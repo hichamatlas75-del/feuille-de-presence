@@ -34,6 +34,7 @@
             border: none; 
             flex-shrink: 0; 
         }
+        .header button:hover { background: #45a049; }
         .add-form { 
             background: white; 
             padding: 15px; 
@@ -91,9 +92,6 @@
             background: #f9f9f9;
             z-index: 2;
         }
-        #tablePresence td:nth-child(2), #tablePresence th:nth-child(2) { 
-            min-width: 90px; 
-        }
         input[type="checkbox"] { 
             width: 22px; 
             height: 22px; 
@@ -129,7 +127,7 @@
     <div class="header">
         <input type="date" id="date" value="2026-01-18">
         <button onclick="sauvegarderDonnees()">💾 Sauvegarder</button>
-        <button onclick="imprimer()">🖨️ Imprimer</button>
+        <button id="printBtn" onclick="imprimer()">🖨️ Imprimer</button>
         <button onclick="restaurerListe()">🔄 Reset</button>
     </div>
 
@@ -159,27 +157,19 @@
     </div>
 
     <script>
+        // Liste complète des 24 employés (CAISSE, EXONOMAT, BAR, MÉNAGE, CUISINE, SERVICE)
         const employesInit = [
-            // 🔥 CAISSE (2)
             {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
-            
-            // 📊 EXONOMAT (1)
             {nom: 'ENNHAIlI', prenom: 'SOUMIA', fonction: 'EXONOMAT 07:45'},
-            
-            // 🍸 BAR (4)
             {nom: 'CHKAIRI', prenom: 'YOUSSEF', fonction: 'BAR'},
             {nom: 'KHALOUQ', prenom: 'RACHID', fonction: 'BAR'},
             {nom: 'FILALI', prenom: 'ABDERAFI', fonction: 'BAR'},
             {nom: 'EL KOBBI', prenom: 'MOSTAFA', fonction: 'BAR'},
-            
-            // 🧹 MÉNAGE (4)
             {nom: 'SBAI', prenom: 'HAKIMA', fonction: 'MENAGE'},
             {nom: 'ELGORRAMY', prenom: 'SOUAD', fonction: 'MENAGE'},
             {nom: 'ELGORRAMY', prenom: 'ANISSA', fonction: 'MENAGE'},
             {nom: 'ELMCHAOURI', prenom: 'SOUAD', fonction: 'MENAGE'},
-            
-            // 🍳 CUISINE (7)
             {nom: 'ZAIR', prenom: 'FATIMA', fonction: 'CUISINE'},
             {nom: 'BELQASSE', prenom: 'KHAOULA', fonction: 'CUISINE'},
             {nom: 'MAJDOUB', prenom: 'JIHANE', fonction: 'CUISINE'},
@@ -187,8 +177,6 @@
             {nom: 'BOURAHMA', prenom: 'ANAS', fonction: 'CUISINE'},
             {nom: 'MOUJAHID', prenom: 'IMANE', fonction: 'CUISINE'},
             {nom: 'IDRISSI', prenom: 'SAAD', fonction: 'CUISINE'},
-            
-            // 👨‍🍳 SERVICE (6)
             {nom: 'GUETIBI', prenom: 'AMINE', fonction: 'SERVICE'},
             {nom: 'EL MOEDEN', prenom: 'HASSAN', fonction: 'SERVICE'},
             {nom: 'HIDARA', prenom: 'YOUSSEF', fonction: 'SERVICE'},
@@ -200,52 +188,68 @@
         let employes = JSON.parse(localStorage.getItem('employesPresence')) || employesInit;
         let donneesPresence = JSON.parse(localStorage.getItem('donneesPresence')) || {};
 
-        function sauvegarder() {
-            localStorage.setItem('employesPresence', JSON.stringify(employes));
-            localStorage.setItem('donneesPresence', JSON.stringify(donneesPresence));
+        // ✅ FONCTION SAUVEGARDER CORRIGÉE ET TESTÉE
+        function sauvegarderDonnees() {
+            try {
+                const date = document.getElementById('date').value;
+                if (!date) {
+                    alert('⚠️ Sélectionnez une date d\'abord !');
+                    return;
+                }
+
+                const lignes = document.querySelectorAll('#tablePresence tbody tr');
+                const dateData = {};
+                
+                lignes.forEach((ligne, index) => {
+                    if (index >= employes.length) return;
+                    
+                    const inputs = ligne.querySelectorAll('input');
+                    const empKey = employes[index].nom + '_' + employes[index].prenom;
+                    
+                    dateData[empKey] = {
+                        on: inputs[2].checked,
+                        off: inputs[3].checked,
+                        heurePrevue: inputs[4].value,
+                        heureArrivee: inputs[5].value,
+                        signature: inputs[6].value
+                    };
+                });
+
+                donneesPresence[date] = dateData;
+                localStorage.setItem('donneesPresence', JSON.stringify(donneesPresence));
+                localStorage.setItem('employesPresence', JSON.stringify(employes));
+                
+                alert('✅ Sauvegardé ! ' + Object.keys(dateData).length + ' employés pour ' + date);
+            } catch (error) {
+                alert('❌ Erreur sauvegarde: ' + error.message);
+            }
         }
 
         function ajouterEmploye() {
             const nom = document.getElementById('nomAjout').value.toUpperCase().trim();
             const prenom = document.getElementById('prenomAjout').value.toUpperCase().trim();
             const fonction = document.getElementById('fonctionAjout').value.toUpperCase().trim();
+            
             if (nom && prenom) {
                 employes.push({nom, prenom, fonction});
                 document.getElementById('nomAjout').value = '';
                 document.getElementById('prenomAjout').value = '';
                 document.getElementById('fonctionAjout').value = '';
-                sauvegarder();
+                localStorage.setItem('employesPresence', JSON.stringify(employes));
                 afficherTable();
+                alert('✅ Employé ajouté: ' + nom + ' ' + prenom);
             }
         }
 
         function restaurerListe() {
-            if (confirm('Restaurer la liste complète des 24 employés ?')) {
+            if (confirm('Restaurer les 24 employés originaux ? Les données seront perdues.')) {
                 employes = [...employesInit];
                 donneesPresence = {};
-                localStorage.removeItem('employesPresence');
-                localStorage.removeItem('donneesPresence');
+                localStorage.setItem('employesPresence', JSON.stringify(employes));
+                localStorage.setItem('donneesPresence', JSON.stringify(donneesPresence));
                 afficherTable();
+                alert('✅ Liste restaurée');
             }
-        }
-
-        function sauvegarderDonnees() {
-            const date = document.getElementById('date').value;
-            const lignes = document.querySelectorAll('#tablePresence tbody tr');
-            lignes.forEach((ligne, index) => {
-                const inputs = ligne.querySelectorAll('input');
-                const key = employes[index]?.nom + '_' + employes[index]?.prenom;
-                donneesPresence[date] = donneesPresence[date] || {};
-                donneesPresence[date][key] = {
-                    on: inputs[2].checked,
-                    off: inputs[3].checked,
-                    heurePrevue: inputs[4].value,
-                    heureArrivee: inputs[5].value,
-                    signature: inputs[6].value
-                };
-            });
-            sauvegarder();
-            alert('✅ Données sauvegardées pour ' + date);
         }
 
         function afficherTable() {
@@ -254,16 +258,16 @@
             tbody.innerHTML = '';
             
             employes.forEach((emp, index) => {
-                const donneesJour = donneesPresence[date]?.[emp.nom + '_' + emp.prenom];
+                const donneesJour = donneesPresence[date] ? donneesPresence[date][emp.nom + '_' + emp.prenom] : {};
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${emp.nom} ${emp.prenom}</td>
                     <td>${emp.fonction}</td>
-                    <td><input type="checkbox" ${donneesJour?.on ? 'checked' : ''}></td>
-                    <td><input type="checkbox" ${donneesJour?.off ? 'checked' : ''}></td>
-                    <td><input type="time" step="300" value="${donneesJour?.heurePrevue || ''}"></td>
-                    <td><input type="time" step="300" value="${donneesJour?.heureArrivee || ''}"></td>
-                    <td><input type="text" placeholder="Sig." value="${donneesJour?.signature || ''}"></td>
+                    <td><input type="checkbox" ${donneesJour.on ? 'checked' : ''}></td>
+                    <td><input type="checkbox" ${donneesJour.off ? 'checked' : ''}></td>
+                    <td><input type="time" step="300" value="${donneesJour.heurePrevue || ''}"></td>
+                    <td><input type="time" step="300" value="${donneesJour.heureArrivee || ''}"></td>
+                    <td><input type="text" placeholder="Sig." value="${donneesJour.signature || ''}"></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -273,9 +277,9 @@
             window.print();
         }
 
-        // Écouteurs d'événements
+        // Initialisation
         document.getElementById('date').addEventListener('change', afficherTable);
-        document.addEventListener('DOMContentLoaded', afficherTable);
+        window.addEventListener('load', afficherTable);
     </script>
 </body>
 </html>
