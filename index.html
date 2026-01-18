@@ -157,7 +157,7 @@
     </div>
 
     <script>
-        // ✅ 24 EMPLOYES COMPLÈTS - JAMAIS VIDES
+        // 24 employés complets
         const employesInit = [
             {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
@@ -188,83 +188,54 @@
         let employes = employesInit;
         let donneesPresence = {};
 
-        // ✅ SAUVEGARDE CORRIGÉE - GARANTIE 24 EMPLOYES
+        // ✅ SAUVEGARDE SIMPLIFIÉE ET FONCTIONNELLE
         function sauvegarderDonnees() {
-            const dateInput = document.getElementById('date');
-            if (!dateInput || !dateInput.value) {
-                alert('⚠️ Sélectionnez une date !');
+            const date = document.getElementById('date').value;
+            if (!date) {
+                alert('⚠️ Choisissez une date !');
                 return;
             }
-            
-            const date = dateInput.value;
-            const tbody = document.querySelector('#tablePresence tbody');
-            const lignes = tbody.querySelectorAll('tr');
+
+            const lignes = document.querySelectorAll('#tablePresence tbody tr');
             const dateData = {};
-            
-            // ✅ PARCOURS DIRECT DES LIGNES VISIBLES
-            lignes.forEach((ligne, index) => {
+
+            // Lire chaque ligne du tableau
+            Array.from(lignes).forEach((ligne, index) => {
+                if (index >= employes.length) return;
+                
                 const inputs = ligne.querySelectorAll('input');
-                if (inputs.length >= 7 && employes[index]) {
-                    const empKey = employes[index].nom + '_' + employes[index].prenom;
-                    dateData[empKey] = {
-                        on: inputs[2].checked || false,
-                        off: inputs[3].checked || false,
-                        heurePrevue: inputs[4].value || '',
-                        heureArrivee: inputs[5].value || '',
-                        signature: inputs[6].value || ''
-                    };
-                }
+                const nom = employes[index].nom;
+                const prenom = employes[index].prenom;
+                const key = nom + '_' + prenom;
+
+                dateData[key] = {
+                    on: inputs[2] ? inputs[2].checked : false,
+                    off: inputs[3] ? inputs[3].checked : false,
+                    heurePrevue: inputs[4] ? inputs[4].value : '',
+                    heureArrivee: inputs[5] ? inputs[5].value : '',
+                    signature: inputs[6] ? inputs[6].value : ''
+                };
             });
-            
+
+            // ✅ SAUVEGARDE VÉRIFIÉE
             donneesPresence[date] = dateData;
-            localStorage.setItem('donneesPresence', JSON.stringify(donneesPresence));
+            localStorage.setItem('donneesPresence_' + date.replace(/-/g, ''), JSON.stringify(dateData));
+            localStorage.setItem('employesPresence', JSON.stringify(employes));
             
-            alert('✅ ' + Object.keys(dateData).length + '/24 employés sauvegardés pour ' + date);
-        }
-
-        function ajouterEmploye() {
-            const nomInput = document.getElementById('nomAjout');
-            const prenomInput = document.getElementById('prenomAjout');
-            const fonctionInput = document.getElementById('fonctionAjout');
-            
-            const nom = nomInput.value.toUpperCase().trim();
-            const prenom = prenomInput.value.toUpperCase().trim();
-            const fonction = fonctionInput.value.toUpperCase().trim();
-            
-            if (nom && prenom) {
-                employes.push({nom, prenom, fonction});
-                nomInput.value = '';
-                prenomInput.value = '';
-                fonctionInput.value = '';
-                localStorage.setItem('employesPresence', JSON.stringify(employes));
-                afficherTable();
-                alert('✅ Employé ajouté');
-            }
-        }
-
-        function restaurerListe() {
-            if (confirm('Restaurer les 24 employés ?')) {
-                employes = [...employesInit];
-                donneesPresence = {};
-                localStorage.setItem('employesPresence', JSON.stringify(employes));
-                localStorage.setItem('donneesPresence', JSON.stringify(donneesPresence));
-                afficherTable();
-                alert('✅ 24 employés restaurés');
-            }
+            alert('✅ ' + Object.keys(dateData).length + ' employés SAUVEGARDÉS pour ' + date);
         }
 
         function afficherTable() {
             const tbody = document.querySelector('#tablePresence tbody');
-            if (!tbody) return;
-            
-            const dateInput = document.getElementById('date');
-            const date = dateInput ? dateInput.value : '2026-01-18';
+            const date = document.getElementById('date').value || '2026-01-18';
             
             tbody.innerHTML = '';
-            
-            // ✅ TOUJOURS 24 LIGNES MINIMUM
-            employes.slice(0, 50).forEach((emp) => {
-                const donneesJour = donneesPresence[date] && donneesPresence[date][emp.nom + '_' + emp.prenom];
+
+            employes.forEach(emp => {
+                // Charger données sauvegardées
+                const savedData = localStorage.getItem('donneesPresence_' + date.replace(/-/g, ''));
+                const donneesJour = savedData ? JSON.parse(savedData)[emp.nom + '_' + emp.prenom] : {};
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${emp.nom} ${emp.prenom}</td>
@@ -279,30 +250,38 @@
             });
         }
 
+        function ajouterEmploye() {
+            const nom = document.getElementById('nomAjout').value.toUpperCase().trim();
+            const prenom = document.getElementById('prenomAjout').value.toUpperCase().trim();
+            const fonction = document.getElementById('fonctionAjout').value.toUpperCase().trim();
+            
+            if (nom && prenom) {
+                employes.push({nom, prenom, fonction});
+                document.getElementById('nomAjout').value = '';
+                document.getElementById('prenomAjout').value = '';
+                document.getElementById('fonctionAjout').value = '';
+                localStorage.setItem('employesPresence', JSON.stringify(employes));
+                afficherTable();
+            }
+        }
+
+        function restaurerListe() {
+            if (confirm('Restaurer les 24 employés ?')) {
+                employes = [...employesInit];
+                localStorage.setItem('employesPresence', JSON.stringify(employes));
+                afficherTable();
+            }
+        }
+
         function imprimer() {
             window.print();
         }
 
-        // ✅ INITIALISATION IMMÉDIATE ET SÉCURISÉE
+        // Démarrage automatique
         document.addEventListener('DOMContentLoaded', function() {
-            // Charger les employés depuis localStorage ou utiliser init
-            try {
-                const savedEmployes = localStorage.getItem('employesPresence');
-                if (savedEmployes) {
-                    employes = JSON.parse(savedEmployes);
-                }
-            } catch (e) {
-                employes = employesInit;
-            }
-            
-            try {
-                const savedData = localStorage.getItem('donneesPresence');
-                if (savedData) {
-                    donneesPresence = JSON.parse(savedData);
-                }
-            } catch (e) {
-                donneesPresence = {};
-            }
+            // Charger employés sauvegardés ou initiaux
+            const saved = localStorage.getItem('employesPresence');
+            if (saved) employes = JSON.parse(saved);
             
             document.getElementById('date').addEventListener('change', afficherTable);
             afficherTable();
