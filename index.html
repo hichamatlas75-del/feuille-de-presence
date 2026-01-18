@@ -1,291 +1,131 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Feuille de Présence Mobile - 2026</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 10px; 
-            font-size: 16px;
-            background: #f5f5f5;
-        }
-        h1 { font-size: 1.5em; margin: 0 0 15px 0; color: #333; }
-        .header { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 10px; 
-            margin-bottom: 20px; 
-            align-items: center; 
-        }
-        .header input, .header button { 
-            flex: 1; 
-            min-width: 120px; 
-            padding: 12px; 
-            font-size: 16px; 
-            border-radius: 5px;
-        }
-        .header button { 
-            background: #4CAF50; 
-            color: white; 
-            border: none; 
-            flex-shrink: 0; 
-        }
-        .header button:hover { background: #45a049; }
-        .add-form { 
-            background: white; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .add-form h3 { margin: 0 0 10px 0; font-size: 1.1em; }
-        .add-form input { 
-            width: 100%; 
-            margin: 5px 0; 
-            padding: 10px; 
-            border: 1px solid #ddd; 
-            border-radius: 4px; 
-            font-size: 16px; 
-        }
-        .add-form button { 
-            width: 100%; 
-            padding: 12px; 
-            background: #2196F3; 
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            font-size: 16px; 
-            margin-top: 10px;
-        }
-        .table-container {
-            overflow-x: auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        #tablePresence { 
-            width: 100%; 
-            border-collapse: collapse; 
-            min-width: 700px;
-        }
-        #tablePresence th, #tablePresence td { 
-            border: 1px solid #ddd; 
-            padding: 10px 6px; 
-            text-align: center; 
-            font-size: 14px; 
-        }
-        #tablePresence th { 
-            background: #4CAF50; 
-            color: white; 
-            font-weight: bold;
-            position: sticky; top: 0;
-        }
-        #tablePresence td:first-child, #tablePresence th:first-child { 
-            min-width: 140px; 
-            text-align: left; 
-            position: sticky; left: 0;
-            background: #f9f9f9;
-            z-index: 2;
-        }
-        input[type="checkbox"] { 
-            width: 22px; 
-            height: 22px; 
-            transform: scale(1.1); 
-            cursor: pointer;
-        }
-        input[type="time"], input[type="text"] { 
-            width: 100%; 
-            padding: 6px; 
-            border: none; 
-            font-size: 14px; 
-            background: transparent;
-        }
-        input[type="text"]:focus, input[type="time"]:focus {
-            background: white;
-            outline: 2px solid #4CAF50;
-        }
-        @media (min-width: 768px) {
-            body { padding: 20px; }
-            .table-container { margin: 0 auto; max-width: 1200px; }
-        }
-        @media print {
-            body { padding: 0; background: white; }
-            .add-form, .header button:not(#printBtn) { display: none; }
-            .table-container { box-shadow: none; overflow: visible; }
-            #tablePresence { min-width: auto; }
-        }
-    </style>
-</head>
-<body>
-    <h1>🍽️ Feuille de Présence Restaurant</h1>
-    
-    <div class="header">
-        <input type="date" id="date" value="2026-01-18">
-        <button onclick="sauvegarderDonnees()">💾 Sauvegarder</button>
-        <button id="printBtn" onclick="imprimer()">🖨️ Imprimer</button>
-        <button onclick="restaurerListe()">🔄 Reset</button>
-    </div>
+<script>
+    const employesInit = [
+        {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
+        {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
+        {nom: 'ENNHAIlI', prenom: 'SOUMIA', fonction: 'EXONOMAT 07:45'},
+        {nom: 'CHKAIRI', prenom: 'YOUSSEF', fonction: 'BAR'},
+        {nom: 'KHALOUQ', prenom: 'RACHID', fonction: 'BAR'},
+        {nom: 'FILALI', prenom: 'ABDERAFI', fonction: 'BAR'},
+        {nom: 'EL KOBBI', prenom: 'MOSTAFA', fonction: 'BAR'},
+        {nom: 'SBAI', prenom: 'HAKIMA', fonction: 'MENAGE'},
+        {nom: 'ELGORRAMY', prenom: 'SOUAD', fonction: 'MENAGE'},
+        {nom: 'ELGORRAMY', prenom: 'ANISSA', fonction: 'MENAGE'},
+        {nom: 'ELMCHAOURI', prenom: 'SOUAD', fonction: 'MENAGE'},
+        {nom: 'ZAIR', prenom: 'FATIMA', fonction: 'CUISINE'},
+        {nom: 'BELQASSE', prenom: 'KHAOULA', fonction: 'CUISINE'},
+        {nom: 'MAJDOUB', prenom: 'JIHANE', fonction: 'CUISINE'},
+        {nom: 'LEMSSIEH', prenom: 'JAWAD', fonction: 'CUISINE'},
+        {nom: 'BOURAHMA', prenom: 'ANAS', fonction: 'CUISINE'},
+        {nom: 'MOUJAHID', prenom: 'IMANE', fonction: 'CUISINE'},
+        {nom: 'IDRISSI', prenom: 'SAAD', fonction: 'CUISINE'},
+        {nom: 'GUETIBI', prenom: 'AMINE', fonction: 'SERVICE'},
+        {nom: 'EL MOEDEN', prenom: 'HASSAN', fonction: 'SERVICE'},
+        {nom: 'HIDARA', prenom: 'YOUSSEF', fonction: 'SERVICE'},
+        {nom: 'ALAOUI', prenom: 'LAZIZ', fonction: 'SERVICE'},
+        {nom: 'HATTAF', prenom: 'MOHAMED', fonction: 'SERVICE'},
+        {nom: 'MOHSINE', prenom: 'YOUNESS', fonction: 'SERVICE'}
+    ];
 
-    <div class="add-form">
-        <h3>➕ Ajouter Nouvel Employé</h3>
-        <input type="text" id="nomAjout" placeholder="Nom (ex: DUPONT)">
-        <input type="text" id="prenomAjout" placeholder="Prénom (ex: Jean)">
-        <input type="text" id="fonctionAjout" placeholder="Fonction (CAISSE, BAR...)">
-        <button onclick="ajouterEmploye()">Ajouter Employé</button>
-    </div>
+    let employes = JSON.parse(localStorage.getItem('employesPresence')) || employesInit;
 
-    <div class="table-container">
-        <table id="tablePresence">
-            <thead>
-                <tr>
-                    <th>Nom Prénom</th>
-                    <th>Fonction</th>
-                    <th>ON</th>
-                    <th>OFF</th>
-                    <th>H. Prévue</th>
-                    <th>H. Arrivée</th>
-                    <th>Signature</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <script>
-        // 24 employés complets
-        const employesInit = [
-            {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
-            {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
-            {nom: 'ENNHAIlI', prenom: 'SOUMIA', fonction: 'EXONOMAT 07:45'},
-            {nom: 'CHKAIRI', prenom: 'YOUSSEF', fonction: 'BAR'},
-            {nom: 'KHALOUQ', prenom: 'RACHID', fonction: 'BAR'},
-            {nom: 'FILALI', prenom: 'ABDERAFI', fonction: 'BAR'},
-            {nom: 'EL KOBBI', prenom: 'MOSTAFA', fonction: 'BAR'},
-            {nom: 'SBAI', prenom: 'HAKIMA', fonction: 'MENAGE'},
-            {nom: 'ELGORRAMY', prenom: 'SOUAD', fonction: 'MENAGE'},
-            {nom: 'ELGORRAMY', prenom: 'ANISSA', fonction: 'MENAGE'},
-            {nom: 'ELMCHAOURI', prenom: 'SOUAD', fonction: 'MENAGE'},
-            {nom: 'ZAIR', prenom: 'FATIMA', fonction: 'CUISINE'},
-            {nom: 'BELQASSE', prenom: 'KHAOULA', fonction: 'CUISINE'},
-            {nom: 'MAJDOUB', prenom: 'JIHANE', fonction: 'CUISINE'},
-            {nom: 'LEMSSIEH', prenom: 'JAWAD', fonction: 'CUISINE'},
-            {nom: 'BOURAHMA', prenom: 'ANAS', fonction: 'CUISINE'},
-            {nom: 'MOUJAHID', prenom: 'IMANE', fonction: 'CUISINE'},
-            {nom: 'IDRISSI', prenom: 'SAAD', fonction: 'CUISINE'},
-            {nom: 'GUETIBI', prenom: 'AMINE', fonction: 'SERVICE'},
-            {nom: 'EL MOEDEN', prenom: 'HASSAN', fonction: 'SERVICE'},
-            {nom: 'HIDARA', prenom: 'YOUSSEF', fonction: 'SERVICE'},
-            {nom: 'ALAOUI', prenom: 'LAZIZ', fonction: 'SERVICE'},
-            {nom: 'HATTAF', prenom: 'MOHAMED', fonction: 'SERVICE'},
-            {nom: 'MOHSINE', prenom: 'YOUNESS', fonction: 'SERVICE'}
-        ];
-
-        let employes = employesInit;
-        let donneesPresence = {};
-
-        // ✅ SAUVEGARDE SIMPLIFIÉE ET FONCTIONNELLE
-        function sauvegarderDonnees() {
-            const date = document.getElementById('date').value;
-            if (!date) {
-                alert('⚠️ Choisissez une date !');
-                return;
-            }
-
-            const lignes = document.querySelectorAll('#tablePresence tbody tr');
-            const dateData = {};
-
-            // Lire chaque ligne du tableau
-            Array.from(lignes).forEach((ligne, index) => {
-                if (index >= employes.length) return;
-                
-                const inputs = ligne.querySelectorAll('input');
-                const nom = employes[index].nom;
-                const prenom = employes[index].prenom;
-                const key = nom + '_' + prenom;
-
-                dateData[key] = {
-                    on: inputs[2] ? inputs[2].checked : false,
-                    off: inputs[3] ? inputs[3].checked : false,
-                    heurePrevue: inputs[4] ? inputs[4].value : '',
-                    heureArrivee: inputs[5] ? inputs[5].value : '',
-                    signature: inputs[6] ? inputs[6].value : ''
-                };
-            });
-
-            // ✅ SAUVEGARDE VÉRIFIÉE
-            donneesPresence[date] = dateData;
-            localStorage.setItem('donneesPresence_' + date.replace(/-/g, ''), JSON.stringify(dateData));
-            localStorage.setItem('employesPresence', JSON.stringify(employes));
-            
-            alert('✅ ' + Object.keys(dateData).length + ' employés SAUVEGARDÉS pour ' + date);
+    function sauvegarderDonnees() {
+        const date = document.getElementById('date').value;
+        if (!date) {
+            alert('⚠️ Veuillez choisir une date.');
+            return;
         }
 
-        function afficherTable() {
-            const tbody = document.querySelector('#tablePresence tbody');
-            const date = document.getElementById('date').value || '2026-01-18';
-            
-            tbody.innerHTML = '';
+        const lignes = document.querySelectorAll('#tablePresence tbody tr');
+        const dateData = {};
 
-            employes.forEach(emp => {
-                // Charger données sauvegardées
-                const savedData = localStorage.getItem('donneesPresence_' + date.replace(/-/g, ''));
-                const donneesJour = savedData ? JSON.parse(savedData)[emp.nom + '_' + emp.prenom] : {};
+        lignes.forEach((ligne, index) => {
+            const inputs = ligne.querySelectorAll('input');
+            const emp = employes[index];
+            if (!emp) return;
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${emp.nom} ${emp.prenom}</td>
-                    <td>${emp.fonction}</td>
-                    <td><input type="checkbox" ${donneesJour?.on ? 'checked' : ''}></td>
-                    <td><input type="checkbox" ${donneesJour?.off ? 'checked' : ''}></td>
-                    <td><input type="time" step="300" value="${donneesJour?.heurePrevue || ''}"></td>
-                    <td><input type="time" step="300" value="${donneesJour?.heureArrivee || ''}"></td>
-                    <td><input type="text" placeholder="Sig." value="${donneesJour?.signature || ''}"></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+            const key = emp.nom + '_' + emp.prenom;
 
-        function ajouterEmploye() {
-            const nom = document.getElementById('nomAjout').value.toUpperCase().trim();
-            const prenom = document.getElementById('prenomAjout').value.toUpperCase().trim();
-            const fonction = document.getElementById('fonctionAjout').value.toUpperCase().trim();
-            
-            if (nom && prenom) {
-                employes.push({nom, prenom, fonction});
-                document.getElementById('nomAjout').value = '';
-                document.getElementById('prenomAjout').value = '';
-                document.getElementById('fonctionAjout').value = '';
-                localStorage.setItem('employesPresence', JSON.stringify(employes));
-                afficherTable();
-            }
-        }
-
-        function restaurerListe() {
-            if (confirm('Restaurer les 24 employés ?')) {
-                employes = [...employesInit];
-                localStorage.setItem('employesPresence', JSON.stringify(employes));
-                afficherTable();
-            }
-        }
-
-        function imprimer() {
-            window.print();
-        }
-
-        // Démarrage automatique
-        document.addEventListener('DOMContentLoaded', function() {
-            // Charger employés sauvegardés ou initiaux
-            const saved = localStorage.getItem('employesPresence');
-            if (saved) employes = JSON.parse(saved);
-            
-            document.getElementById('date').addEventListener('change', afficherTable);
-            afficherTable();
+            // Correction des index :
+            // inputs[0] = checkbox ON, inputs[1] = checkbox OFF, 
+            // inputs[2] = H. Prévue, inputs[3] = H. Arrivée, inputs[4] = Signature
+            dateData[key] = {
+                on: inputs[0].checked,
+                off: inputs[1].checked,
+                heurePrevue: inputs[2].value,
+                heureArrivee: inputs[3].value,
+                signature: inputs[4].value
+            };
         });
-    </script>
-</body>
-</html>
+
+        localStorage.setItem('donneesPresence_' + date, JSON.stringify(dateData));
+        localStorage.setItem('employesPresence', JSON.stringify(employes));
+        
+        alert('✅ Présences sauvegardées avec soin pour le ' + date);
+    }
+
+    function afficherTable() {
+        const tbody = document.querySelector('#tablePresence tbody');
+        const date = document.getElementById('date').value;
+        
+        tbody.innerHTML = '';
+
+        const savedData = localStorage.getItem('donneesPresence_' + date);
+        const donneesJour = savedData ? JSON.parse(savedData) : {};
+
+        employes.forEach(emp => {
+            const key = emp.nom + '_' + emp.prenom;
+            const d = donneesJour[key] || {};
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${emp.nom} ${emp.prenom}</td>
+                <td>${emp.fonction}</td>
+                <td><input type="checkbox" ${d.on ? 'checked' : ''}></td>
+                <td><input type="checkbox" ${d.off ? 'checked' : ''}></td>
+                <td><input type="time" value="${d.heurePrevue || ''}"></td>
+                <td><input type="time" value="${d.heureArrivee || ''}"></td>
+                <td><input type="text" placeholder="Sig." value="${d.signature || ''}"></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function ajouterEmploye() {
+        const nom = document.getElementById('nomAjout').value.toUpperCase().trim();
+        const prenom = document.getElementById('prenomAjout').value.toUpperCase().trim();
+        const fonction = document.getElementById('fonctionAjout').value.toUpperCase().trim();
+        
+        if (nom && prenom) {
+            employes.push({nom, prenom, fonction});
+            localStorage.setItem('employesPresence', JSON.stringify(employes));
+            // Réinitialiser les champs
+            document.getElementById('nomAjout').value = '';
+            document.getElementById('prenomAjout').value = '';
+            document.getElementById('fonctionAjout').value = '';
+            afficherTable();
+        } else {
+            alert("Veuillez saisir au moins un nom et un prénom.");
+        }
+    }
+
+    function restaurerListe() {
+        if (confirm('Voulez-vous restaurer la liste initiale des employés ?')) {
+            employes = [...employesInit];
+            localStorage.setItem('employesPresence', JSON.stringify(employes));
+            afficherTable();
+        }
+    }
+
+    function imprimer() {
+        window.print();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Définir la date d'aujourd'hui par défaut
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
+        
+        document.getElementById('date').addEventListener('change', afficherTable);
+        afficherTable();
+    });
+</script>
