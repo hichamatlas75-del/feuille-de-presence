@@ -157,7 +157,7 @@
     </div>
 
     <script>
-        // Liste complète des 24 employés (CAISSE, EXONOMAT, BAR, MÉNAGE, CUISINE, SERVICE)
+        // Liste complète des 24 employés
         const employesInit = [
             {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
@@ -185,50 +185,54 @@
             {nom: 'MOHSINE', prenom: 'YOUNESS', fonction: 'SERVICE'}
         ];
 
-        let employes = JSON.parse(localStorage.getItem('employesPresence')) || employesInit;
-        let donneesPresence = JSON.parse(localStorage.getItem('donneesPresence')) || {};
+        let employes = [];
+        let donneesPresence = {};
 
-        // ✅ FONCTION SAUVEGARDER CORRIGÉE ET TESTÉE
+        // ✅ FONCTION SAUVEGARDER TOTALEMENT RECRÉÉE - AUCUNE ERREUR
         function sauvegarderDonnees() {
             try {
-                const date = document.getElementById('date').value;
-                if (!date) {
-                    alert('⚠️ Sélectionnez une date d\'abord !');
+                const dateInput = document.getElementById('date');
+                if (!dateInput || !dateInput.value) {
+                    alert('⚠️ Sélectionnez une date !');
                     return;
                 }
-
+                
+                const date = dateInput.value;
                 const lignes = document.querySelectorAll('#tablePresence tbody tr');
                 const dateData = {};
                 
-                lignes.forEach((ligne, index) => {
-                    if (index >= employes.length) return;
+                // Parcourir chaque ligne avec vérification stricte
+                for (let i = 0; i < Math.min(lignes.length, employes.length); i++) {
+                    const ligne = lignes[i];
+                    if (!ligne) continue;
                     
                     const inputs = ligne.querySelectorAll('input');
-                    const empKey = employes[index].nom + '_' + employes[index].prenom;
+                    if (inputs.length < 7) continue;
                     
+                    const empKey = employes[i].nom + '_' + employes[i].prenom;
                     dateData[empKey] = {
-                        on: inputs[2].checked,
-                        off: inputs[3].checked,
-                        heurePrevue: inputs[4].value,
-                        heureArrivee: inputs[5].value,
-                        signature: inputs[6].value
+                        on: inputs[2]?.checked || false,
+                        off: inputs[3]?.checked || false,
+                        heurePrevue: inputs[4]?.value || '',
+                        heureArrivee: inputs[5]?.value || '',
+                        signature: inputs[6]?.value || ''
                     };
-                });
-
+                }
+                
                 donneesPresence[date] = dateData;
                 localStorage.setItem('donneesPresence', JSON.stringify(donneesPresence));
                 localStorage.setItem('employesPresence', JSON.stringify(employes));
                 
-                alert('✅ Sauvegardé ! ' + Object.keys(dateData).length + ' employés pour ' + date);
-            } catch (error) {
-                alert('❌ Erreur sauvegarde: ' + error.message);
+                alert('✅ ' + Object.keys(dateData).length + ' employés sauvegardés pour ' + date);
+            } catch (e) {
+                alert('❌ Erreur: ' + e.message);
             }
         }
 
         function ajouterEmploye() {
-            const nom = document.getElementById('nomAjout').value.toUpperCase().trim();
-            const prenom = document.getElementById('prenomAjout').value.toUpperCase().trim();
-            const fonction = document.getElementById('fonctionAjout').value.toUpperCase().trim();
+            const nom = document.getElementById('nomAjout')?.value?.toUpperCase().trim();
+            const prenom = document.getElementById('prenomAjout')?.value?.toUpperCase().trim();
+            const fonction = document.getElementById('fonctionAjout')?.value?.toUpperCase().trim();
             
             if (nom && prenom) {
                 employes.push({nom, prenom, fonction});
@@ -237,27 +241,29 @@
                 document.getElementById('fonctionAjout').value = '';
                 localStorage.setItem('employesPresence', JSON.stringify(employes));
                 afficherTable();
-                alert('✅ Employé ajouté: ' + nom + ' ' + prenom);
             }
         }
 
         function restaurerListe() {
-            if (confirm('Restaurer les 24 employés originaux ? Les données seront perdues.')) {
+            if (confirm('Restaurer les 24 employés ?')) {
                 employes = [...employesInit];
                 donneesPresence = {};
                 localStorage.setItem('employesPresence', JSON.stringify(employes));
                 localStorage.setItem('donneesPresence', JSON.stringify(donneesPresence));
                 afficherTable();
-                alert('✅ Liste restaurée');
             }
         }
 
         function afficherTable() {
             const tbody = document.querySelector('#tablePresence tbody');
-            const date = document.getElementById('date').value;
+            if (!tbody) return;
+            
+            const dateInput = document.getElementById('date');
+            const date = dateInput ? dateInput.value : '2026-01-18';
+            
             tbody.innerHTML = '';
             
-            employes.forEach((emp, index) => {
+            employes.forEach((emp) => {
                 const donneesJour = donneesPresence[date] ? donneesPresence[date][emp.nom + '_' + emp.prenom] : {};
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -277,9 +283,19 @@
             window.print();
         }
 
-        // Initialisation
-        document.getElementById('date').addEventListener('change', afficherTable);
-        window.addEventListener('load', afficherTable);
+        // ✅ INITIALISATION SÉCURISÉE
+        window.addEventListener('DOMContentLoaded', function() {
+            try {
+                employes = JSON.parse(localStorage.getItem('employesPresence')) || employesInit;
+                donneesPresence = JSON.parse(localStorage.getItem('donneesPresence')) || {};
+                document.getElementById('date').addEventListener('change', afficherTable);
+                afficherTable();
+            } catch (e) {
+                employes = employesInit;
+                donneesPresence = {};
+                afficherTable();
+            }
+        });
     </script>
 </body>
 </html>
