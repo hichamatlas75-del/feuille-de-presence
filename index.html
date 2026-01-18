@@ -28,10 +28,40 @@
 
     let employes = JSON.parse(localStorage.getItem('employesPresence')) || employesInit;
 
+    function afficherTable() {
+        const tbody = document.querySelector('#tablePresence tbody');
+        const dateSelectionnee = document.getElementById('date').value;
+        
+        tbody.innerHTML = '';
+
+        // Récupération des données pour cette date spécifique
+        const storageKey = 'donneesPresence_' + dateSelectionnee;
+        const savedData = localStorage.getItem(storageKey);
+        const donneesJour = savedData ? JSON.parse(savedData) : {};
+
+        employes.forEach((emp, index) => {
+            const key = emp.nom + '_' + emp.prenom;
+            const d = donneesJour[key] || {};
+
+            const tr = document.createElement('tr');
+            // On utilise des classes pour cibler les inputs sans se tromper d'index
+            tr.innerHTML = `
+                <td>${emp.nom} ${emp.prenom}</td>
+                <td>${emp.fonction}</td>
+                <td><input type="checkbox" class="check-on" ${d.on ? 'checked' : ''}></td>
+                <td><input type="checkbox" class="check-off" ${d.off ? 'checked' : ''}></td>
+                <td><input type="time" class="time-prevu" value="${d.heurePrevue || ''}"></td>
+                <td><input type="time" class="time-arrive" value="${d.heureArrivee || ''}"></td>
+                <td><input type="text" class="input-sig" placeholder="Sig." value="${d.signature || ''}"></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
     function sauvegarderDonnees() {
-        const date = document.getElementById('date').value;
-        if (!date) {
-            alert('⚠️ Veuillez choisir une date.');
+        const dateSelectionnee = document.getElementById('date').value;
+        if (!dateSelectionnee) {
+            alert('⚠️ Veuillez sélectionner une date.');
             return;
         }
 
@@ -39,55 +69,25 @@
         const dateData = {};
 
         lignes.forEach((ligne, index) => {
-            const inputs = ligne.querySelectorAll('input');
             const emp = employes[index];
-            if (!emp) return;
-
-            const key = emp.nom + '_' + emp.prenom;
-
-            // Correction des index :
-            // inputs[0] = checkbox ON, inputs[1] = checkbox OFF, 
-            // inputs[2] = H. Prévue, inputs[3] = H. Arrivée, inputs[4] = Signature
-            dateData[key] = {
-                on: inputs[0].checked,
-                off: inputs[1].checked,
-                heurePrevue: inputs[2].value,
-                heureArrivee: inputs[3].value,
-                signature: inputs[4].value
-            };
+            if (emp) {
+                const key = emp.nom + '_' + emp.prenom;
+                dateData[key] = {
+                    on: ligne.querySelector('.check-on').checked,
+                    off: ligne.querySelector('.check-off').checked,
+                    heurePrevue: ligne.querySelector('.time-prevu').value,
+                    heureArrivee: ligne.querySelector('.time-arrive').value,
+                    signature: ligne.querySelector('.input-sig').value
+                };
+            }
         });
 
-        localStorage.setItem('donneesPresence_' + date, JSON.stringify(dateData));
+        // Sauvegarde par date
+        localStorage.setItem('donneesPresence_' + dateSelectionnee, JSON.stringify(dateData));
+        // Sauvegarde de la liste des employés au cas où elle a été modifiée
         localStorage.setItem('employesPresence', JSON.stringify(employes));
         
-        alert('✅ Présences sauvegardées avec soin pour le ' + date);
-    }
-
-    function afficherTable() {
-        const tbody = document.querySelector('#tablePresence tbody');
-        const date = document.getElementById('date').value;
-        
-        tbody.innerHTML = '';
-
-        const savedData = localStorage.getItem('donneesPresence_' + date);
-        const donneesJour = savedData ? JSON.parse(savedData) : {};
-
-        employes.forEach(emp => {
-            const key = emp.nom + '_' + emp.prenom;
-            const d = donneesJour[key] || {};
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${emp.nom} ${emp.prenom}</td>
-                <td>${emp.fonction}</td>
-                <td><input type="checkbox" ${d.on ? 'checked' : ''}></td>
-                <td><input type="checkbox" ${d.off ? 'checked' : ''}></td>
-                <td><input type="time" value="${d.heurePrevue || ''}"></td>
-                <td><input type="time" value="${d.heureArrivee || ''}"></td>
-                <td><input type="text" placeholder="Sig." value="${d.signature || ''}"></td>
-            `;
-            tbody.appendChild(tr);
-        });
+        alert('✅ Les présences ont été enregistrées avec succès pour le ' + dateSelectionnee);
     }
 
     function ajouterEmploye() {
@@ -98,21 +98,21 @@
         if (nom && prenom) {
             employes.push({nom, prenom, fonction});
             localStorage.setItem('employesPresence', JSON.stringify(employes));
-            // Réinitialiser les champs
             document.getElementById('nomAjout').value = '';
             document.getElementById('prenomAjout').value = '';
             document.getElementById('fonctionAjout').value = '';
             afficherTable();
         } else {
-            alert("Veuillez saisir au moins un nom et un prénom.");
+            alert("Merci de renseigner le nom et le prénom de l'équipier.");
         }
     }
 
     function restaurerListe() {
-        if (confirm('Voulez-vous restaurer la liste initiale des employés ?')) {
+        if (confirm('Voulez-vous réinitialiser la liste à 24 employés ?')) {
+            localStorage.clear(); // Nettoyage complet si nécessaire
             employes = [...employesInit];
             localStorage.setItem('employesPresence', JSON.stringify(employes));
-            afficherTable();
+            location.reload(); // Recharge la page pour tout remettre à zéro proprement
         }
     }
 
@@ -121,9 +121,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Définir la date d'aujourd'hui par défaut
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = today;
+        // Initialisation de la date si vide
+        if(!document.getElementById('date').value) {
+            document.getElementById('date').value = '2026-01-18';
+        }
         
         document.getElementById('date').addEventListener('change', afficherTable);
         afficherTable();
