@@ -1,132 +1,193 @@
-<script>
-    const employesInit = [
-        {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
-        {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
-        {nom: 'ENNHAIlI', prenom: 'SOUMIA', fonction: 'EXONOMAT 07:45'},
-        {nom: 'CHKAIRI', prenom: 'YOUSSEF', fonction: 'BAR'},
-        {nom: 'KHALOUQ', prenom: 'RACHID', fonction: 'BAR'},
-        {nom: 'FILALI', prenom: 'ABDERAFI', fonction: 'BAR'},
-        {nom: 'EL KOBBI', prenom: 'MOSTAFA', fonction: 'BAR'},
-        {nom: 'SBAI', prenom: 'HAKIMA', fonction: 'MENAGE'},
-        {nom: 'ELGORRAMY', prenom: 'SOUAD', fonction: 'MENAGE'},
-        {nom: 'ELGORRAMY', prenom: 'ANISSA', fonction: 'MENAGE'},
-        {nom: 'ELMCHAOURI', prenom: 'SOUAD', fonction: 'MENAGE'},
-        {nom: 'ZAIR', prenom: 'FATIMA', fonction: 'CUISINE'},
-        {nom: 'BELQASSE', prenom: 'KHAOULA', fonction: 'CUISINE'},
-        {nom: 'MAJDOUB', prenom: 'JIHANE', fonction: 'CUISINE'},
-        {nom: 'LEMSSIEH', prenom: 'JAWAD', fonction: 'CUISINE'},
-        {nom: 'BOURAHMA', prenom: 'ANAS', fonction: 'CUISINE'},
-        {nom: 'MOUJAHID', prenom: 'IMANE', fonction: 'CUISINE'},
-        {nom: 'IDRISSI', prenom: 'SAAD', fonction: 'CUISINE'},
-        {nom: 'GUETIBI', prenom: 'AMINE', fonction: 'SERVICE'},
-        {nom: 'EL MOEDEN', prenom: 'HASSAN', fonction: 'SERVICE'},
-        {nom: 'HIDARA', prenom: 'YOUSSEF', fonction: 'SERVICE'},
-        {nom: 'ALAOUI', prenom: 'LAZIZ', fonction: 'SERVICE'},
-        {nom: 'HATTAF', prenom: 'MOHAMED', fonction: 'SERVICE'},
-        {nom: 'MOHSINE', prenom: 'YOUNESS', fonction: 'SERVICE'}
-    ];
-
-    let employes = JSON.parse(localStorage.getItem('employesPresence')) || employesInit;
-
-    function afficherTable() {
-        const tbody = document.querySelector('#tablePresence tbody');
-        const dateSelectionnee = document.getElementById('date').value;
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gestion Présence - Grey Corner</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; padding: 15px; background: #fdfaf6; color: #444;
+        }
+        h1 { font-size: 1.4em; color: #2c3e50; text-align: center; margin-bottom: 20px; }
         
-        tbody.innerHTML = '';
+        .header { 
+            display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; 
+        }
+        .header input, .header button { 
+            flex: 1; min-width: 130px; padding: 12px; font-size: 15px; border-radius: 8px; border: 1px solid #ddd;
+        }
+        .btn-save { background: #4CAF50; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-print { background: #555; color: white; border: none; cursor: pointer; }
+        .btn-reset { background: #e74c3c; color: white; border: none; cursor: pointer; }
 
-        // Récupération des données pour cette date spécifique
-        const storageKey = 'donneesPresence_' + dateSelectionnee;
-        const savedData = localStorage.getItem(storageKey);
-        const donneesJour = savedData ? JSON.parse(savedData) : {};
+        .add-form { 
+            background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eee;
+        }
+        .add-form h3 { margin: 0 0 10px 0; font-size: 1em; color: #7f8c8d; }
+        .add-form input { width: 100%; margin: 5px 0; padding: 10px; border: 1px solid #eee; border-radius: 6px; }
+        .btn-add { width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 6px; margin-top: 5px; cursor: pointer; }
 
-        employes.forEach((emp, index) => {
-            const key = emp.nom + '_' + emp.prenom;
-            const d = donneesJour[key] || {};
+        .table-container { 
+            overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th, td { border-bottom: 1px solid #eee; padding: 12px 8px; text-align: center; font-size: 13px; }
+        th { background: #f8f9fa; color: #7f8c8d; font-weight: 600; text-transform: uppercase; font-size: 11px; }
+        
+        .name-cell { text-align: left; font-weight: bold; color: #2c3e50; min-width: 150px; }
+        input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        input[type="time"], input[type="text"] { width: 100%; border: 1px solid #f0f0f0; padding: 5px; border-radius: 4px; }
 
-            const tr = document.createElement('tr');
-            // On utilise des classes pour cibler les inputs sans se tromper d'index
-            tr.innerHTML = `
-                <td>${emp.nom} ${emp.prenom}</td>
-                <td>${emp.fonction}</td>
-                <td><input type="checkbox" class="check-on" ${d.on ? 'checked' : ''}></td>
-                <td><input type="checkbox" class="check-off" ${d.off ? 'checked' : ''}></td>
-                <td><input type="time" class="time-prevu" value="${d.heurePrevue || ''}"></td>
-                <td><input type="time" class="time-arrive" value="${d.heureArrivee || ''}"></td>
-                <td><input type="text" class="input-sig" placeholder="Sig." value="${d.signature || ''}"></td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
+        @media print {
+            .add-form, .header button:not(.btn-print) { display: none; }
+            body { padding: 0; }
+            .table-container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
 
-    function sauvegarderDonnees() {
-        const dateSelectionnee = document.getElementById('date').value;
-        if (!dateSelectionnee) {
-            alert('⚠️ Veuillez sélectionner une date.');
-            return;
+    <h1>🌿 Présences Grey Corner Fès</h1>
+
+    <div class="header">
+        <input type="date" id="datePicker">
+        <button class="btn-save" onclick="sauvegarder()">💾 Enregistrer</button>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimer</button>
+        <button class="btn-reset" onclick="resetTout()">🔄 Reset</button>
+    </div>
+
+    <div class="add-form">
+        <h3>➕ Ajouter un membre à l'équipe</h3>
+        <input type="text" id="addNom" placeholder="NOM">
+        <input type="text" id="addPrenom" placeholder="Prénom">
+        <input type="text" id="addFonction" placeholder="Poste (ex: CUISINE)">
+        <button class="btn-add" onclick="ajouterMembre()">Ajouter à la liste</button>
+    </div>
+
+    <div class="table-container">
+        <table id="tablePresence">
+            <thead>
+                <tr>
+                    <th>Nom & Prénom</th>
+                    <th>Poste</th>
+                    <th>ON</th>
+                    <th>OFF</th>
+                    <th>H. Prévue</th>
+                    <th>H. Arrivée</th>
+                    <th>Signature</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        const equipeInitiale = [
+            {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
+            {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
+            {nom: 'ENNHAIlI', prenom: 'SOUMIA', fonction: 'EXONOMAT 07:45'},
+            {nom: 'CHKAIRI', prenom: 'YOUSSEF', fonction: 'BAR'},
+            {nom: 'KHALOUQ', prenom: 'RACHID', fonction: 'BAR'},
+            {nom: 'FILALI', prenom: 'ABDERAFI', fonction: 'BAR'},
+            {nom: 'EL KOBBI', prenom: 'MOSTAFA', fonction: 'BAR'},
+            {nom: 'SBAI', prenom: 'HAKIMA', fonction: 'MENAGE'},
+            {nom: 'ELGORRAMY', prenom: 'SOUAD', fonction: 'MENAGE'},
+            {nom: 'ELGORRAMY', prenom: 'ANISSA', fonction: 'MENAGE'},
+            {nom: 'ELMCHAOURI', prenom: 'SOUAD', fonction: 'MENAGE'},
+            {nom: 'ZAIR', prenom: 'FATIMA', fonction: 'CUISINE'},
+            {nom: 'BELQASSE', prenom: 'KHAOULA', fonction: 'CUISINE'},
+            {nom: 'MAJDOUB', prenom: 'JIHANE', fonction: 'CUISINE'},
+            {nom: 'LEMSSIEH', prenom: 'JAWAD', fonction: 'CUISINE'},
+            {nom: 'BOURAHMA', prenom: 'ANAS', fonction: 'CUISINE'},
+            {nom: 'MOUJAHID', prenom: 'IMANE', fonction: 'CUISINE'},
+            {nom: 'IDRISSI', prenom: 'SAAD', fonction: 'CUISINE'},
+            {nom: 'GUETIBI', prenom: 'AMINE', fonction: 'SERVICE'},
+            {nom: 'EL MOEDEN', prenom: 'HASSAN', fonction: 'SERVICE'},
+            {nom: 'HIDARA', prenom: 'YOUSSEF', fonction: 'SERVICE'},
+            {nom: 'ALAOUI', prenom: 'LAZIZ', fonction: 'SERVICE'},
+            {nom: 'HATTAF', prenom: 'MOHAMED', fonction: 'SERVICE'},
+            {nom: 'MOHSINE', prenom: 'YOUNESS', fonction: 'SERVICE'}
+        ];
+
+        let equipeActuelle = JSON.parse(localStorage.getItem('equipe_grey_corner')) || equipeInitiale;
+
+        function afficher() {
+            const date = document.getElementById('datePicker').value;
+            const tbody = document.querySelector('#tablePresence tbody');
+            tbody.innerHTML = '';
+
+            const dataSauvegardee = JSON.parse(localStorage.getItem('presence_' + date)) || {};
+
+            equipeActuelle.forEach((pers, index) => {
+                const id = pers.nom + '_' + pers.prenom;
+                const d = dataSauvegardee[id] || {};
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="name-cell">${pers.nom} ${pers.prenom}</td>
+                    <td>${pers.fonction}</td>
+                    <td><input type="checkbox" class="c-on" ${d.on ? 'checked' : ''}></td>
+                    <td><input type="checkbox" class="c-off" ${d.off ? 'checked' : ''}></td>
+                    <td><input type="time" class="t-pre" value="${d.hPre || ''}"></td>
+                    <td><input type="time" class="t-arr" value="${d.hArr || ''}"></td>
+                    <td><input type="text" class="i-sig" value="${d.sig || ''}"></td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
-        const lignes = document.querySelectorAll('#tablePresence tbody tr');
-        const dateData = {};
+        function sauvegarder() {
+            const date = document.getElementById('datePicker').value;
+            if(!date) return alert("Sélectionnez une date.");
 
-        lignes.forEach((ligne, index) => {
-            const emp = employes[index];
-            if (emp) {
-                const key = emp.nom + '_' + emp.prenom;
-                dateData[key] = {
-                    on: ligne.querySelector('.check-on').checked,
-                    off: ligne.querySelector('.check-off').checked,
-                    heurePrevue: ligne.querySelector('.time-prevu').value,
-                    heureArrivee: ligne.querySelector('.time-arrive').value,
-                    signature: ligne.querySelector('.input-sig').value
+            const lignes = document.querySelectorAll('#tablePresence tbody tr');
+            const dataJours = {};
+
+            lignes.forEach((tr, i) => {
+                const pers = equipeActuelle[i];
+                const id = pers.nom + '_' + pers.prenom;
+                dataJours[id] = {
+                    on: tr.querySelector('.c-on').checked,
+                    off: tr.querySelector('.c-off').checked,
+                    hPre: tr.querySelector('.t-pre').value,
+                    hArr: tr.querySelector('.t-arr').value,
+                    sig: tr.querySelector('.i-sig').value
                 };
+            });
+
+            localStorage.setItem('presence_' + date, JSON.stringify(dataJours));
+            localStorage.setItem('equipe_grey_corner', JSON.stringify(equipeActuelle));
+            alert("✅ Données enregistrées pour le " + date);
+        }
+
+        function ajouterMembre() {
+            const n = document.getElementById('addNom').value.toUpperCase();
+            const p = document.getElementById('addPrenom').value;
+            const f = document.getElementById('addFonction').value;
+            if(n && p) {
+                equipeActuelle.push({nom: n, prenom: p, fonction: f});
+                localStorage.setItem('equipe_grey_corner', JSON.stringify(equipeActuelle));
+                afficher();
             }
+        }
+
+        function resetTout() {
+            if(confirm("Voulez-vous restaurer la liste par défaut ?")) {
+                localStorage.removeItem('equipe_grey_corner');
+                location.reload();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('datePicker').value = today;
+            document.getElementById('datePicker').addEventListener('change', afficher);
+            afficher();
         });
-
-        // Sauvegarde par date
-        localStorage.setItem('donneesPresence_' + dateSelectionnee, JSON.stringify(dateData));
-        // Sauvegarde de la liste des employés au cas où elle a été modifiée
-        localStorage.setItem('employesPresence', JSON.stringify(employes));
-        
-        alert('✅ Les présences ont été enregistrées avec succès pour le ' + dateSelectionnee);
-    }
-
-    function ajouterEmploye() {
-        const nom = document.getElementById('nomAjout').value.toUpperCase().trim();
-        const prenom = document.getElementById('prenomAjout').value.toUpperCase().trim();
-        const fonction = document.getElementById('fonctionAjout').value.toUpperCase().trim();
-        
-        if (nom && prenom) {
-            employes.push({nom, prenom, fonction});
-            localStorage.setItem('employesPresence', JSON.stringify(employes));
-            document.getElementById('nomAjout').value = '';
-            document.getElementById('prenomAjout').value = '';
-            document.getElementById('fonctionAjout').value = '';
-            afficherTable();
-        } else {
-            alert("Merci de renseigner le nom et le prénom de l'équipier.");
-        }
-    }
-
-    function restaurerListe() {
-        if (confirm('Voulez-vous réinitialiser la liste à 24 employés ?')) {
-            localStorage.clear(); // Nettoyage complet si nécessaire
-            employes = [...employesInit];
-            localStorage.setItem('employesPresence', JSON.stringify(employes));
-            location.reload(); // Recharge la page pour tout remettre à zéro proprement
-        }
-    }
-
-    function imprimer() {
-        window.print();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // Initialisation de la date si vide
-        if(!document.getElementById('date').value) {
-            document.getElementById('date').value = '2026-01-18';
-        }
-        
-        document.getElementById('date').addEventListener('change', afficherTable);
-        afficherTable();
-    });
-</script>
+    </script>
+</body>
+</html>
