@@ -3,128 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Grey Corner - Live Presence</title>
+    <title>Saisie Grey Corner - Premium</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        :root {
-            --primary: #2c3e50;
-            --accent: #c5a059; /* Or discret pour le côté haut de gamme */
-            --bg: #f8f5f2;
-            --card-bg: #ffffff;
-            --success: #27ae60;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--bg); 
-            margin: 0; padding: 10px; color: var(--primary);
-            line-height: 1.4;
-        }
-
-        header {
-            text-align: center; padding: 20px 0; border-bottom: 1px solid rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-
-        h1 { font-size: 1.5rem; margin: 0; letter-spacing: 1px; text-transform: uppercase; color: var(--primary); }
-        .live-status { font-size: 0.7rem; color: var(--success); font-weight: bold; margin-top: 5px; }
-
-        .controls {
-            display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;
-        }
-
-        input[type="date"] {
-            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
-            font-size: 16px; background: white; color: var(--primary); text-align: center;
-        }
-
-        .btn-sync {
-            background-color: var(--primary); color: white; border: none; padding: 15px;
-            border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
-            transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-
-        .btn-sync:active { transform: scale(0.98); }
-
-        /* Design en Cartes pour Mobile */
-        .staff-container { display: flex; flex-direction: column; gap: 12px; }
-
-        .staff-card {
-            background: var(--card-bg); padding: 15px; border-radius: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);
-            display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 10px;
-        }
-
-        .staff-info { grid-column: 1; }
-        .staff-name { font-weight: 700; font-size: 1rem; display: block; color: var(--primary); }
-        .staff-role { font-size: 0.75rem; color: #888; text-transform: uppercase; }
-
-        .staff-actions { 
-            grid-column: 2; grid-row: 1 / 3; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; gap: 8px; padding-left: 15px;
-            border-left: 1px solid #f0f0f0;
-        }
-
-        .toggle-group { display: flex; gap: 15px; align-items: center; }
-        .toggle-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .toggle-item span { font-size: 0.65rem; font-weight: bold; color: #aaa; }
-
-        .time-group { 
-            grid-column: 1; display: flex; gap: 10px; margin-top: 5px;
-        }
-
-        .time-input-wrapper { flex: 1; }
-        .time-input-wrapper label { font-size: 0.65rem; color: #999; display: block; margin-bottom: 3px; }
-        input[type="time"] {
-            width: 100%; border: 1px solid #eee; padding: 6px; border-radius: 6px;
-            font-size: 0.9rem; color: var(--primary); background: #fafafa;
-        }
-
-        input[type="checkbox"] {
-            width: 26px; height: 26px; accent-color: var(--accent); cursor: pointer;
-        }
-
-        @media (min-width: 600px) {
-            .staff-container { display: grid; grid-template-columns: 1fr 1fr; }
-        }
+        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
+        header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; }
+        h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+        .controls { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+        .btn { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.9rem; transition: 0.3s; }
+        .btn-sheet { background: var(--primary); }
+        .btn-pdf { background: #7f8c8d; }
+        .btn:disabled { opacity: 0.5; }
+        .staff-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .staff-name { font-weight: bold; font-size: 0.95rem; display: block; color: var(--primary); }
+        .staff-info { font-size: 0.75rem; color: #888; text-transform: uppercase; }
+        .time-inputs { display: flex; gap: 8px; margin-top: 8px; }
+        .time-group { display: flex; flex-direction: column; }
+        .time-group label { font-size: 0.6rem; color: #aaa; margin-bottom: 2px; }
+        input[type="time"] { border: 1px solid #eee; padding: 5px; border-radius: 6px; font-size: 0.85rem; background: #fafafa; }
+        .check-group { display: flex; gap: 15px; }
+        .check-item { text-align: center; }
+        .check-item label { font-size: 0.65rem; font-weight: bold; display: block; margin-bottom: 4px; }
+        input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; }
+        #report-area { padding: 5px; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Grey Corner</h1>
-        <div class="live-status">● SYNCHRONISATION EN DIRECT</div>
+        <h1>🌿 Grey Corner Presence</h1>
+        <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd; font-size:1rem;">
     </header>
 
     <div class="controls">
-        <input type="date" id="datePicker">
-        <button class="btn-sync" id="btnSync" onclick="synchroniserVersSheet()">
-            <span>📊</span> EXPORTER VERS GOOGLE SHEETS
-        </button>
+        <button class="btn btn-sheet" id="btnExport" onclick="exportToSheet()">📊 EXPORTER VERS GOOGLE SHEETS</button>
+        <button class="btn btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT PDF</button>
     </div>
 
-    <div id="staffContainer" class="staff-container">
-        </div>
+    <div id="report-area">
+        <div id="staffList"></div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
+        // Configuration Firebase et Google Script
         const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
-        const sheetUrl = "https://script.google.com/macros/s/AKfycbwNXY6UXFyfUgHdQo_P5gKObWfxncOzX2WtDmCgoPn15_mQP8iydwyr1wYOvMY4psu6/exec";
+        const sheetUrl = "https://script.google.com/macros/s/AKfycbygPZ7Vyt5sgGHhU8yg6o8ITj0B7MYHOkNAhJHj2V3ZCMuL8F73U-63tYSct_FarVQ/exec";
         
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        // Liste des 24 membres de l'équipe
         const equipe = [
             {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'},
-            {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT 07:45'},
+            {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT'},
+            {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
             {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'},
             {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'},
             {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'},
-            {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
             {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'},
             {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'},
             {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'},
@@ -146,70 +86,105 @@
 
         const dateInput = document.getElementById('datePicker');
 
-        function loadLive() {
+        function load() {
             const date = dateInput.value;
-            database.ref('presences/' + date).on('value', (snap) => {
+            database.ref('presences/' + date).on('value', snap => {
                 const data = snap.val() || {};
-                const container = document.getElementById('staffContainer');
-                container.innerHTML = '';
-
+                const list = document.getElementById('staffList');
+                list.innerHTML = '';
                 equipe.forEach(emp => {
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
-                    const card = document.createElement('div');
-                    card.className = 'staff-card';
-                    card.innerHTML = `
-                        <div class="staff-info">
+                    const div = document.createElement('div');
+                    div.className = 'staff-card';
+                    div.innerHTML = `
+                        <div>
                             <span class="staff-name">${emp.nom} ${emp.prenom}</span>
-                            <span class="staff-role">${emp.poste}</span>
+                            <span class="staff-info">${emp.poste}</span>
+                            <div class="time-inputs">
+                                <div class="time-group">
+                                    <label>PRÉVU</label>
+                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}">
+                                </div>
+                                <div class="time-group">
+                                    <label>ARRIVÉE</label>
+                                    <input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">
+                                </div>
+                            </div>
                         </div>
-                        <div class="staff-actions">
-                            <div class="toggle-item"><span>ON</span><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}></div>
-                            <div class="toggle-item"><span>OFF</span><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}></div>
-                        </div>
-                        <div class="time-group">
-                            <div class="time-input-wrapper"><label>Prévu</label><input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}"></div>
-                            <div class="time-input-wrapper"><label>Arrivée</label><input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}"></div>
+                        <div class="check-group">
+                            <div class="check-item">
+                                <label>ON</label>
+                                <input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}>
+                            </div>
+                            <div class="check-item">
+                                <label>OFF</label>
+                                <input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}>
+                            </div>
                         </div>
                     `;
-                    container.appendChild(card);
+                    list.appendChild(div);
                 });
             });
         }
 
-        function upd(id, f, v) {
-            database.ref('presences/' + dateInput.value + '/' + id).update({[f]: v});
+        function upd(id, field, value) {
+            database.ref('presences/' + dateInput.value + '/' + id).update({ [field]: value });
         }
 
-        async function synchroniserVersSheet() {
+        async function exportToSheet() {
+            const btn = document.getElementById('btnExport');
             const date = dateInput.value;
-            const btn = document.getElementById('btnSync');
-            btn.innerText = "⏳ ENVOI..."; btn.disabled = true;
+            btn.innerText = "⏳ EXPORT EN COURS...";
+            btn.disabled = true;
 
-            database.ref('presences/' + date).once('value', async (snap) => {
+            database.ref('presences/' + date).once('value', async snap => {
                 const data = snap.val() || {};
-                const list = equipe.map(e => {
-                    const d = data[e.nom+'_'+e.prenom] || {};
+                const payload = equipe.map(e => {
+                    const d = data[e.nom + '_' + e.prenom] || {};
                     return {
-                        nomPrenom: e.nom+' '+e.prenom, fonction: e.poste,
-                        on: d.on||false, off: d.off||false,
-                        hPrevue: d.hP||'', hArrivee: d.hA||'', signature: ''
+                        nomPrenom: e.nom + ' ' + e.prenom,
+                        fonction: e.poste,
+                        on: d.on || false,
+                        off: d.off || false,
+                        hPrevue: d.hP || '',
+                        hArrivee: d.hA || ''
                     };
                 });
 
                 try {
-                    await fetch(sheetUrl, { method:'POST', mode:'no-cors', body: JSON.stringify({date:date, presences:list}) });
-                    alert("✅ Synchronisé avec Google Sheets !");
-                } catch(e) { alert("❌ Erreur de connexion"); }
-                finally { btn.innerText = "📊 EXPORTER VERS GOOGLE SHEETS"; btn.disabled = false; }
+                    await fetch(sheetUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        cache: 'no-cache',
+                        body: JSON.stringify({ date: date, presences: payload })
+                    });
+                    alert("✅ Données envoyées avec succès vers votre Google Sheet !");
+                } catch (error) {
+                    alert("❌ Erreur lors de l'exportation. Vérifiez votre connexion.");
+                } finally {
+                    btn.innerText = "📊 EXPORTER VERS GOOGLE SHEETS";
+                    btn.disabled = false;
+                }
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            dateInput.value = new Date().toISOString().split('T')[0];
-            dateInput.addEventListener('change', loadLive);
-            loadLive();
-        });
+        function downloadPDF() {
+            const element = document.getElementById('report-area');
+            const opt = {
+                margin: 10,
+                filename: 'Rapport_Grey_Corner_' + dateInput.value + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // Initialisation à la date du jour
+        dateInput.value = new Date().toISOString().split('T')[0];
+        dateInput.addEventListener('change', load);
+        load();
     </script>
 </body>
 </html>
