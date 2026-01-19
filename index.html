@@ -38,7 +38,7 @@
         th { background: #f8f9fa; color: #7f8c8d; font-weight: 600; text-transform: uppercase; font-size: 11px; }
         
         .name-cell { text-align: left; font-weight: bold; color: #2c3e50; min-width: 150px; }
-        input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
         input[type="time"], input[type="text"] { width: 100%; border: 1px solid #f0f0f0; padding: 5px; border-radius: 4px; }
 
         @media print {
@@ -54,7 +54,7 @@
 
     <div class="header">
         <input type="date" id="datePicker">
-        <button class="btn-save" onclick="sauvegarder()">💾 Enregistrer</button>
+        <button class="btn-save" id="saveBtn" onclick="sauvegarder()">💾 Sauvegarder en Ligne</button>
         <button class="btn-print" onclick="window.print()">🖨️ Imprimer</button>
         <button class="btn-reset" onclick="resetTout()">🔄 Reset</button>
     </div>
@@ -80,12 +80,13 @@
                     <th>Signature</th>
                 </tr>
             </thead>
-            <tbody>
-                </tbody>
+            <tbody></tbody>
         </table>
     </div>
 
     <script>
+        const urlScript = "https://script.google.com/macros/s/AKfycbwNXY6UXFyfUgHdQo_P5gKObWfxncOzX2WtDmCgoPn15_mQP8iydwyr1wYOvMY4psu6/exec";
+
         const equipeInitiale = [
             {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
@@ -119,13 +120,11 @@
             const date = document.getElementById('datePicker').value;
             const tbody = document.querySelector('#tablePresence tbody');
             tbody.innerHTML = '';
-
             const dataSauvegardee = JSON.parse(localStorage.getItem('presence_' + date)) || {};
 
             equipeActuelle.forEach((pers, index) => {
                 const id = pers.nom + '_' + pers.prenom;
                 const d = dataSauvegardee[id] || {};
-
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="name-cell">${pers.nom} ${pers.prenom}</td>
@@ -140,28 +139,61 @@
             });
         }
 
-        function sauvegarder() {
+        async function sauvegarder() {
             const date = document.getElementById('datePicker').value;
             if(!date) return alert("Sélectionnez une date.");
+            
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerText = "⏳ Envoi en cours...";
 
             const lignes = document.querySelectorAll('#tablePresence tbody tr');
-            const dataJours = {};
+            const dataLocale = {};
+            const listePresences = [];
 
             lignes.forEach((tr, i) => {
                 const pers = equipeActuelle[i];
                 const id = pers.nom + '_' + pers.prenom;
-                dataJours[id] = {
+                
+                const record = {
                     on: tr.querySelector('.c-on').checked,
                     off: tr.querySelector('.c-off').checked,
                     hPre: tr.querySelector('.t-pre').value,
                     hArr: tr.querySelector('.t-arr').value,
                     sig: tr.querySelector('.i-sig').value
                 };
+
+                dataLocale[id] = record;
+                
+                listePresences.push({
+                    nomPrenom: pers.nom + ' ' + pers.prenom,
+                    fonction: pers.fonction,
+                    on: record.on,
+                    off: record.off,
+                    hPrevue: record.hPre,
+                    hArrivee: record.hArr,
+                    signature: record.sig
+                });
             });
 
-            localStorage.setItem('presence_' + date, JSON.stringify(dataJours));
-            localStorage.setItem('equipe_grey_corner', JSON.stringify(equipeActuelle));
-            alert("✅ Données enregistrées pour le " + date);
+            // 1. Sauvegarde locale (toujours utile)
+            localStorage.setItem('presence_' + date, JSON.stringify(dataLocale));
+
+            // 2. Envoi vers Google Sheets
+            try {
+                await fetch(urlScript, {
+                    method: 'POST',
+                    mode: 'no-cors', // Important pour Google Apps Script
+                    cache: 'no-cache',
+                    body: JSON.stringify({ date: date, presences: listePresences })
+                });
+                alert("✅ Succès ! Les données sont synchronisées sur Google Sheets.");
+            } catch (error) {
+                alert("⚠️ Erreur de réseau, mais les données sont sauvées sur cet appareil.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "💾 Sauvegarder en Ligne";
+            }
         }
 
         function ajouterMembre() {
@@ -177,7 +209,7 @@
 
         function resetTout() {
             if(confirm("Voulez-vous restaurer la liste par défaut ?")) {
-                localStorage.removeItem('equipe_grey_corner');
+                localStorage.clear();
                 location.reload();
             }
         }
