@@ -2,223 +2,125 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Gestion Présence - Grey Corner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Présence - Grey Corner</title>
     <style>
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0; padding: 15px; background: #fdfaf6; color: #444;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #fdfaf6; padding: 15px; margin: 0; color: #444; }
         h1 { font-size: 1.4em; color: #2c3e50; text-align: center; margin-bottom: 20px; }
-        
-        .header { 
-            display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; 
-        }
-        .header input, .header button { 
-            flex: 1; min-width: 130px; padding: 12px; font-size: 15px; border-radius: 8px; border: 1px solid #ddd;
-        }
-        .btn-save { background: #4CAF50; color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-print { background: #555; color: white; border: none; cursor: pointer; }
-        .btn-reset { background: #e74c3c; color: white; border: none; cursor: pointer; }
-
-        .add-form { 
-            background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eee;
-        }
-        .add-form h3 { margin: 0 0 10px 0; font-size: 1em; color: #7f8c8d; }
-        .add-form input { width: 100%; margin: 5px 0; padding: 10px; border: 1px solid #eee; border-radius: 6px; }
-        .btn-add { width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 6px; margin-top: 5px; cursor: pointer; }
-
-        .table-container { 
-            overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
+        .live-indicator { color: #4CAF50; font-size: 0.8em; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .header { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .header input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 15px; }
+        .table-container { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; min-width: 600px; }
         th, td { border-bottom: 1px solid #eee; padding: 12px 8px; text-align: center; font-size: 13px; }
-        th { background: #f8f9fa; color: #7f8c8d; font-weight: 600; text-transform: uppercase; font-size: 11px; }
-        
+        th { background: #f8f9fa; color: #7f8c8d; font-size: 11px; text-transform: uppercase; }
         .name-cell { text-align: left; font-weight: bold; color: #2c3e50; min-width: 150px; }
         input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
         input[type="time"], input[type="text"] { width: 100%; border: 1px solid #f0f0f0; padding: 5px; border-radius: 4px; }
-
-        @media print {
-            .add-form, .header button:not(.btn-print) { display: none; }
-            body { padding: 0; }
-            .table-container { box-shadow: none; }
-        }
     </style>
 </head>
 <body>
 
-    <h1>🌿 Présences Grey Corner Fès</h1>
+    <h1>🌿 Grey Corner Live - 2026</h1>
+    <div class="live-indicator">● CONNEXION EN DIRECT ÉTABLIE</div>
 
     <div class="header">
         <input type="date" id="datePicker">
-        <button class="btn-save" id="saveBtn" onclick="sauvegarder()">💾 Sauvegarder en Ligne</button>
-        <button class="btn-print" onclick="window.print()">🖨️ Imprimer</button>
-        <button class="btn-reset" onclick="resetTout()">🔄 Reset</button>
-    </div>
-
-    <div class="add-form">
-        <h3>➕ Ajouter un membre à l'équipe</h3>
-        <input type="text" id="addNom" placeholder="NOM">
-        <input type="text" id="addPrenom" placeholder="Prénom">
-        <input type="text" id="addFonction" placeholder="Poste (ex: CUISINE)">
-        <button class="btn-add" onclick="ajouterMembre()">Ajouter à la liste</button>
     </div>
 
     <div class="table-container">
         <table id="tablePresence">
             <thead>
                 <tr>
-                    <th>Nom & Prénom</th>
+                    <th>Membre</th>
                     <th>Poste</th>
                     <th>ON</th>
                     <th>OFF</th>
                     <th>H. Prévue</th>
                     <th>H. Arrivée</th>
-                    <th>Signature</th>
+                    <th>Sig.</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
 
-    <script>
-        const urlScript = "https://script.google.com/macros/s/AKfycbwNXY6UXFyfUgHdQo_P5gKObWfxncOzX2WtDmCgoPn15_mQP8iydwyr1wYOvMY4psu6/exec";
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-        const equipeInitiale = [
-            {nom: 'SALIL', prenom: 'HOUDA', fonction: 'CAISSE'},
-            {nom: 'BENKHADA', prenom: 'ABDESLAM', fonction: 'CAISSE'},
-            {nom: 'ENNHAIlI', prenom: 'SOUMIA', fonction: 'EXONOMAT 07:45'},
-            {nom: 'CHKAIRI', prenom: 'YOUSSEF', fonction: 'BAR'},
-            {nom: 'KHALOUQ', prenom: 'RACHID', fonction: 'BAR'},
-            {nom: 'FILALI', prenom: 'ABDERAFI', fonction: 'BAR'},
-            {nom: 'EL KOBBI', prenom: 'MOSTAFA', fonction: 'BAR'},
-            {nom: 'SBAI', prenom: 'HAKIMA', fonction: 'MENAGE'},
-            {nom: 'ELGORRAMY', prenom: 'SOUAD', fonction: 'MENAGE'},
-            {nom: 'ELGORRAMY', prenom: 'ANISSA', fonction: 'MENAGE'},
-            {nom: 'ELMCHAOURI', prenom: 'SOUAD', fonction: 'MENAGE'},
-            {nom: 'ZAIR', prenom: 'FATIMA', fonction: 'CUISINE'},
-            {nom: 'BELQASSE', prenom: 'KHAOULA', fonction: 'CUISINE'},
-            {nom: 'MAJDOUB', prenom: 'JIHANE', fonction: 'CUISINE'},
-            {nom: 'LEMSSIEH', prenom: 'JAWAD', fonction: 'CUISINE'},
-            {nom: 'BOURAHMA', prenom: 'ANAS', fonction: 'CUISINE'},
-            {nom: 'MOUJAHID', prenom: 'IMANE', fonction: 'CUISINE'},
-            {nom: 'IDRISSI', prenom: 'SAAD', fonction: 'CUISINE'},
-            {nom: 'GUETIBI', prenom: 'AMINE', fonction: 'SERVICE'},
-            {nom: 'EL MOEDEN', prenom: 'HASSAN', fonction: 'SERVICE'},
-            {nom: 'HIDARA', prenom: 'YOUSSEF', fonction: 'SERVICE'},
-            {nom: 'ALAOUI', prenom: 'LAZIZ', fonction: 'SERVICE'},
-            {nom: 'HATTAF', prenom: 'MOHAMED', fonction: 'SERVICE'},
-            {nom: 'MOHSINE', prenom: 'YOUNESS', fonction: 'SERVICE'}
+    <script>
+        // CONFIGURATION FIREBASE
+        const firebaseConfig = {
+            databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const equipe = [
+            {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
+            {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'},
+            {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT 07:45'},
+            {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'},
+            {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'},
+            {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'},
+            {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
+            {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'},
+            {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'},
+            {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'},
+            {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'},
+            {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'},
+            {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
+            {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'},
+            {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'},
+            {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
+            {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'},
+            {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'},
+            {nom: 'GUETIBI', prenom: 'AMINE', poste: 'SERVICE'},
+            {nom: 'EL MOEDEN', prenom: 'HASSAN', poste: 'SERVICE'},
+            {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'},
+            {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'},
+            {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'},
+            {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
         ];
 
-        let equipeActuelle = JSON.parse(localStorage.getItem('equipe_grey_corner')) || equipeInitiale;
+        const dateInput = document.getElementById('datePicker');
+        
+        function chargerDonneesLive() {
+            const date = dateInput.value;
+            if(!date) return;
+            database.ref('presences/' + date).on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                const tbody = document.querySelector('#tablePresence tbody');
+                tbody.innerHTML = '';
 
-        function afficher() {
-            const date = document.getElementById('datePicker').value;
-            const tbody = document.querySelector('#tablePresence tbody');
-            tbody.innerHTML = '';
-            const dataSauvegardee = JSON.parse(localStorage.getItem('presence_' + date)) || {};
-
-            equipeActuelle.forEach((pers, index) => {
-                const id = pers.nom + '_' + pers.prenom;
-                const d = dataSauvegardee[id] || {};
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="name-cell">${pers.nom} ${pers.prenom}</td>
-                    <td>${pers.fonction}</td>
-                    <td><input type="checkbox" class="c-on" ${d.on ? 'checked' : ''}></td>
-                    <td><input type="checkbox" class="c-off" ${d.off ? 'checked' : ''}></td>
-                    <td><input type="time" class="t-pre" value="${d.hPre || ''}"></td>
-                    <td><input type="time" class="t-arr" value="${d.hArr || ''}"></td>
-                    <td><input type="text" class="i-sig" value="${d.sig || ''}"></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        async function sauvegarder() {
-            const date = document.getElementById('datePicker').value;
-            if(!date) return alert("Sélectionnez une date.");
-            
-            const btn = document.getElementById('saveBtn');
-            btn.disabled = true;
-            btn.innerText = "⏳ Envoi en cours...";
-
-            const lignes = document.querySelectorAll('#tablePresence tbody tr');
-            const dataLocale = {};
-            const listePresences = [];
-
-            lignes.forEach((tr, i) => {
-                const pers = equipeActuelle[i];
-                const id = pers.nom + '_' + pers.prenom;
-                
-                const record = {
-                    on: tr.querySelector('.c-on').checked,
-                    off: tr.querySelector('.c-off').checked,
-                    hPre: tr.querySelector('.t-pre').value,
-                    hArr: tr.querySelector('.t-arr').value,
-                    sig: tr.querySelector('.i-sig').value
-                };
-
-                dataLocale[id] = record;
-                
-                listePresences.push({
-                    nomPrenom: pers.nom + ' ' + pers.prenom,
-                    fonction: pers.fonction,
-                    on: record.on,
-                    off: record.off,
-                    hPrevue: record.hPre,
-                    hArrivee: record.hArr,
-                    signature: record.sig
+                equipe.forEach(emp => {
+                    const id = emp.nom + '_' + emp.prenom;
+                    const d = data[id] || {};
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="name-cell">${emp.nom} ${emp.prenom}</td>
+                        <td>${emp.poste}</td>
+                        <td><input type="checkbox" onchange="update('${id}', 'on', this.checked)" ${d.on ? 'checked' : ''}></td>
+                        <td><input type="checkbox" onchange="update('${id}', 'off', this.checked)" ${d.off ? 'checked' : ''}></td>
+                        <td><input type="time" onchange="update('${id}', 'hPre', this.value)" value="${d.hPre || ''}"></td>
+                        <td><input type="time" onchange="update('${id}', 'hArr', this.value)" value="${d.hArr || ''}"></td>
+                        <td><input type="text" placeholder="Sig" onchange="update('${id}', 'sig', this.value)" value="${d.sig || ''}"></td>
+                    `;
+                    tbody.appendChild(tr);
                 });
             });
-
-            // 1. Sauvegarde locale (toujours utile)
-            localStorage.setItem('presence_' + date, JSON.stringify(dataLocale));
-
-            // 2. Envoi vers Google Sheets
-            try {
-                await fetch(urlScript, {
-                    method: 'POST',
-                    mode: 'no-cors', // Important pour Google Apps Script
-                    cache: 'no-cache',
-                    body: JSON.stringify({ date: date, presences: listePresences })
-                });
-                alert("✅ Succès ! Les données sont synchronisées sur Google Sheets.");
-            } catch (error) {
-                alert("⚠️ Erreur de réseau, mais les données sont sauvées sur cet appareil.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "💾 Sauvegarder en Ligne";
-            }
         }
 
-        function ajouterMembre() {
-            const n = document.getElementById('addNom').value.toUpperCase();
-            const p = document.getElementById('addPrenom').value;
-            const f = document.getElementById('addFonction').value;
-            if(n && p) {
-                equipeActuelle.push({nom: n, prenom: p, fonction: f});
-                localStorage.setItem('equipe_grey_corner', JSON.stringify(equipeActuelle));
-                afficher();
-            }
-        }
-
-        function resetTout() {
-            if(confirm("Voulez-vous restaurer la liste par défaut ?")) {
-                localStorage.clear();
-                location.reload();
-            }
+        function update(empId, champ, valeur) {
+            const date = dateInput.value;
+            database.ref('presences/' + date + '/' + empId).update({ [champ]: valeur });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('datePicker').value = today;
-            document.getElementById('datePicker').addEventListener('change', afficher);
-            afficher();
+            dateInput.value = new Date().toISOString().split('T')[0];
+            dateInput.addEventListener('change', chargerDonneesLive);
+            chargerDonneesLive();
         });
     </script>
 </body>
