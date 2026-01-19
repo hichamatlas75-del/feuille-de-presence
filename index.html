@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Saisie Grey Corner - Premium</title>
+    <title>Saisie Grey Corner - Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
         header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; }
         h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
-        .controls { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
-        .btn { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.9rem; transition: 0.3s; }
-        .btn-sheet { background: var(--primary); }
-        .btn-pdf { background: #7f8c8d; }
-        .btn:disabled { opacity: 0.5; }
+        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.9rem; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .staff-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .staff-name { font-weight: bold; font-size: 0.95rem; display: block; color: var(--primary); }
         .staff-info { font-size: 0.75rem; color: #888; text-transform: uppercase; }
@@ -32,14 +28,11 @@
 <body>
 
     <header>
-        <h1>🌿 Grey Corner Presence</h1>
+        <h1>🌿 Grey Corner Live</h1>
         <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd; font-size:1rem;">
     </header>
 
-    <div class="controls">
-        <button class="btn btn-sheet" id="btnExport" onclick="exportToSheet()">📊 EXPORTER VERS GOOGLE SHEETS</button>
-        <button class="btn btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT PDF</button>
-    </div>
+    <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT DU JOUR (PDF)</button>
 
     <div id="report-area">
         <div id="staffList"></div>
@@ -49,46 +42,29 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // Configuration Firebase et Google Script
         const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
-        const sheetUrl = "https://script.google.com/macros/s/AKfycbygPZ7Vyt5sgGHhU8yg6o8ITj0B7MYHOkNAhJHj2V3ZCMuL8F73U-63tYSct_FarVQ/exec";
-        
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Liste des 24 membres de l'équipe
         const equipe = [
-            {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
-            {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'},
-            {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT'},
-            {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
-            {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'},
-            {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'},
-            {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'},
-            {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'},
-            {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'},
-            {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'},
-            {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'},
-            {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'},
-            {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
-            {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'},
-            {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'},
-            {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
-            {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'},
-            {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'},
-            {nom: 'GUETIBI', prenom: 'AMINE', poste: 'SERVICE'},
-            {nom: 'EL MOEDEN', prenom: 'HASSAN', poste: 'SERVICE'},
-            {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'},
-            {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'},
-            {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'},
-            {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
+            {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'}, {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'},
+            {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT'}, {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
+            {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'},
+            {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'}, {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'},
+            {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'},
+            {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'},
+            {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'}, {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'},
+            {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
+            {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'}, {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'},
+            {nom: 'GUETIBI', prenom: 'AMINE', poste: 'SERVICE'}, {nom: 'EL MOEDEN', prenom: 'HASSAN', poste: 'SERVICE'},
+            {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'}, {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'},
+            {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
         ];
 
         const dateInput = document.getElementById('datePicker');
 
         function load() {
-            const date = dateInput.value;
-            database.ref('presences/' + date).on('value', snap => {
+            database.ref('presences/' + dateInput.value).on('value', snap => {
                 const data = snap.val() || {};
                 const list = document.getElementById('staffList');
                 list.innerHTML = '';
@@ -102,25 +78,13 @@
                             <span class="staff-name">${emp.nom} ${emp.prenom}</span>
                             <span class="staff-info">${emp.poste}</span>
                             <div class="time-inputs">
-                                <div class="time-group">
-                                    <label>PRÉVU</label>
-                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}">
-                                </div>
-                                <div class="time-group">
-                                    <label>ARRIVÉE</label>
-                                    <input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">
-                                </div>
+                                <div class="time-group"><label>PRÉVU</label><input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}"></div>
+                                <div class="time-group"><label>ARRIVÉE</label><input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}"></div>
                             </div>
                         </div>
                         <div class="check-group">
-                            <div class="check-item">
-                                <label>ON</label>
-                                <input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}>
-                            </div>
-                            <div class="check-item">
-                                <label>OFF</label>
-                                <input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}>
-                            </div>
+                            <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}></div>
+                            <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}></div>
                         </div>
                     `;
                     list.appendChild(div);
@@ -128,60 +92,14 @@
             });
         }
 
-        function upd(id, field, value) {
-            database.ref('presences/' + dateInput.value + '/' + id).update({ [field]: value });
-        }
-
-        async function exportToSheet() {
-            const btn = document.getElementById('btnExport');
-            const date = dateInput.value;
-            btn.innerText = "⏳ EXPORT EN COURS...";
-            btn.disabled = true;
-
-            database.ref('presences/' + date).once('value', async snap => {
-                const data = snap.val() || {};
-                const payload = equipe.map(e => {
-                    const d = data[e.nom + '_' + e.prenom] || {};
-                    return {
-                        nomPrenom: e.nom + ' ' + e.prenom,
-                        fonction: e.poste,
-                        on: d.on || false,
-                        off: d.off || false,
-                        hPrevue: d.hP || '',
-                        hArrivee: d.hA || ''
-                    };
-                });
-
-                try {
-                    await fetch(sheetUrl, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        cache: 'no-cache',
-                        body: JSON.stringify({ date: date, presences: payload })
-                    });
-                    alert("✅ Données envoyées avec succès vers votre Google Sheet !");
-                } catch (error) {
-                    alert("❌ Erreur lors de l'exportation. Vérifiez votre connexion.");
-                } finally {
-                    btn.innerText = "📊 EXPORTER VERS GOOGLE SHEETS";
-                    btn.disabled = false;
-                }
-            });
-        }
+        function upd(id, f, v) { database.ref('presences/'+dateInput.value+'/'+id).update({[f]:v}); }
 
         function downloadPDF() {
             const element = document.getElementById('report-area');
-            const opt = {
-                margin: 10,
-                filename: 'Rapport_Grey_Corner_' + dateInput.value + '.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+            const opt = { margin: 10, filename: 'Grey_Corner_'+dateInput.value+'.pdf', image: { type:'jpeg', quality:0.98 }, html2canvas: { scale:2 }, jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } };
             html2pdf().set(opt).from(element).save();
         }
 
-        // Initialisation à la date du jour
         dateInput.value = new Date().toISOString().split('T')[0];
         dateInput.addEventListener('change', load);
         load();
