@@ -6,12 +6,17 @@
     <title>Saisie Grey Corner - Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; }
+        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; --locked: #bdc3c7; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
         header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; }
         h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
         .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.9rem; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .staff-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        .staff-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
+        
+        /* Style quand verrouillé */
+        .staff-card.locked { opacity: 0.7; background: #f4f4f4; pointer-events: none; }
+        
         .staff-name { font-weight: bold; font-size: 0.95rem; display: block; color: var(--primary); }
         .staff-info { font-size: 0.75rem; color: #888; text-transform: uppercase; }
         .time-inputs { display: flex; gap: 8px; margin-top: 8px; }
@@ -22,7 +27,15 @@
         .check-item { text-align: center; }
         .check-item label { font-size: 0.65rem; font-weight: bold; display: block; margin-bottom: 4px; }
         input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; }
+        
         #report-area { padding: 5px; }
+        
+        /* Bandeau de verrouillage */
+        #lockMessage { 
+            background: #e74c3c; color: white; text-align: center; padding: 10px; 
+            border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9rem; 
+            display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -32,7 +45,10 @@
         <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd; font-size:1rem;">
     </header>
 
-    <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT DU JOUR (PDF)</button>
+    <!-- Message d'alerte si jour passé -->
+    <div id="lockMessage">🔒 JOURNÉE CLÔTURÉE (Lecture seule)</div>
+
+    <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT (PDF)</button>
 
     <div id="report-area">
         <div id="staffList"></div>
@@ -62,29 +78,66 @@
         ];
 
         const dateInput = document.getElementById('datePicker');
+        const lockMsg = document.getElementById('lockMessage');
+
+        // Calcul de la date d'aujourd'hui (Heure locale)
+        const todayObj = new Date();
+        const year = todayObj.getFullYear();
+        const month = String(todayObj.getMonth() + 1).padStart(2, '0');
+        const day = String(todayObj.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
 
         function load() {
-            database.ref('presences/' + dateInput.value).on('value', snap => {
+            // Vérifier si la date sélectionnée est passée
+            const selectedDate = dateInput.value;
+            const isPast = selectedDate < todayStr;
+
+            // Afficher ou masquer le message de verrouillage
+            if(isPast) {
+                lockMsg.style.display = 'block';
+            } else {
+                lockMsg.style.display = 'none';
+            }
+
+            database.ref('presences/' + selectedDate).on('value', snap => {
                 const data = snap.val() || {};
                 const list = document.getElementById('staffList');
                 list.innerHTML = '';
+                
                 equipe.forEach(emp => {
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
+                    
+                    // Si c'est passé, on ajoute l'attribut 'disabled'
+                    const disableAttr = isPast ? 'disabled' : '';
+                    const lockedClass = isPast ? 'locked' : '';
+
                     const div = document.createElement('div');
-                    div.className = 'staff-card';
+                    div.className = `staff-card ${lockedClass}`;
                     div.innerHTML = `
                         <div>
                             <span class="staff-name">${emp.nom} ${emp.prenom}</span>
                             <span class="staff-info">${emp.poste}</span>
                             <div class="time-inputs">
-                                <div class="time-group"><label>PRÉVU</label><input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}"></div>
-                                <div class="time-group"><label>ARRIVÉE</label><input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}"></div>
+                                <div class="time-group">
+                                    <label>PRÉVU</label>
+                                    <input type="time" ${disableAttr} onchange="upd('${id}','hP',this.value)" value="${d.hP||''}">
+                                </div>
+                                <div class="time-group">
+                                    <label>ARRIVÉE</label>
+                                    <input type="time" ${disableAttr} onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">
+                                </div>
                             </div>
                         </div>
                         <div class="check-group">
-                            <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}></div>
-                            <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}></div>
+                            <div class="check-item">
+                                <label>ON</label>
+                                <input type="checkbox" ${disableAttr} onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}>
+                            </div>
+                            <div class="check-item">
+                                <label>OFF</label>
+                                <input type="checkbox" ${disableAttr} onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}>
+                            </div>
                         </div>
                     `;
                     list.appendChild(div);
@@ -92,7 +145,12 @@
             });
         }
 
-        function upd(id, f, v) { database.ref('presences/'+dateInput.value+'/'+id).update({[f]:v}); }
+        function upd(id, f, v) { 
+            // Sécurité supplémentaire : si la date est passée, on ne fait rien
+            if(dateInput.value < todayStr) return;
+            
+            database.ref('presences/'+dateInput.value+'/'+id).update({[f]:v}); 
+        }
 
         function downloadPDF() {
             const element = document.getElementById('report-area');
@@ -100,14 +158,8 @@
             html2pdf().set(opt).from(element).save();
         }
 
-        // --- CORRECTION HEURE LOCALE ---
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        dateInput.value = `${year}-${month}-${day}`;
-        // -------------------------------
-        
+        // Initialisation à la date d'aujourd'hui
+        dateInput.value = todayStr;
         dateInput.addEventListener('change', load);
         load();
     </script>
