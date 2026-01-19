@@ -2,58 +2,118 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Présence - Grey Corner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Grey Corner - Live Presence</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #fdfaf6; padding: 15px; margin: 0; color: #444; }
-        h1 { font-size: 1.4em; color: #2c3e50; text-align: center; margin-bottom: 20px; }
-        .live-indicator { color: #4CAF50; font-size: 0.8em; font-weight: bold; text-align: center; margin-bottom: 10px; }
-        .header { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-        .header input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 15px; }
-        .table-container { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th, td { border-bottom: 1px solid #eee; padding: 12px 8px; text-align: center; font-size: 13px; }
-        th { background: #f8f9fa; color: #7f8c8d; font-size: 11px; text-transform: uppercase; }
-        .name-cell { text-align: left; font-weight: bold; color: #2c3e50; min-width: 150px; }
-        input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
-        input[type="time"], input[type="text"] { width: 100%; border: 1px solid #f0f0f0; padding: 5px; border-radius: 4px; }
+        :root {
+            --primary: #2c3e50;
+            --accent: #c5a059; /* Or discret pour le côté haut de gamme */
+            --bg: #f8f5f2;
+            --card-bg: #ffffff;
+            --success: #27ae60;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg); 
+            margin: 0; padding: 10px; color: var(--primary);
+            line-height: 1.4;
+        }
+
+        header {
+            text-align: center; padding: 20px 0; border-bottom: 1px solid rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        h1 { font-size: 1.5rem; margin: 0; letter-spacing: 1px; text-transform: uppercase; color: var(--primary); }
+        .live-status { font-size: 0.7rem; color: var(--success); font-weight: bold; margin-top: 5px; }
+
+        .controls {
+            display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;
+        }
+
+        input[type="date"] {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
+            font-size: 16px; background: white; color: var(--primary); text-align: center;
+        }
+
+        .btn-sync {
+            background-color: var(--primary); color: white; border: none; padding: 15px;
+            border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
+            transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
+        .btn-sync:active { transform: scale(0.98); }
+
+        /* Design en Cartes pour Mobile */
+        .staff-container { display: flex; flex-direction: column; gap: 12px; }
+
+        .staff-card {
+            background: var(--card-bg); padding: 15px; border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);
+            display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 10px;
+        }
+
+        .staff-info { grid-column: 1; }
+        .staff-name { font-weight: 700; font-size: 1rem; display: block; color: var(--primary); }
+        .staff-role { font-size: 0.75rem; color: #888; text-transform: uppercase; }
+
+        .staff-actions { 
+            grid-column: 2; grid-row: 1 / 3; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; gap: 8px; padding-left: 15px;
+            border-left: 1px solid #f0f0f0;
+        }
+
+        .toggle-group { display: flex; gap: 15px; align-items: center; }
+        .toggle-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .toggle-item span { font-size: 0.65rem; font-weight: bold; color: #aaa; }
+
+        .time-group { 
+            grid-column: 1; display: flex; gap: 10px; margin-top: 5px;
+        }
+
+        .time-input-wrapper { flex: 1; }
+        .time-input-wrapper label { font-size: 0.65rem; color: #999; display: block; margin-bottom: 3px; }
+        input[type="time"] {
+            width: 100%; border: 1px solid #eee; padding: 6px; border-radius: 6px;
+            font-size: 0.9rem; color: var(--primary); background: #fafafa;
+        }
+
+        input[type="checkbox"] {
+            width: 26px; height: 26px; accent-color: var(--accent); cursor: pointer;
+        }
+
+        @media (min-width: 600px) {
+            .staff-container { display: grid; grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body>
 
-    <h1>🌿 Grey Corner Live - 2026</h1>
-    <div class="live-indicator">● CONNEXION EN DIRECT ÉTABLIE</div>
+    <header>
+        <h1>Grey Corner</h1>
+        <div class="live-status">● SYNCHRONISATION EN DIRECT</div>
+    </header>
 
-    <div class="header">
+    <div class="controls">
         <input type="date" id="datePicker">
+        <button class="btn-sync" id="btnSync" onclick="synchroniserVersSheet()">
+            <span>📊</span> EXPORTER VERS GOOGLE SHEETS
+        </button>
     </div>
 
-    <div class="table-container">
-        <table id="tablePresence">
-            <thead>
-                <tr>
-                    <th>Membre</th>
-                    <th>Poste</th>
-                    <th>ON</th>
-                    <th>OFF</th>
-                    <th>H. Prévue</th>
-                    <th>H. Arrivée</th>
-                    <th>Sig.</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+    <div id="staffContainer" class="staff-container">
+        </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // CONFIGURATION FIREBASE
-        const firebaseConfig = {
-            databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app"
-        };
+        const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
+        const sheetUrl = "https://script.google.com/macros/s/AKfycbwNXY6UXFyfUgHdQo_P5gKObWfxncOzX2WtDmCgoPn15_mQP8iydwyr1wYOvMY4psu6/exec";
+        
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
@@ -85,42 +145,70 @@
         ];
 
         const dateInput = document.getElementById('datePicker');
-        
-        function chargerDonneesLive() {
+
+        function loadLive() {
             const date = dateInput.value;
-            if(!date) return;
-            database.ref('presences/' + date).on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                const tbody = document.querySelector('#tablePresence tbody');
-                tbody.innerHTML = '';
+            database.ref('presences/' + date).on('value', (snap) => {
+                const data = snap.val() || {};
+                const container = document.getElementById('staffContainer');
+                container.innerHTML = '';
 
                 equipe.forEach(emp => {
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="name-cell">${emp.nom} ${emp.prenom}</td>
-                        <td>${emp.poste}</td>
-                        <td><input type="checkbox" onchange="update('${id}', 'on', this.checked)" ${d.on ? 'checked' : ''}></td>
-                        <td><input type="checkbox" onchange="update('${id}', 'off', this.checked)" ${d.off ? 'checked' : ''}></td>
-                        <td><input type="time" onchange="update('${id}', 'hPre', this.value)" value="${d.hPre || ''}"></td>
-                        <td><input type="time" onchange="update('${id}', 'hArr', this.value)" value="${d.hArr || ''}"></td>
-                        <td><input type="text" placeholder="Sig" onchange="update('${id}', 'sig', this.value)" value="${d.sig || ''}"></td>
+                    const card = document.createElement('div');
+                    card.className = 'staff-card';
+                    card.innerHTML = `
+                        <div class="staff-info">
+                            <span class="staff-name">${emp.nom} ${emp.prenom}</span>
+                            <span class="staff-role">${emp.poste}</span>
+                        </div>
+                        <div class="staff-actions">
+                            <div class="toggle-item"><span>ON</span><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}></div>
+                            <div class="toggle-item"><span>OFF</span><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}></div>
+                        </div>
+                        <div class="time-group">
+                            <div class="time-input-wrapper"><label>Prévu</label><input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}"></div>
+                            <div class="time-input-wrapper"><label>Arrivée</label><input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}"></div>
+                        </div>
                     `;
-                    tbody.appendChild(tr);
+                    container.appendChild(card);
                 });
             });
         }
 
-        function update(empId, champ, valeur) {
+        function upd(id, f, v) {
+            database.ref('presences/' + dateInput.value + '/' + id).update({[f]: v});
+        }
+
+        async function synchroniserVersSheet() {
             const date = dateInput.value;
-            database.ref('presences/' + date + '/' + empId).update({ [champ]: valeur });
+            const btn = document.getElementById('btnSync');
+            btn.innerText = "⏳ ENVOI..."; btn.disabled = true;
+
+            database.ref('presences/' + date).once('value', async (snap) => {
+                const data = snap.val() || {};
+                const list = equipe.map(e => {
+                    const d = data[e.nom+'_'+e.prenom] || {};
+                    return {
+                        nomPrenom: e.nom+' '+e.prenom, fonction: e.poste,
+                        on: d.on||false, off: d.off||false,
+                        hPrevue: d.hP||'', hArrivee: d.hA||'', signature: ''
+                    };
+                });
+
+                try {
+                    await fetch(sheetUrl, { method:'POST', mode:'no-cors', body: JSON.stringify({date:date, presences:list}) });
+                    alert("✅ Synchronisé avec Google Sheets !");
+                } catch(e) { alert("❌ Erreur de connexion"); }
+                finally { btn.innerText = "📊 EXPORTER VERS GOOGLE SHEETS"; btn.disabled = false; }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             dateInput.value = new Date().toISOString().split('T')[0];
-            dateInput.addEventListener('change', chargerDonneesLive);
-            chargerDonneesLive();
+            dateInput.addEventListener('change', loadLive);
+            loadLive();
         });
     </script>
 </body>
