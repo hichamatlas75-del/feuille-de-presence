@@ -8,14 +8,41 @@
     <style>
         :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; --locked: #bdc3c7; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
+        
+        /* --- ECRAN DE MOT DE PASSE --- */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary); z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .login-card {
+            background: white; padding: 30px; border-radius: 15px; text-align: center;
+            width: 80%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .login-card h2 { margin-top: 0; color: var(--accent); text-transform: uppercase; font-size: 1.2rem; }
+        .login-card input {
+            width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px;
+            font-size: 1.1rem; text-align: center; box-sizing: border-box; outline: none; transition: 0.3s;
+        }
+        .login-card input:focus { border-color: var(--accent); }
+        .btn-enter {
+            background: var(--accent); color: white; border: none; padding: 12px; width: 100%;
+            border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem;
+        }
+        .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 10px; display: none; font-weight: bold; }
+
+        /* --- APPLICATION (Masquée par défaut) --- */
+        #appContainer { display: none; }
+
         header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; }
         h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+        
         .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.9rem; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
         .staff-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
         
-        /* Style quand verrouillé */
-        .staff-card.locked { opacity: 0.7; background: #f4f4f4; pointer-events: none; }
+        /* Style Verrouillé */
+        .staff-card.locked { opacity: 0.6; background: #eee; pointer-events: none; filter: grayscale(100%); }
         
         .staff-name { font-weight: bold; font-size: 0.95rem; display: block; color: var(--primary); }
         .staff-info { font-size: 0.75rem; color: #888; text-transform: uppercase; }
@@ -30,7 +57,6 @@
         
         #report-area { padding: 5px; }
         
-        /* Bandeau de verrouillage */
         #lockMessage { 
             background: #e74c3c; color: white; text-align: center; padding: 10px; 
             border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9rem; 
@@ -40,18 +66,31 @@
 </head>
 <body>
 
-    <header>
-        <h1>🌿 Grey Corner Live</h1>
-        <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd; font-size:1rem;">
-    </header>
+    <!-- ECRAN DE VERROUILLAGE -->
+    <div id="loginOverlay">
+        <div class="login-card">
+            <h2>🔒 Accès Sécurisé</h2>
+            <p style="color:#777; font-size:0.9rem;">Entrez le code d'accès</p>
+            <input type="password" id="passInput" placeholder="Mot de passe">
+            <button class="btn-enter" onclick="checkPass()">ENTRER</button>
+            <div id="errorMsg" class="error-msg">Mot de passe incorrect !</div>
+        </div>
+    </div>
 
-    <!-- Message d'alerte si jour passé -->
-    <div id="lockMessage">🔒 JOURNÉE CLÔTURÉE (Lecture seule)</div>
+    <!-- APPLICATION -->
+    <div id="appContainer">
+        <header>
+            <h1>🌿 Grey Corner Live</h1>
+            <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd; font-size:1rem;">
+        </header>
 
-    <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT (PDF)</button>
+        <div id="lockMessage">🔒 JOURNÉE CLÔTURÉE (Lecture seule)</div>
 
-    <div id="report-area">
-        <div id="staffList"></div>
+        <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT (PDF)</button>
+
+        <div id="report-area">
+            <div id="staffList"></div>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -80,24 +119,38 @@
         const dateInput = document.getElementById('datePicker');
         const lockMsg = document.getElementById('lockMessage');
 
-        // Calcul de la date d'aujourd'hui (Heure locale)
+        // --- GESTION DU MOT DE PASSE SIMPLE ---
+        function checkPass() {
+            const val = document.getElementById('passInput').value;
+            if(val === 'greycorner') {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                initApp(); // Lancement de l'app
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        }
+
+        // --- GESTION DES DATES LOCALES ---
         const todayObj = new Date();
         const year = todayObj.getFullYear();
         const month = String(todayObj.getMonth() + 1).padStart(2, '0');
         const day = String(todayObj.getDate()).padStart(2, '0');
         const todayStr = `${year}-${month}-${day}`;
 
+        function initApp() {
+            dateInput.value = todayStr;
+            dateInput.addEventListener('change', load);
+            load();
+        }
+
         function load() {
-            // Vérifier si la date sélectionnée est passée
+            // Vérification si jour passé
             const selectedDate = dateInput.value;
             const isPast = selectedDate < todayStr;
 
-            // Afficher ou masquer le message de verrouillage
-            if(isPast) {
-                lockMsg.style.display = 'block';
-            } else {
-                lockMsg.style.display = 'none';
-            }
+            if(isPast) lockMsg.style.display = 'block';
+            else lockMsg.style.display = 'none';
 
             database.ref('presences/' + selectedDate).on('value', snap => {
                 const data = snap.val() || {};
@@ -108,7 +161,6 @@
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
                     
-                    // Si c'est passé, on ajoute l'attribut 'disabled'
                     const disableAttr = isPast ? 'disabled' : '';
                     const lockedClass = isPast ? 'locked' : '';
 
@@ -146,9 +198,8 @@
         }
 
         function upd(id, f, v) { 
-            // Sécurité supplémentaire : si la date est passée, on ne fait rien
+            // Sécurité côté JS : on ne modifie pas si la date est passée
             if(dateInput.value < todayStr) return;
-            
             database.ref('presences/'+dateInput.value+'/'+id).update({[f]:v}); 
         }
 
@@ -157,11 +208,6 @@
             const opt = { margin: 10, filename: 'Grey_Corner_'+dateInput.value+'.pdf', image: { type:'jpeg', quality:0.98 }, html2canvas: { scale:2 }, jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } };
             html2pdf().set(opt).from(element).save();
         }
-
-        // Initialisation à la date d'aujourd'hui
-        dateInput.value = todayStr;
-        dateInput.addEventListener('change', load);
-        load();
     </script>
 </body>
 </html>
