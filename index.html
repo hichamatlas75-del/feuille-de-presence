@@ -3,44 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Saisie Grey Corner - Live</title>
+    <title>Saisie Grey Corner • Gestion Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; --manager: #e67e22; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
+        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #fdfaf6; --manager: #e67e22; --locked: #e2e8f0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
         
         header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; position: relative; }
-        h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+        h1 { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin: 0; color: #1a202c; }
         
-        /* Bouton Manager */
         #managerToggle {
             position: absolute; top: 15px; right: 10px;
             background: white; border: 1px solid var(--accent); color: var(--accent);
-            padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; cursor: pointer;
+            padding: 6px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
         #managerToggle.active { background: var(--manager); color: white; border-color: var(--manager); }
 
-        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 8px; font-weight: bold; color: white; background: var(--primary); margin-bottom: 20px; }
+        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; color: white; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         
-        .staff-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
-        .staff-name { font-weight: bold; font-size: 0.95rem; display: block; }
-        .staff-info { font-size: 0.75rem; color: #888; text-transform: uppercase; }
+        .staff-card { background: white; padding: 15px; border-radius: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
+        .staff-name { font-weight: 700; font-size: 0.95rem; color: #2d3748; }
+        .staff-info { font-size: 0.7rem; color: #a0aec0; text-transform: uppercase; font-weight: 600; }
         
         .time-inputs { display: flex; gap: 8px; margin-top: 8px; }
-        .time-group { display: flex; flex-direction: column; }
-        .time-group label { font-size: 0.6rem; color: #aaa; margin-bottom: 2px; font-weight: bold; }
+        .time-group label { font-size: 0.6rem; color: #718096; margin-bottom: 2px; font-weight: 700; display: block; }
         
-        input[type="time"] { border: 1px solid #eee; padding: 5px; border-radius: 6px; font-size: 0.85rem; background: #fafafa; }
+        input[type="time"], input[type="date"] { border: 1px solid #edf2f7; padding: 6px; border-radius: 8px; font-size: 0.85rem; background: #f8fafc; color: #2d3748; }
+        input:disabled { background: var(--locked) !important; color: #718096 !important; cursor: not-allowed; border-color: transparent; }
         
-        /* Style lecture seule (Caissier) */
-        .readonly-hA { 
-            background: #f1f5f9; border: 1px solid #e2e8f0; padding: 5px 8px; 
-            border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: #64748b; 
-        }
+        .readonly-field { background: #edf2f7; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; color: #4a5568; min-width: 50px; text-align: center; }
 
         .check-group { display: flex; gap: 12px; }
         .check-item { text-align: center; }
-        .check-item label { font-size: 0.6rem; font-weight: bold; display: block; margin-bottom: 4px; color: #888; }
+        .check-item label { font-size: 0.6rem; font-weight: 800; display: block; margin-bottom: 4px; color: #a0aec0; }
         input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
     </style>
 </head>
@@ -49,7 +44,7 @@
     <header>
         <h1>🌿 Grey Corner Live</h1>
         <button id="managerToggle" onclick="toggleManager()">🔓 MODE MANAGER</button>
-        <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd;">
+        <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; box-sizing: border-box;">
     </header>
 
     <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT PDF</button>
@@ -67,8 +62,7 @@
         const database = firebase.database();
 
         let isManager = false;
-
-        const equipe = [
+        const EQUIPE = [
             {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'}, {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'},
             {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT'}, {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
             {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'},
@@ -83,25 +77,6 @@
             {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
         ];
 
-        function toggleManager() {
-            if(!isManager) {
-                const code = prompt("Entrez le code Manager :");
-                if(code === "grey") {
-                    isManager = true;
-                    document.getElementById('managerToggle').innerHTML = "🔒 MODE MANAGER ACTIF";
-                    document.getElementById('managerToggle').classList.add('active');
-                    load(); // Recharger pour débloquer les champs
-                } else {
-                    alert("Code incorrect");
-                }
-            } else {
-                isManager = false;
-                document.getElementById('managerToggle').innerHTML = "🔓 MODE MANAGER";
-                document.getElementById('managerToggle').classList.remove('active');
-                load();
-            }
-        }
-
         function initApp() {
             const dateInput = document.getElementById('datePicker');
             dateInput.value = new Date().toISOString().split('T')[0];
@@ -109,14 +84,36 @@
             load();
         }
 
+        function toggleManager() {
+            if(!isManager) {
+                const code = prompt("Entrez le code Manager :");
+                if(code === "grey") {
+                    isManager = true;
+                    document.getElementById('managerToggle').innerHTML = "🔒 MODE MANAGER ACTIF";
+                    document.getElementById('managerToggle').classList.add('active');
+                } else { alert("Code incorrect"); }
+            } else {
+                isManager = false;
+                document.getElementById('managerToggle').innerHTML = "🔓 MODE MANAGER";
+                document.getElementById('managerToggle').classList.remove('active');
+            }
+            load();
+        }
+
         function load() {
             const selectedDate = document.getElementById('datePicker').value;
+            const today = new Date().toISOString().split('T')[0];
+            const isHistoricalDate = (selectedDate !== today);
+            
+            // Le caissier est verrouillé si ce n'est pas aujourd'hui
+            const isLockedForUser = isHistoricalDate && !isManager;
+
             database.ref('presences/' + selectedDate).on('value', snap => {
                 const data = snap.val() || {};
                 const list = document.getElementById('staffList');
                 list.innerHTML = '';
                 
-                equipe.forEach(emp => {
+                EQUIPE.forEach(emp => {
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
                     
@@ -129,20 +126,20 @@
                             <div class="time-inputs">
                                 <div class="time-group">
                                     <label>Prévu</label>
-                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}">
+                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${isLockedForUser ? 'disabled' : ''}>
                                 </div>
                                 <div class="time-group">
                                     <label>Arrivée (Scan)</label>
                                     ${isManager ? 
                                         `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">` : 
-                                        `<div class="readonly-hA">${d.hA || '--:--'}</div>`
+                                        `<div class="readonly-field">${d.hA || '--:--'}</div>`
                                     }
                                 </div>
                             </div>
                         </div>
                         <div class="check-group">
-                            <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}></div>
-                            <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}></div>
+                            <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
+                            <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
                         </div>
                     `;
                     list.appendChild(div);
@@ -157,7 +154,11 @@
 
         function downloadPDF() {
             const element = document.getElementById('report-area');
-            const opt = { margin: 10, filename: 'Grey_Corner_Report.pdf', jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } };
+            const opt = { 
+                margin: 10, 
+                filename: `Reporting_Grey_Corner_${document.getElementById('datePicker').value}.pdf`, 
+                jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } 
+            };
             html2pdf().set(opt).from(element).save();
         }
 
