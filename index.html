@@ -6,91 +6,56 @@
     <title>Saisie Grey Corner - Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; --locked: #bdc3c7; }
+        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #f8f5f2; --manager: #e67e22; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
         
-        /* --- ECRAN DE MOT DE PASSE --- */
-        #loginOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--primary); z-index: 10000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .login-card {
-            background: white; padding: 30px; border-radius: 15px; text-align: center;
-            width: 80%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        .login-card h2 { margin-top: 0; color: var(--accent); text-transform: uppercase; font-size: 1.2rem; }
-        .login-card input {
-            width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px;
-            font-size: 1.1rem; text-align: center; box-sizing: border-box; outline: none; transition: 0.3s;
-        }
-        .login-card input:focus { border-color: var(--accent); }
-        .btn-enter {
-            background: var(--accent); color: white; border: none; padding: 12px; width: 100%;
-            border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem;
-        }
-        .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 10px; display: none; font-weight: bold; }
-
-        /* --- APPLICATION (Masquée par défaut) --- */
-        #appContainer { display: none; }
-
-        header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; }
+        header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; position: relative; }
         h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
         
-        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.9rem; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        /* Bouton Manager */
+        #managerToggle {
+            position: absolute; top: 15px; right: 10px;
+            background: white; border: 1px solid var(--accent); color: var(--accent);
+            padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; cursor: pointer;
+        }
+        #managerToggle.active { background: var(--manager); color: white; border-color: var(--manager); }
+
+        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 8px; font-weight: bold; color: white; background: var(--primary); margin-bottom: 20px; }
         
         .staff-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
-        
-        /* Style Verrouillé */
-        .staff-card.locked { opacity: 0.6; background: #eee; pointer-events: none; filter: grayscale(100%); }
-        
-        .staff-name { font-weight: bold; font-size: 0.95rem; display: block; color: var(--primary); }
+        .staff-name { font-weight: bold; font-size: 0.95rem; display: block; }
         .staff-info { font-size: 0.75rem; color: #888; text-transform: uppercase; }
+        
         .time-inputs { display: flex; gap: 8px; margin-top: 8px; }
         .time-group { display: flex; flex-direction: column; }
-        .time-group label { font-size: 0.6rem; color: #aaa; margin-bottom: 2px; }
+        .time-group label { font-size: 0.6rem; color: #aaa; margin-bottom: 2px; font-weight: bold; }
+        
         input[type="time"] { border: 1px solid #eee; padding: 5px; border-radius: 6px; font-size: 0.85rem; background: #fafafa; }
-        .check-group { display: flex; gap: 15px; }
-        .check-item { text-align: center; }
-        .check-item label { font-size: 0.65rem; font-weight: bold; display: block; margin-bottom: 4px; }
-        input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; }
         
-        #report-area { padding: 5px; }
-        
-        #lockMessage { 
-            background: #e74c3c; color: white; text-align: center; padding: 10px; 
-            border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9rem; 
-            display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        /* Style lecture seule (Caissier) */
+        .readonly-hA { 
+            background: #f1f5f9; border: 1px solid #e2e8f0; padding: 5px 8px; 
+            border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: #64748b; 
         }
+
+        .check-group { display: flex; gap: 12px; }
+        .check-item { text-align: center; }
+        .check-item label { font-size: 0.6rem; font-weight: bold; display: block; margin-bottom: 4px; color: #888; }
+        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
     </style>
 </head>
 <body>
 
-    <!-- ECRAN DE VERROUILLAGE -->
-    <div id="loginOverlay">
-        <div class="login-card">
-            <h2>🔒 Accès Sécurisé</h2>
-            <p style="color:#777; font-size:0.9rem;">Entrez le code d'accès</p>
-            <input type="password" id="passInput" placeholder="Mot de passe">
-            <button class="btn-enter" onclick="checkPass()">ENTRER</button>
-            <div id="errorMsg" class="error-msg">Mot de passe incorrect !</div>
-        </div>
-    </div>
+    <header>
+        <h1>🌿 Grey Corner Live</h1>
+        <button id="managerToggle" onclick="toggleManager()">🔓 MODE MANAGER</button>
+        <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd;">
+    </header>
 
-    <!-- APPLICATION -->
-    <div id="appContainer">
-        <header>
-            <h1>🌿 Grey Corner Live</h1>
-            <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; border-radius:8px; border:1px solid #ddd; font-size:1rem;">
-        </header>
+    <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT PDF</button>
 
-        <div id="lockMessage">🔒 JOURNÉE CLÔTURÉE (Lecture seule)</div>
-
-        <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT (PDF)</button>
-
-        <div id="report-area">
-            <div id="staffList"></div>
-        </div>
+    <div id="report-area">
+        <div id="staffList"></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -100,6 +65,8 @@
         const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+
+        let isManager = false;
 
         const equipe = [
             {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'}, {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'},
@@ -116,42 +83,34 @@
             {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
         ];
 
-        const dateInput = document.getElementById('datePicker');
-        const lockMsg = document.getElementById('lockMessage');
-
-        // --- GESTION DU MOT DE PASSE SIMPLE ---
-        function checkPass() {
-            const val = document.getElementById('passInput').value;
-            if(val === '2026') {
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'block';
-                initApp(); // Lancement de l'app
+        function toggleManager() {
+            if(!isManager) {
+                const code = prompt("Entrez le code Manager :");
+                if(code === "2026") {
+                    isManager = true;
+                    document.getElementById('managerToggle').innerHTML = "🔒 MODE MANAGER ACTIF";
+                    document.getElementById('managerToggle').classList.add('active');
+                    load(); // Recharger pour débloquer les champs
+                } else {
+                    alert("Code incorrect");
+                }
             } else {
-                document.getElementById('errorMsg').style.display = 'block';
+                isManager = false;
+                document.getElementById('managerToggle').innerHTML = "🔓 MODE MANAGER";
+                document.getElementById('managerToggle').classList.remove('active');
+                load();
             }
         }
 
-        // --- GESTION DES DATES LOCALES ---
-        const todayObj = new Date();
-        const year = todayObj.getFullYear();
-        const month = String(todayObj.getMonth() + 1).padStart(2, '0');
-        const day = String(todayObj.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
-
         function initApp() {
-            dateInput.value = todayStr;
+            const dateInput = document.getElementById('datePicker');
+            dateInput.value = new Date().toISOString().split('T')[0];
             dateInput.addEventListener('change', load);
             load();
         }
 
         function load() {
-            // Vérification si jour passé
-            const selectedDate = dateInput.value;
-            const isPast = selectedDate < todayStr;
-
-            if(isPast) lockMsg.style.display = 'block';
-            else lockMsg.style.display = 'none';
-
+            const selectedDate = document.getElementById('datePicker').value;
             database.ref('presences/' + selectedDate).on('value', snap => {
                 const data = snap.val() || {};
                 const list = document.getElementById('staffList');
@@ -161,35 +120,29 @@
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
                     
-                    const disableAttr = isPast ? 'disabled' : '';
-                    const lockedClass = isPast ? 'locked' : '';
-
                     const div = document.createElement('div');
-                    div.className = `staff-card ${lockedClass}`;
+                    div.className = `staff-card`;
                     div.innerHTML = `
                         <div>
                             <span class="staff-name">${emp.nom} ${emp.prenom}</span>
                             <span class="staff-info">${emp.poste}</span>
                             <div class="time-inputs">
                                 <div class="time-group">
-                                    <label>PRÉVU</label>
-                                    <input type="time" ${disableAttr} onchange="upd('${id}','hP',this.value)" value="${d.hP||''}">
+                                    <label>Prévu</label>
+                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}">
                                 </div>
                                 <div class="time-group">
-                                    <label>ARRIVÉE</label>
-                                    <input type="time" ${disableAttr} onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">
+                                    <label>Arrivée (Scan)</label>
+                                    ${isManager ? 
+                                        `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">` : 
+                                        `<div class="readonly-hA">${d.hA || '--:--'}</div>`
+                                    }
                                 </div>
                             </div>
                         </div>
                         <div class="check-group">
-                            <div class="check-item">
-                                <label>ON</label>
-                                <input type="checkbox" ${disableAttr} onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}>
-                            </div>
-                            <div class="check-item">
-                                <label>OFF</label>
-                                <input type="checkbox" ${disableAttr} onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}>
-                            </div>
+                            <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''}></div>
+                            <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''}></div>
                         </div>
                     `;
                     list.appendChild(div);
@@ -198,16 +151,17 @@
         }
 
         function upd(id, f, v) { 
-            // Sécurité côté JS : on ne modifie pas si la date est passée
-            if(dateInput.value < todayStr) return;
-            database.ref('presences/'+dateInput.value+'/'+id).update({[f]:v}); 
+            const date = document.getElementById('datePicker').value;
+            database.ref('presences/'+date+'/'+id).update({[f]:v}); 
         }
 
         function downloadPDF() {
             const element = document.getElementById('report-area');
-            const opt = { margin: 10, filename: 'Grey_Corner_'+dateInput.value+'.pdf', image: { type:'jpeg', quality:0.98 }, html2canvas: { scale:2 }, jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } };
+            const opt = { margin: 10, filename: 'Grey_Corner_Report.pdf', jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } };
             html2pdf().set(opt).from(element).save();
         }
+
+        initApp();
     </script>
 </body>
 </html>
