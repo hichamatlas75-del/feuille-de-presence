@@ -104,9 +104,10 @@
             const selectedDate = document.getElementById('datePicker').value;
             const today = new Date().toISOString().split('T')[0];
             const isHistoricalDate = (selectedDate !== today);
-            
-            // Le caissier est verrouillé si ce n'est pas aujourd'hui
             const isLockedForUser = isHistoricalDate && !isManager;
+
+            // Liste des IDs avec exception pour pointage manuel
+            const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
 
             database.ref('presences/' + selectedDate).on('value', snap => {
                 const data = snap.val() || {};
@@ -116,12 +117,17 @@
                 EQUIPE.forEach(emp => {
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
-                    
+                    const estException = exceptions.includes(id);
+
+                    // Seul le manager peut tout modifier.
+                    // Le caissier peut modifier l'arrivée UNIQUEMENT pour les exceptions et UNIQUEMENT le jour même.
+                    const peutSaisirHA = isManager || (estException && !isHistoricalDate);
+
                     const div = document.createElement('div');
                     div.className = `staff-card`;
                     div.innerHTML = `
                         <div>
-                            <span class="staff-name">${emp.nom} ${emp.prenom}</span>
+                            <span class="staff-name">${emp.nom} ${emp.prenom} ${estException ? '🌿' : ''}</span>
                             <span class="staff-info">${emp.poste}</span>
                             <div class="time-inputs">
                                 <div class="time-group">
@@ -129,8 +135,8 @@
                                     <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${isLockedForUser ? 'disabled' : ''}>
                                 </div>
                                 <div class="time-group">
-                                    <label>Arrivée (Scan)</label>
-                                    ${isManager ? 
+                                    <label>Arrivée ${estException ? '(Manuel)' : '(Scan)'}</label>
+                                    ${peutSaisirHA ? 
                                         `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">` : 
                                         `<div class="readonly-field">${d.hA || '--:--'}</div>`
                                     }
