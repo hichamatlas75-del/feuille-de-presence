@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Saisie Grey Corner • Gestion Live</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #2c3e50; --accent: #c5a059; --bg: #fdfaf6; --manager: #e67e22; --locked: #e2e8f0; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
@@ -63,7 +64,7 @@
 
         let isManager = false;
         
-        // 📋 LISTE MISE À JOUR (HASSAN RETIRÉ / ZAKARIAE AJOUTÉ)
+        // 📋 LISTE ÉQUIPE TRIÉE (NOM PRENOM)
         let EQUIPE = [
             {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
@@ -74,12 +75,11 @@
             {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'},
             {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'}, {nom: 'KAFOUNI', prenom: 'ZAKARIAE', poste: 'SERVICE'},
             {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'}, {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'},
-            {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'}, {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'},
-            {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'}, {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'},
-            {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
+            {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'},
+            {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'}, {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
+            {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
         ];
 
-        // Tri alphabétique rigoureux par Nom
         EQUIPE.sort((a, b) => a.nom.localeCompare(b.nom));
 
         function initApp() {
@@ -111,7 +111,8 @@
             const isHistoricalDate = (selectedDate !== today);
             const isLockedForUser = isHistoricalDate && !isManager;
 
-            const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
+            // 🌿 AJOUT DE KHALOUQ RACHID AUX EXCEPTIONS DE SAISIE MANUELLE
+            const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
 
             database.ref('presences/' + selectedDate).on('value', snap => {
                 const data = snap.val() || {};
