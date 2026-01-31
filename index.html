@@ -23,7 +23,7 @@
         
         .staff-card { background: white; padding: 15px; border-radius: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
         .staff-name { font-weight: 700; font-size: 0.95rem; color: #2d3748; }
-        .staff-info { font-size: 0.7rem; color: #a0aec0; text-transform: uppercase; font-weight: 600; }
+        .staff-info { font-size: 0.7rem; color: #a0aec0; text-transform: uppercase; font-weight: 600; margin-left: 8px; }
         
         .time-inputs { display: flex; gap: 8px; margin-top: 8px; }
         .time-group label { font-size: 0.6rem; color: #718096; margin-bottom: 2px; font-weight: 700; display: block; }
@@ -62,20 +62,25 @@
         const database = firebase.database();
 
         let isManager = false;
-        const EQUIPE = [
-            {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'}, {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'},
-            {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT'}, {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
-            {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'},
-            {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'}, {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'},
-            {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'},
-            {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'},
-            {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'}, {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'},
-            {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
-            {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'}, {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'},
-            {nom: 'GUETIBI', prenom: 'AMINE', poste: 'SERVICE'}, {nom: 'KAFOUNI', prenom: 'ZAKARIAE', poste: 'SERVICE'},
-            {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'}, {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'},
-            {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
+        
+        // 📋 LISTE MISE À JOUR (HASSAN RETIRÉ / ZAKARIAE AJOUTÉ)
+        let EQUIPE = [
+            {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
+            {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
+            {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'EL KOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
+            {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'}, {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'},
+            {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ENNHAIlI', prenom: 'SOUMIA', poste: 'EXONOMAT'},
+            {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'}, {nom: 'GUETIBI', prenom: 'AMINE', poste: 'SERVICE'},
+            {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'},
+            {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'}, {nom: 'KAFOUNI', prenom: 'ZAKARIAE', poste: 'SERVICE'},
+            {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'}, {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'},
+            {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'}, {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'},
+            {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'}, {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'},
+            {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'}
         ];
+
+        // Tri alphabétique rigoureux par Nom
+        EQUIPE.sort((a, b) => a.nom.localeCompare(b.nom));
 
         function initApp() {
             const dateInput = document.getElementById('datePicker');
@@ -106,7 +111,6 @@
             const isHistoricalDate = (selectedDate !== today);
             const isLockedForUser = isHistoricalDate && !isManager;
 
-            // Liste des IDs avec exception pour pointage manuel
             const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
 
             database.ref('presences/' + selectedDate).on('value', snap => {
@@ -118,9 +122,6 @@
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
                     const estException = exceptions.includes(id);
-
-                    // Seul le manager peut tout modifier.
-                    // Le caissier peut modifier l'arrivée UNIQUEMENT pour les exceptions et UNIQUEMENT le jour même.
                     const peutSaisirHA = isManager || (estException && !isHistoricalDate);
 
                     const div = document.createElement('div');
