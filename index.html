@@ -20,7 +20,7 @@
         }
         #managerToggle.active { background: var(--manager); color: white; border-color: var(--manager); }
 
-        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; color: white; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; color: white; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; }
         
         .staff-card { background: white; padding: 15px; border-radius: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
         .staff-name { font-weight: 700; font-size: 0.95rem; color: #2d3748; }
@@ -29,7 +29,7 @@
         .time-inputs { display: flex; gap: 8px; margin-top: 8px; }
         .time-group label { font-size: 0.6rem; color: #718096; margin-bottom: 2px; font-weight: 700; display: block; }
         
-        input[type="time"], input[type="date"] { border: 1px solid #edf2f7; padding: 6px; border-radius: 8px; font-size: 0.85rem; background: #f8fafc; color: #2d3748; }
+        input[type="time"], input[type="date"] { border: 1px solid #edf2f7; padding: 6px; border-radius: 8px; font-size: 0.85rem; background: #f8fafc; color: #2d3748; font-family: inherit; }
         input:disabled { background: var(--locked) !important; color: #718096 !important; cursor: not-allowed; border-color: transparent; }
         
         .readonly-field { background: #edf2f7; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; color: #4a5568; min-width: 50px; text-align: center; }
@@ -37,7 +37,7 @@
         .check-group { display: flex; gap: 12px; }
         .check-item { text-align: center; }
         .check-item label { font-size: 0.6rem; font-weight: 800; display: block; margin-bottom: 4px; color: #a0aec0; }
-        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
     </style>
 </head>
 <body>
@@ -64,13 +64,13 @@
 
         let isManager = false;
         
-        // 📋 LISTE ÉQUIPE TRIÉE (NOM PRENOM)
+        // Correction des guillemets manquants sur ENNHAILI
         let EQUIPE = [
             {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
             {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
             {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'}, {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'},
-            {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: ENNHAILI', prenom: 'SOUMIA', poste: 'EXONOMAT'},
+            {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ENNHAILI', prenom: 'SOUMIA', poste: 'ECONOMAT'},
             {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'}, {nom: 'GUETIBI', prenom: 'AMINE', poste: 'SERVICE'},
             {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'},
             {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'}, {nom: 'KAFOUNI', prenom: 'ZAKARIAE', poste: 'SERVICE'},
@@ -111,7 +111,6 @@
             const isHistoricalDate = (selectedDate !== today);
             const isLockedForUser = isHistoricalDate && !isManager;
 
-            // 🌿 AJOUT DE KHALOUQ RACHID AUX EXCEPTIONS DE SAISIE MANUELLE
             const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
 
             database.ref('presences/' + selectedDate).on('value', snap => {
@@ -123,6 +122,7 @@
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
                     const estException = exceptions.includes(id);
+                    // Autorise la saisie si manager OU (si exception ET qu'on est sur la date du jour)
                     const peutSaisirHA = isManager || (estException && !isHistoricalDate);
 
                     const div = document.createElement('div');
@@ -165,6 +165,8 @@
             const opt = { 
                 margin: 10, 
                 filename: `Reporting_Grey_Corner_${document.getElementById('datePicker').value}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
                 jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } 
             };
             html2pdf().set(opt).from(element).save();
