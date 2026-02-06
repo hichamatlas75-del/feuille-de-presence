@@ -63,8 +63,15 @@
         const database = firebase.database();
 
         let isManager = false;
+
+        // --- CALCUL DATE MAROC (SYNCHRO TOTALE) ---
+        const getMarocDate = () => {
+            return new Intl.DateTimeFormat('fr-CA', {
+                timeZone: 'Africa/Casablanca',
+                year: 'numeric', month: '2-digit', day: '2-digit'
+            }).format(new Date());
+        };
         
-        // Correction des guillemets manquants sur ENNHAILI
         let EQUIPE = [
             {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
@@ -84,7 +91,7 @@
 
         function initApp() {
             const dateInput = document.getElementById('datePicker');
-            dateInput.value = new Date().toISOString().split('T')[0];
+            dateInput.value = getMarocDate(); // Correction : Date réelle du Maroc
             dateInput.addEventListener('change', load);
             load();
         }
@@ -107,8 +114,8 @@
 
         function load() {
             const selectedDate = document.getElementById('datePicker').value;
-            const today = new Date().toISOString().split('T')[0];
-            const isHistoricalDate = (selectedDate !== today);
+            const todayMaroc = getMarocDate();
+            const isHistoricalDate = (selectedDate !== todayMaroc);
             const isLockedForUser = isHistoricalDate && !isManager;
 
             const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
@@ -122,7 +129,6 @@
                     const id = emp.nom + '_' + emp.prenom;
                     const d = data[id] || {};
                     const estException = exceptions.includes(id);
-                    // Autorise la saisie si manager OU (si exception ET qu'on est sur la date du jour)
                     const peutSaisirHA = isManager || (estException && !isHistoricalDate);
 
                     const div = document.createElement('div');
