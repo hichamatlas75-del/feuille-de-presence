@@ -22,22 +22,24 @@
 
         .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; color: white; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; }
         
-        .staff-card { background: white; padding: 15px; border-radius: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
+        .staff-card { background: white; padding: 15px; border-radius: 16px; margin-bottom: 10px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
+        .staff-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .staff-name { font-weight: 700; font-size: 0.95rem; color: #2d3748; }
-        .staff-info { font-size: 0.7rem; color: #a0aec0; text-transform: uppercase; font-weight: 600; margin-left: 8px; }
+        .staff-info { font-size: 0.7rem; color: #a0aec0; text-transform: uppercase; font-weight: 600; }
         
-        .time-inputs { display: flex; gap: 8px; margin-top: 8px; }
-        .time-group label { font-size: 0.6rem; color: #718096; margin-bottom: 2px; font-weight: 700; display: block; }
+        .time-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+        .time-group { flex: 1; min-width: 80px; }
+        .time-group label { font-size: 0.6rem; color: #718096; margin-bottom: 4px; font-weight: 700; display: block; }
         
-        input[type="time"], input[type="date"] { border: 1px solid #edf2f7; padding: 6px; border-radius: 8px; font-size: 0.85rem; background: #f8fafc; color: #2d3748; font-family: inherit; }
-        input:disabled { background: var(--locked) !important; color: #718096 !important; cursor: not-allowed; border-color: transparent; }
+        input[type="time"], input[type="date"] { width: 100%; border: 1px solid #edf2f7; padding: 8px; border-radius: 8px; font-size: 0.85rem; background: #f8fafc; color: #2d3748; box-sizing: border-box; }
+        input:disabled { background: var(--locked) !important; color: #718096 !important; cursor: not-allowed; }
         
-        .readonly-field { background: #edf2f7; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; color: #4a5568; min-width: 50px; text-align: center; }
+        .readonly-field { background: #edf2f7; border: 1px solid #e2e8f0; padding: 8px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; color: #4a5568; text-align: center; }
 
-        .check-group { display: flex; gap: 12px; }
-        .check-item { text-align: center; }
-        .check-item label { font-size: 0.6rem; font-weight: 800; display: block; margin-bottom: 4px; color: #a0aec0; }
-        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+        .check-group { display: flex; gap: 10px; align-items: center; background: #f8fafc; padding: 5px 10px; border-radius: 10px; border: 1px solid #edf2f7; }
+        .check-item { text-align: center; display: flex; flex-direction: column; align-items: center; }
+        .check-item label { font-size: 0.55rem; font-weight: 800; color: #a0aec0; margin-bottom: 2px; }
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
     </style>
 </head>
 <body>
@@ -64,7 +66,6 @@
 
         let isManager = false;
 
-        // --- CALCUL DATE MAROC (SYNCHRO TOTALE) ---
         const getMarocDate = () => {
             return new Intl.DateTimeFormat('fr-CA', {
                 timeZone: 'Africa/Casablanca',
@@ -91,7 +92,7 @@
 
         function initApp() {
             const dateInput = document.getElementById('datePicker');
-            dateInput.value = getMarocDate(); // Correction : Date réelle du Maroc
+            dateInput.value = getMarocDate();
             dateInput.addEventListener('change', load);
             load();
         }
@@ -117,7 +118,6 @@
             const todayMaroc = getMarocDate();
             const isHistoricalDate = (selectedDate !== todayMaroc);
             const isLockedForUser = isHistoricalDate && !isManager;
-
             const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
 
             database.ref('presences/' + selectedDate).on('value', snap => {
@@ -134,26 +134,26 @@
                     const div = document.createElement('div');
                     div.className = `staff-card`;
                     div.innerHTML = `
-                        <div>
+                        <div class="staff-header">
                             <span class="staff-name">${emp.nom} ${emp.prenom} ${estException ? '🌿' : ''}</span>
                             <span class="staff-info">${emp.poste}</span>
-                            <div class="time-inputs">
-                                <div class="time-group">
-                                    <label>Prévu</label>
-                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${isLockedForUser ? 'disabled' : ''}>
-                                </div>
-                                <div class="time-group">
-                                    <label>Arrivée ${estException ? '(Manuel)' : '(Scan)'}</label>
-                                    ${peutSaisirHA ? 
-                                        `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">` : 
-                                        `<div class="readonly-field">${d.hA || '--:--'}</div>`
-                                    }
-                                </div>
-                            </div>
                         </div>
-                        <div class="check-group">
-                            <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
-                            <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
+                        <div class="time-row">
+                            <div class="time-group">
+                                <label>Prévu</label>
+                                <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${isLockedForUser ? 'disabled' : ''}>
+                            </div>
+                            <div class="time-group">
+                                <label>Arrivée ${estException ? '(M)' : '(S)'}</label>
+                                ${peutSaisirHA ? 
+                                    `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">` : 
+                                    `<div class="readonly-field">${d.hA || '--:--'}</div>`
+                                }
+                            </div>
+                            <div class="check-group">
+                                <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
+                                <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
+                            </div>
                         </div>
                     `;
                     list.appendChild(div);
