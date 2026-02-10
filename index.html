@@ -4,57 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Saisie Grey Corner • Gestion Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #2c3e50; --accent: #c5a059; --bg: #fdfaf6; --manager: #e67e22; --locked: #e2e8f0; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--primary); }
-        
-        header { text-align: center; padding: 15px; border-bottom: 1px solid var(--accent); margin-bottom: 15px; position: relative; }
-        h1 { font-size: 1.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin: 0; color: #1a202c; }
-        
-        #managerToggle {
-            position: absolute; top: 15px; right: 10px;
-            background: white; border: 1px solid var(--accent); color: var(--accent);
-            padding: 6px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: 0.3s;
-        }
-        #managerToggle.active { background: var(--manager); color: white; border-color: var(--manager); }
-
-        .btn-pdf { width: 100%; border: none; padding: 14px; border-radius: 12px; font-weight: bold; color: white; background: var(--primary); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; }
-        
-        .staff-card { background: white; padding: 15px; border-radius: 16px; margin-bottom: 10px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
-        .staff-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .staff-name { font-weight: 700; font-size: 0.95rem; color: #2d3748; }
-        .staff-info { font-size: 0.7rem; color: #a0aec0; text-transform: uppercase; font-weight: 600; }
-        
-        .time-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-        .time-group { flex: 1; min-width: 80px; }
-        .time-group label { font-size: 0.6rem; color: #718096; margin-bottom: 4px; font-weight: 700; display: block; }
-        
-        input[type="time"], input[type="date"] { width: 100%; border: 1px solid #edf2f7; padding: 8px; border-radius: 8px; font-size: 0.85rem; background: #f8fafc; color: #2d3748; box-sizing: border-box; }
-        input:disabled { background: var(--locked) !important; color: #718096 !important; cursor: not-allowed; }
-        
-        .readonly-field { background: #edf2f7; border: 1px solid #e2e8f0; padding: 8px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; color: #4a5568; text-align: center; }
-
-        .check-group { display: flex; gap: 10px; align-items: center; background: #f8fafc; padding: 5px 10px; border-radius: 10px; border: 1px solid #edf2f7; }
-        .check-item { text-align: center; display: flex; flex-direction: column; align-items: center; }
-        .check-item label { font-size: 0.55rem; font-weight: 800; color: #a0aec0; margin-bottom: 2px; }
-        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--primary); }
+        .staff-card { transition: all 0.2s ease; }
+        .staff-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
+        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+        input[type="checkbox"] { cursor: pointer; }
     </style>
 </head>
-<body>
+<body class="p-3 sm:p-6">
 
-    <header>
-        <h1>🌿 Grey Corner Live</h1>
-        <button id="managerToggle" onclick="toggleManager()">🔓 MODE MANAGER</button>
-        <input type="date" id="datePicker" style="width:100%; padding:12px; margin-top:15px; box-sizing: border-box;">
+    <header class="max-w-2xl mx-auto mb-8 text-center relative">
+        <h1 class="text-2xl font-extrabold uppercase tracking-tighter mb-4 text-slate-900">🌿 Grey Corner Live</h1>
+        
+        <button id="managerToggle" onclick="toggleManager()" class="absolute top-0 right-0 py-1.5 px-3 rounded-full text-[10px] font-bold border border-[#c5a059] text-[#c5a059] bg-white transition-all shadow-sm active:scale-95">
+            🔓 MODE MANAGER
+        </button>
+
+        <div class="mt-6">
+            <input type="date" id="datePicker" class="w-full p-3 rounded-xl border border-slate-200 bg-white shadow-sm font-bold text-sm focus:ring-2 focus:ring-[#c5a059] outline-none">
+        </div>
     </header>
 
-    <button class="btn-pdf" onclick="downloadPDF()">📥 TÉLÉCHARGER LE RAPPORT PDF</button>
+    <div class="max-w-2xl mx-auto">
+        <button class="w-full bg-[#2c3e50] hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-2xl mb-8 shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2" onclick="downloadPDF()">
+            📥 TÉLÉCHARGER LE RAPPORT PDF
+        </button>
 
-    <div id="report-area">
-        <div id="staffList"></div>
+        <div id="report-area">
+            <div id="staffList" class="space-y-3">
+                <div class="flex justify-center items-center py-20 opacity-50">
+                    <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#c5a059] border-t-transparent"></div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <footer class="mt-12 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest pb-10">
+        &copy; 2026 Grey Corner • Système de Présence Live
+    </footer>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -102,13 +94,19 @@
                 const code = prompt("Entrez le code Manager :");
                 if(code === "grey") {
                     isManager = true;
-                    document.getElementById('managerToggle').innerHTML = "🔒 MODE MANAGER ACTIF";
-                    document.getElementById('managerToggle').classList.add('active');
+                    const btn = document.getElementById('managerToggle');
+                    btn.innerHTML = "🔒 MODE MANAGER ACTIF";
+                    btn.style.backgroundColor = "#e67e22";
+                    btn.style.color = "white";
+                    btn.style.borderColor = "#e67e22";
                 } else { alert("Code incorrect"); }
             } else {
                 isManager = false;
-                document.getElementById('managerToggle').innerHTML = "🔓 MODE MANAGER";
-                document.getElementById('managerToggle').classList.remove('active');
+                const btn = document.getElementById('managerToggle');
+                btn.innerHTML = "🔓 MODE MANAGER";
+                btn.style.backgroundColor = "white";
+                btn.style.color = "#c5a059";
+                btn.style.borderColor = "#c5a059";
             }
             load();
         }
@@ -132,27 +130,45 @@
                     const peutSaisirHA = isManager || (estException && !isHistoricalDate);
 
                     const div = document.createElement('div');
-                    div.className = `staff-card`;
+                    div.className = `staff-card bg-white p-4 rounded-2xl shadow-sm border border-black/5`;
                     div.innerHTML = `
-                        <div class="staff-header">
-                            <span class="staff-name">${emp.nom} ${emp.prenom} ${estException ? '🌿' : ''}</span>
-                            <span class="staff-info">${emp.poste}</span>
-                        </div>
-                        <div class="time-row">
-                            <div class="time-group">
-                                <label>Prévu</label>
-                                <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${isLockedForUser ? 'disabled' : ''}>
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-slate-800 text-sm sm:text-base">${emp.nom} ${emp.prenom} ${estException ? '🌿' : ''}</span>
+                                    <span class="text-[9px] font-bold uppercase text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">${emp.poste}</span>
+                                </div>
                             </div>
-                            <div class="time-group">
-                                <label>Arrivée ${estException ? '(M)' : '(S)'}</label>
-                                ${peutSaisirHA ? 
-                                    `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}">` : 
-                                    `<div class="readonly-field">${d.hA || '--:--'}</div>`
-                                }
-                            </div>
-                            <div class="check-group">
-                                <div class="check-item"><label>ON</label><input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
-                                <div class="check-item"><label>OFF</label><input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''} ${isLockedForUser ? 'disabled' : ''}></div>
+
+                            <div class="flex flex-row items-end gap-3 sm:gap-4 overflow-x-auto pb-1">
+                                <div class="flex flex-col gap-1 min-w-[80px]">
+                                    <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-tighter">Prévu</label>
+                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${isLockedForUser ? 'disabled' : ''} 
+                                           class="border border-slate-100 p-2 rounded-xl text-xs bg-slate-50 text-slate-700 focus:ring-2 focus:ring-[#c5a059] outline-none disabled:opacity-50">
+                                </div>
+                                
+                                <div class="flex flex-col gap-1 min-w-[80px]">
+                                    <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-tighter">Arrivée</label>
+                                    ${peutSaisirHA ? 
+                                        `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}" 
+                                         class="border border-slate-100 p-2 rounded-xl text-xs bg-slate-50 text-slate-700 focus:ring-2 focus:ring-[#c5a059] outline-none">` : 
+                                        `<div class="bg-slate-100 border border-slate-200 py-2 px-3 rounded-xl text-xs font-bold text-slate-500 text-center min-h-[34px] flex items-center justify-center">${d.hA || '--:--'}</div>`
+                                    }
+                                </div>
+
+                                <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 p-1 rounded-xl h-[34px]">
+                                    <div class="flex flex-col items-center px-1">
+                                        <label class="text-[8px] font-black text-slate-400 leading-none mb-0.5">ON</label>
+                                        <input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''} ${isLockedForUser ? 'disabled' : ''}
+                                               class="w-4 h-4 accent-[#c5a059]">
+                                    </div>
+                                    <div class="w-[1px] h-4 bg-slate-200"></div>
+                                    <div class="flex flex-col items-center px-1">
+                                        <label class="text-[8px] font-black text-slate-400 leading-none mb-0.5">OFF</label>
+                                        <input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''} ${isLockedForUser ? 'disabled' : ''}
+                                               class="w-4 h-4 accent-[#c5a059]">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `;
