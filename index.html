@@ -3,49 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Saisie Grey Corner • Gestion Live</title>
+    <title>Grey Corner • Gestion Excellence</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #2c3e50; --accent: #c5a059; --bg: #fdfaf6; --manager: #e67e22; --locked: #e2e8f0; }
+        :root { --primary: #1e293b; --accent: #c5a059; --bg: #faf9f6; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--primary); }
-        .staff-card { transition: all 0.2s ease; }
-        .staff-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
-        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
-        input[type="checkbox"] { cursor: pointer; }
+        .section-header { border-left: 3px solid var(--accent); padding-left: 12px; margin: 24px 0 12px 0; }
+        .staff-card { background: white; border: 1px solid rgba(0,0,0,0.03); transition: all 0.2s ease; }
+        .staff-card:hover { border-color: var(--accent); }
+        input[type="time"] { -webkit-appearance: none; min-height: 40px; }
+        .badge-poste { font-size: 9px; letter-spacing: 0.05em; background: #f1f5f9; color: #64748b; }
     </style>
 </head>
-<body class="p-3 sm:p-6">
+<body class="p-4 sm:p-8">
 
-    <header class="max-w-2xl mx-auto mb-8 text-center relative">
-        <h1 class="text-2xl font-extrabold uppercase tracking-tighter mb-4 text-slate-900">🌿 Grey Corner Live</h1>
+    <header class="max-w-2xl mx-auto mb-10 text-center relative">
+        <div class="mb-2 text-[10px] tracking-[0.2em] font-bold text-[#c5a059] uppercase">Fès — Maroc</div>
+        <h1 class="text-3xl font-extrabold tracking-tighter mb-6 text-slate-900">GREY CORNER</h1>
         
-        <button id="managerToggle" onclick="toggleManager()" class="absolute top-0 right-0 py-1.5 px-3 rounded-full text-[10px] font-bold border border-[#c5a059] text-[#c5a059] bg-white transition-all shadow-sm active:scale-95">
-            🔓 MODE MANAGER
+        <button id="managerToggle" onclick="toggleManager()" class="py-2 px-4 rounded-full text-[10px] font-bold border border-[#c5a059] text-[#c5a059] bg-white transition-all hover:bg-[#c5a059] hover:text-white">
+            🔓 ACCÈS GÉRANT
         </button>
 
-        <div class="mt-6">
-            <input type="date" id="datePicker" class="w-full p-3 rounded-xl border border-slate-200 bg-white shadow-sm font-bold text-sm focus:ring-2 focus:ring-[#c5a059] outline-none">
+        <div class="mt-8">
+            <input type="date" id="datePicker" class="w-full p-4 rounded-2xl border-none shadow-sm font-semibold text-sm focus:ring-2 focus:ring-[#c5a059] outline-none bg-white">
         </div>
     </header>
 
     <div class="max-w-2xl mx-auto">
-        <button class="w-full bg-[#2c3e50] hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-2xl mb-8 shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2" onclick="downloadPDF()">
-            📥 TÉLÉCHARGER LE RAPPORT PDF
+        <button class="w-full bg-[#1e293b] text-white font-bold py-4 px-6 rounded-2xl mb-10 shadow-lg flex items-center justify-center gap-3 active:scale-[0.98] transition-transform" onclick="downloadPDF()">
+            <span>GÉNÉRER LE RAPPORT JOURNALIER</span>
         </button>
 
         <div id="report-area">
-            <div id="staffList" class="space-y-3">
-                <div class="flex justify-center items-center py-20 opacity-50">
-                    <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#c5a059] border-t-transparent"></div>
+            <div id="staffList" class="space-y-8">
                 </div>
-            </div>
         </div>
     </div>
 
-    <footer class="mt-12 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest pb-10">
-        &copy; 2026 Grey Corner • Système de Présence Live
+    <footer class="mt-20 text-center text-slate-400 text-[9px] font-bold uppercase tracking-[0.3em] pb-10">
+        &copy; 2026 Grey Corner • Service & Hospitalité
     </footer>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -57,15 +56,8 @@
         const database = firebase.database();
 
         let isManager = false;
-
-        const getMarocDate = () => {
-            return new Intl.DateTimeFormat('fr-CA', {
-                timeZone: 'Africa/Casablanca',
-                year: 'numeric', month: '2-digit', day: '2-digit'
-            }).format(new Date());
-        };
         
-        let EQUIPE = [
+        const EQUIPE = [
             {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
             {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
             {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
@@ -80,99 +72,95 @@
             {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
         ];
 
-        EQUIPE.sort((a, b) => a.nom.localeCompare(b.nom));
+        const getMarocDate = () => new Intl.DateTimeFormat('fr-CA', {timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
 
         function initApp() {
-            const dateInput = document.getElementById('datePicker');
-            dateInput.value = getMarocDate();
-            dateInput.addEventListener('change', load);
+            const dp = document.getElementById('datePicker');
+            dp.value = getMarocDate();
+            dp.addEventListener('change', load);
             load();
         }
 
         function toggleManager() {
             if(!isManager) {
-                const code = prompt("Entrez le code Manager :");
-                if(code === "grey") {
+                if(prompt("Code Manager :") === "grey") {
                     isManager = true;
                     const btn = document.getElementById('managerToggle');
-                    btn.innerHTML = "🔒 MODE MANAGER ACTIF";
-                    btn.style.backgroundColor = "#e67e22";
-                    btn.style.color = "white";
-                    btn.style.borderColor = "#e67e22";
-                } else { alert("Code incorrect"); }
+                    btn.innerHTML = "🔒 MODE GÉRANT ACTIF";
+                    btn.className = "py-2 px-4 rounded-full text-[10px] font-bold bg-[#e67e22] text-white";
+                }
             } else {
                 isManager = false;
-                const btn = document.getElementById('managerToggle');
-                btn.innerHTML = "🔓 MODE MANAGER";
-                btn.style.backgroundColor = "white";
-                btn.style.color = "#c5a059";
-                btn.style.borderColor = "#c5a059";
+                location.reload();
             }
             load();
         }
 
         function load() {
             const selectedDate = document.getElementById('datePicker').value;
-            const todayMaroc = getMarocDate();
-            const isHistoricalDate = (selectedDate !== todayMaroc);
-            const isLockedForUser = isHistoricalDate && !isManager;
             const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
-
+            
             database.ref('presences/' + selectedDate).on('value', snap => {
                 const data = snap.val() || {};
                 const list = document.getElementById('staffList');
                 list.innerHTML = '';
-                
-                EQUIPE.forEach(emp => {
-                    const id = emp.nom + '_' + emp.prenom;
-                    const d = data[id] || {};
-                    const estException = exceptions.includes(id);
-                    const peutSaisirHA = isManager || (estException && !isHistoricalDate);
 
-                    const div = document.createElement('div');
-                    div.className = `staff-card bg-white p-4 rounded-2xl shadow-sm border border-black/5`;
-                    div.innerHTML = `
-                        <div class="flex flex-col gap-3">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold text-slate-800 text-sm sm:text-base">${emp.nom} ${emp.prenom} ${estException ? '🌿' : ''}</span>
-                                    <span class="text-[9px] font-bold uppercase text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">${emp.poste}</span>
+                // Groupement par poste
+                const groupes = EQUIPE.reduce((acc, emp) => {
+                    (acc[emp.poste] = acc[emp.poste] || []).push(emp);
+                    return acc;
+                }, {});
+
+                // Tri alphabétique des postes
+                Object.keys(groupes).sort().forEach(poste => {
+                    const section = document.createElement('div');
+                    section.innerHTML = `<h2 class="section-header text-xs font-black tracking-widest text-slate-400 uppercase mb-4">${poste}</h2>`;
+                    
+                    const grid = document.createElement('div');
+                    grid.className = "space-y-3";
+
+                    groupes[poste].sort((a,b) => a.nom.localeCompare(b.nom)).forEach(emp => {
+                        const id = `${emp.nom}_${emp.prenom}`;
+                        const d = data[id] || {};
+                        const estEx = exceptions.includes(id);
+                        const lock = (selectedDate !== getMarocDate()) && !isManager;
+                        const peutSaisirHA = isManager || (estEx && selectedDate === getMarocDate());
+
+                        const card = document.createElement('div');
+                        card.className = "staff-card p-4 rounded-2xl flex flex-col gap-4";
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-sm tracking-tight text-slate-800">${emp.nom} ${emp.prenom} ${estEx?'<span class="text-[#c5a059]">🌿</span>':''}</span>
+                                <div class="flex gap-2 items-center bg-slate-50 p-1 rounded-lg border border-slate-100">
+                                    <div class="flex flex-col items-center px-1">
+                                        <span class="text-[7px] font-bold text-slate-400">IN</span>
+                                        <input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''} ${lock?'disabled':''} class="w-3.5 h-3.5 accent-[#c5a059]">
+                                    </div>
+                                    <div class="flex flex-col items-center px-1">
+                                        <span class="text-[7px] font-bold text-slate-400">OUT</span>
+                                        <input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''} ${lock?'disabled':''} class="w-3.5 h-3.5 accent-[#c5a059]">
+                                    </div>
                                 </div>
                             </div>
-
-                            <div class="flex flex-row items-end gap-3 sm:gap-4 overflow-x-auto pb-1">
-                                <div class="flex flex-col gap-1 min-w-[80px]">
-                                    <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-tighter">Prévu</label>
-                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${isLockedForUser ? 'disabled' : ''} 
-                                           class="border border-slate-100 p-2 rounded-xl text-xs bg-slate-50 text-slate-700 focus:ring-2 focus:ring-[#c5a059] outline-none disabled:opacity-50">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Shift Prévu</label>
+                                    <input type="time" onchange="upd('${id}','hP',this.value)" value="${d.hP||''}" ${lock?'disabled':''} 
+                                           class="w-full bg-slate-50 border-none rounded-xl text-xs font-medium p-2 outline-none focus:ring-1 focus:ring-[#c5a059]">
                                 </div>
-                                
-                                <div class="flex flex-col gap-1 min-w-[80px]">
-                                    <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-tighter">Arrivée</label>
+                                <div>
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Arrivée Réelle</label>
                                     ${peutSaisirHA ? 
-                                        `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}" 
-                                         class="border border-slate-100 p-2 rounded-xl text-xs bg-slate-50 text-slate-700 focus:ring-2 focus:ring-[#c5a059] outline-none">` : 
-                                        `<div class="bg-slate-100 border border-slate-200 py-2 px-3 rounded-xl text-xs font-bold text-slate-500 text-center min-h-[34px] flex items-center justify-center">${d.hA || '--:--'}</div>`
+                                        `<input type="time" onchange="upd('${id}','hA',this.value)" value="${d.hA||''}" class="w-full bg-[#fdfaf6] border border-[#c5a059]/20 rounded-xl text-xs font-bold p-2 outline-none">` :
+                                        `<div class="w-full bg-slate-100 rounded-xl text-xs font-bold p-2 text-slate-400 text-center">${d.hA || '--:--'}</div>`
                                     }
                                 </div>
-
-                                <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 p-1 rounded-xl h-[34px]">
-                                    <div class="flex flex-col items-center px-1">
-                                        <label class="text-[8px] font-black text-slate-400 leading-none mb-0.5">ON</label>
-                                        <input type="checkbox" onchange="upd('${id}','on',this.checked)" ${d.on?'checked':''} ${isLockedForUser ? 'disabled' : ''}
-                                               class="w-4 h-4 accent-[#c5a059]">
-                                    </div>
-                                    <div class="w-[1px] h-4 bg-slate-200"></div>
-                                    <div class="flex flex-col items-center px-1">
-                                        <label class="text-[8px] font-black text-slate-400 leading-none mb-0.5">OFF</label>
-                                        <input type="checkbox" onchange="upd('${id}','off',this.checked)" ${d.off?'checked':''} ${isLockedForUser ? 'disabled' : ''}
-                                               class="w-4 h-4 accent-[#c5a059]">
-                                    </div>
-                                </div>
                             </div>
-                        </div>
-                    `;
-                    list.appendChild(div);
+                        `;
+                        grid.appendChild(card);
+                    });
+                    section.appendChild(grid);
+                    list.appendChild(section);
                 });
             });
         }
@@ -184,14 +172,13 @@
 
         function downloadPDF() {
             const element = document.getElementById('report-area');
-            const opt = { 
-                margin: 10, 
-                filename: `Reporting_Grey_Corner_${document.getElementById('datePicker').value}.pdf`, 
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
+            const date = document.getElementById('datePicker').value;
+            html2pdf().set({ 
+                margin: 10, filename: `GC_PRESENCE_${date}.pdf`, 
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 3 },
                 jsPDF: { unit:'mm', format:'a4', orientation:'portrait' } 
-            };
-            html2pdf().set(opt).from(element).save();
+            }).from(element).save();
         }
 
         initApp();
