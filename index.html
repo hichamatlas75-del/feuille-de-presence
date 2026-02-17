@@ -31,22 +31,13 @@
     input[type="time"], input[type="date"]{-webkit-appearance:none;min-height:42px}
     .chip{border:1px solid rgba(2,6,23,.10)}
     .chip.active{border-color: rgba(197,160,89,.55); background: rgba(197,160,89,.10)}
-    .sectionTitle{
-      border-left: 3px solid var(--accent);
-      padding-left: 12px;
-    }
+    .sectionTitle{border-left: 3px solid var(--accent);padding-left: 12px;}
     .badge{
-      font-size: 10px;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      font-weight: 800;
-      padding: 4px 8px;
-      border-radius: 999px;
+      font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+      font-weight: 800; padding: 4px 8px; border-radius: 999px;
       border: 1px solid rgba(2,6,23,.08);
       background: rgba(15,23,42,.04);
-      color: var(--muted);
-      line-height: 1;
-      white-space: nowrap;
+      color: var(--muted); line-height: 1; white-space: nowrap;
     }
     .badge.ok{background: rgba(16,185,129,.10); border-color: rgba(16,185,129,.30); color: #065f46;}
     .badge.warn{background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.32); color: #92400e;}
@@ -84,9 +75,11 @@
 
     <div class="max-w-3xl mx-auto px-4 pb-3">
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+
         <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 items-center">
           <input type="date" id="datePicker"
                  class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
+
           <div class="flex gap-2 flex-wrap">
             <button onclick="setFilter('all')" id="chip-all" class="chip chipBtn chip active px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Tous</button>
             <button onclick="setFilter('present')" id="chip-present" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Présents</button>
@@ -96,15 +89,22 @@
           </div>
         </div>
 
-        <div class="flex gap-2 sm:justify-end">
+        <div class="flex gap-2 sm:justify-end items-stretch">
           <input id="searchInput" oninput="applyFilters()"
                  placeholder="Rechercher un nom…"
-                 class="w-full sm:w-64 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
+                 class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
+
           <button onclick="downloadPDF()"
                   class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
             📄 Rapport PDF
           </button>
+
+          <button onclick="sharePDFtoWhatsApp()"
+                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-green-600 text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+            📤 WhatsApp
+          </button>
         </div>
+
       </div>
     </div>
   </div>
@@ -164,6 +164,7 @@
     let isManager = false;
     let currentFilter = "all";
     let latestDataCache = {};
+    let activeListenerRef = null;
 
     const EQUIPE = [
       {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
@@ -222,12 +223,30 @@
       return isManager || (estEx && selectedDate === getMarocDate());
     }
 
+    // ===== Filters =====
     function setFilter(f){
       currentFilter = f;
       document.querySelectorAll(".chipBtn").forEach(b => b.classList.remove("active"));
       const btn = document.getElementById(`chip-${f}`);
       if(btn) btn.classList.add("active");
       applyFilters();
+    }
+
+    function applyFilters(){
+      const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+      const cards = document.querySelectorAll("#staffList .empCard");
+
+      cards.forEach(card => {
+        const matchName = (card.dataset.name || "").includes(q);
+
+        let matchFilter = true;
+        if(currentFilter === "present") matchFilter = card.dataset.present === "1";
+        if(currentFilter === "absent") matchFilter = card.dataset.present === "0";
+        if(currentFilter === "late") matchFilter = card.dataset.late === "1";
+        if(currentFilter === "incomplete") matchFilter = card.dataset.incomplete === "1";
+
+        card.style.display = (matchName && matchFilter) ? "block" : "none";
+      });
     }
 
     // ===== Manager =====
@@ -266,7 +285,6 @@
         return acc;
       }, {});
 
-      // render poste sections (accordion)
       Object.keys(groupes).sort().forEach(poste => {
         const section = document.createElement('section');
         section.className = "card rounded-3xl overflow-hidden";
@@ -287,100 +305,103 @@
         const body = document.createElement('div');
         body.className = "px-4 pb-4 space-y-3";
 
-        // default: open
+        // default open
         let open = true;
         header.addEventListener('click', () => {
           open = !open;
           body.style.display = open ? "block" : "none";
         });
 
-        groupes[poste].sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom)).forEach(emp => {
-          const id = empId(emp);
-          const d = latestDataCache[id] || {};
-          const estEx = exceptions.includes(id);
-          const editHA = canEditHA(id, selectedDate);
-          const late = lateMinutes(d.hP, d.hA);
-          const hasHP = !!d.hP;
-          const hasHA = !!d.hA;
+        groupes[poste]
+          .slice()
+          .sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom))
+          .forEach(emp => {
 
-          // status badges
-          const isPresent = !!d.on;
-          const isOut = !!d.off;
-          const incomplete = (isPresent && (!hasHP || !hasHA)) || (!isPresent && (hasHP || hasHA || isOut));
-          const isLate = (late !== null && late > 0);
+            const id = empId(emp);
+            const d = latestDataCache[id] || {};
+            const estEx = exceptions.includes(id);
+            const editHA = canEditHA(id, selectedDate);
+            const late = lateMinutes(d.hP, d.hA);
 
-          const statusBadges = [];
-          if(isPresent) statusBadges.push(`<span class="badge ok">Présent</span>`);
-          else statusBadges.push(`<span class="badge bad">Absent</span>`);
-          if(isOut) statusBadges.push(`<span class="badge">Sorti</span>`);
-          if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
-          if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
-          if(estEx) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 Exception</span>`);
+            // status
+            const isPresent = !!d.on;
+            const isOut = !!d.off;
+            const hasHP = !!d.hP;
+            const hasHA = !!d.hA;
 
-          const card = document.createElement('div');
-          card.className = "card rounded-2xl p-4";
+            const incomplete = (isPresent && (!hasHP || !hasHA)) || (!isPresent && (hasHP || hasHA || isOut));
+            const isLate = (late !== null && late > 0);
 
-          card.dataset.name = `${emp.nom} ${emp.prenom}`.toLowerCase();
-          card.dataset.present = isPresent ? "1" : "0";
-          card.dataset.late = isLate ? "1" : "0";
-          card.dataset.incomplete = incomplete ? "1" : "0";
+            const statusBadges = [];
+            if(isPresent) statusBadges.push(`<span class="badge ok">Présent</span>`);
+            else statusBadges.push(`<span class="badge bad">Absent</span>`);
+            if(isOut) statusBadges.push(`<span class="badge">Sorti</span>`);
+            if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
+            if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
+            if(estEx) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 Exception</span>`);
 
-          card.innerHTML = `
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
+            const card = document.createElement('div');
+            card.className = "card rounded-2xl p-4 empCard";
+            card.dataset.name = `${emp.nom} ${emp.prenom}`.toLowerCase();
+            card.dataset.present = isPresent ? "1" : "0";
+            card.dataset.late = isLate ? "1" : "0";
+            card.dataset.incomplete = incomplete ? "1" : "0";
+
+            card.innerHTML = `
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
                   <div class="font-extrabold text-sm tracking-tight text-slate-900 truncate">
                     ${emp.nom} ${emp.prenom}
                   </div>
+                  <div class="mt-2 flex gap-2 flex-wrap">
+                    ${statusBadges.join("")}
+                  </div>
                 </div>
-                <div class="mt-2 flex gap-2 flex-wrap">
-                  ${statusBadges.join("")}
+
+                <div class="toggleWrap rounded-2xl p-2 flex gap-2">
+                  <label class="flex flex-col items-center px-1">
+                    <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">IN</span>
+                    <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
+                      ${isPresent ? "checked" : ""} ${lock ? "disabled" : ""}
+                      onchange="upd('${id}','on',this.checked)">
+                  </label>
+                  <label class="flex flex-col items-center px-1">
+                    <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
+                    <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
+                      ${isOut ? "checked" : ""} ${lock ? "disabled" : ""}
+                      onchange="upd('${id}','off',this.checked)">
+                  </label>
                 </div>
               </div>
 
-              <div class="toggleWrap rounded-2xl p-2 flex gap-2">
-                <label class="flex flex-col items-center px-1">
-                  <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">IN</span>
-                  <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                    ${isPresent ? "checked" : ""} ${lock ? "disabled" : ""}
-                    onchange="upd('${id}','on',this.checked)">
-                </label>
-                <label class="flex flex-col items-center px-1">
-                  <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
-                  <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                    ${isOut ? "checked" : ""} ${lock ? "disabled" : ""}
-                    onchange="upd('${id}','off',this.checked)">
-                </label>
-              </div>
-            </div>
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Shift prévu</label>
+                  <input type="time"
+                    class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
+                    value="${d.hP || ""}" ${lock ? "disabled" : ""}
+                    onchange="upd('${id}','hP',this.value)">
+                </div>
 
-            <div class="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Shift prévu</label>
-                <input type="time"
-                  class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
-                  value="${d.hP || ""}" ${lock ? "disabled" : ""}
-                  onchange="upd('${id}','hP',this.value)">
+                <div>
+                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée réelle</label>
+                  ${
+                    editHA
+                    ? `<input type="time"
+                        class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
+                        style="background: rgba(197,160,89,.10); border:1px solid rgba(197,160,89,.30)"
+                        value="${d.hA || ""}"
+                        onchange="upd('${id}','hA',this.value)">`
+                    : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
+                        ${d.hA || "--:--"}
+                      </div>`
+                  }
+                </div>
               </div>
+            `;
 
-              <div>
-                <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée réelle</label>
-                ${
-                  editHA
-                  ? `<input type="time"
-                      class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
-                      style="background: rgba(197,160,89,.10); border:1px solid rgba(197,160,89,.30)"
-                      value="${d.hA || ""}"
-                      onchange="upd('${id}','hA',this.value)">`
-                  : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
-                      ${d.hA || "--:--"}
-                    </div>`
-                }
-              </div>
-            </div>
-          `;
-          body.appendChild(card);
-        });
+            body.appendChild(card);
+          });
 
         section.appendChild(header);
         section.appendChild(body);
@@ -415,26 +436,7 @@
       document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
 
-    function applyFilters(){
-      const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
-      const cards = document.querySelectorAll("#staffList .card.rounded-2xl");
-
-      cards.forEach(card => {
-        const matchName = card.dataset.name.includes(q);
-        let matchFilter = true;
-
-        if(currentFilter === "present") matchFilter = card.dataset.present === "1";
-        if(currentFilter === "absent") matchFilter = card.dataset.present === "0";
-        if(currentFilter === "late") matchFilter = card.dataset.late === "1";
-        if(currentFilter === "incomplete") matchFilter = card.dataset.incomplete === "1";
-
-        card.style.display = (matchName && matchFilter) ? "block" : "none";
-      });
-    }
-
     // ===== Load =====
-    let activeListenerRef = null;
-
     function load(){
       const selectedDate = document.getElementById('datePicker').value;
 
@@ -451,6 +453,15 @@
     }
 
     // ===== PDF Report (clear + ergonomic) =====
+    function pdfKpi(label, value){
+      return `
+        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
+          <div style="font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#6b7280;font-size:10px;">${label}</div>
+          <div style="font-weight:900;font-size:18px;margin-top:4px;color:#111827;">${value}</div>
+        </div>
+      `;
+    }
+
     function buildPDF(){
       const date = document.getElementById('datePicker').value;
 
@@ -550,15 +561,6 @@
       });
     }
 
-    function pdfKpi(label, value){
-      return `
-        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
-          <div style="font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#6b7280;font-size:10px;">${label}</div>
-          <div style="font-weight:900;font-size:18px;margin-top:4px;color:#111827;">${value}</div>
-        </div>
-      `;
-    }
-
     function downloadPDF(){
       buildPDF();
       const date = document.getElementById('datePicker').value;
@@ -578,6 +580,56 @@
       }).catch(() => {
         element.style.display = "none";
       });
+    }
+
+    // ===== WhatsApp share (manual, with prefilled text) =====
+    async function sharePDFtoWhatsApp(){
+      buildPDF();
+      const date = document.getElementById('datePicker').value;
+
+      const element = document.getElementById('pdfArea');
+      element.style.display = "block";
+
+      const opt = {
+        margin: 8,
+        filename: `GC_RAPPORT_${date}.pdf`,
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { scale: 3, useCORS: true },
+        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      try{
+        const worker = html2pdf().set(opt).from(element);
+        const pdfBlob = await worker.outputPdf('blob');
+
+        element.style.display = "none";
+
+        const file = new File([pdfBlob], `GC_RAPPORT_${date}.pdf`, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: "Rapport Grey Corner",
+            text: `Rapport du jour`,
+            files: [file]
+          });
+
+          // open WhatsApp chat with prefilled message (helps you land on the right chat)
+          setTimeout(() => {
+            window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent("Rapport du jour");
+          }, 400);
+
+        } else {
+          alert("Le partage direct n'est pas supporté ici. Le PDF va être téléchargé.");
+          downloadPDF();
+          setTimeout(() => {
+            window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent("Rapport du jour");
+          }, 700);
+        }
+      } catch(e){
+        element.style.display = "none";
+        alert("Erreur lors de la génération/partage du PDF.");
+      }
     }
 
     // ===== Init =====
