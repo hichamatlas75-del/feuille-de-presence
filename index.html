@@ -5,13 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Grey Corner • Présences</title>
 
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
@@ -47,23 +42,18 @@
     .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
     .stickyTop{position:sticky;top:0;z-index:50}
 
-    /* ✅ PDF-only area: display none (journalier OK), on l'affiche juste pendant export */
     #pdfArea{display:none}
     .pdfPage{background:#fff;color:#111827}
     .pdfTable th,.pdfTable td{border:1px solid #e5e7eb;padding:8px;font-size:11px}
     .pdfTable th{background:#f3f4f6;font-weight:800}
-
-    /* ✅ IMPORTANT: éviter pages vides mensuel => PAS d'overflow scroll */
     .pdfNoScroll{ overflow: visible !important; }
 
-    /* Modal export mensuel */
     #monthModalBackdrop{display:none}
   </style>
 </head>
 
 <body class="pb-16">
 
-  <!-- Top bar -->
   <div class="stickyTop glass border-b border-black/5">
     <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
       <div class="flex-1 min-w-0">
@@ -101,7 +91,6 @@
                  placeholder="Rechercher un nom…"
                  class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
 
-          <!-- ✅ Boutons export: visibles seulement en mode gérant -->
           <div id="managerActions" class="flex gap-2 items-stretch hidden">
             <button onclick="downloadDailyPDF()"
                     class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
@@ -125,8 +114,6 @@
   </div>
 
   <main class="max-w-3xl mx-auto px-4 pt-4">
-
-    <!-- Summary -->
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
       <div class="card rounded-2xl p-3">
         <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
@@ -150,7 +137,6 @@
       </div>
     </div>
 
-    <!-- Staff list -->
     <div id="staffList" class="space-y-6"></div>
 
     <div class="mt-10 text-center text-slate-400 text-[10px] font-extrabold uppercase tracking-[0.28em] pb-6">
@@ -158,14 +144,12 @@
     </div>
   </main>
 
-  <!-- ✅ PDF area (hidden; shown only during export) -->
   <div id="pdfArea" class="pdfPage p-6">
     <div id="pdfHeader" class="mb-4"></div>
     <div id="pdfSummary" class="mb-4"></div>
     <div id="pdfTables" class="space-y-6"></div>
   </div>
 
-  <!-- Modal export mensuel -->
   <div id="monthModalBackdrop" class="fixed inset-0 bg-black/40 z-[80] flex items-end sm:items-center justify-center p-3">
     <div class="card w-full max-w-md rounded-3xl shadowSoft overflow-hidden">
       <div class="px-5 py-4 bg-white border-b border-black/5 flex items-center justify-between">
@@ -175,7 +159,7 @@
 
       <div class="p-5 space-y-4">
         <div class="text-sm text-slate-600 font-semibold">
-          Mensuel (1 employé) : <b>Présent</b> (on=true) • <b>Repos</b> (type=repos) • <b>Retard</b> (hA &gt; hP)
+          Mensuel (1 employé) : <b>Présent</b> (on=true) • <b>Repos</b> = <b>jour OUT</b> (off=true)
         </div>
 
         <div>
@@ -216,21 +200,14 @@
     </div>
   </div>
 
-  <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
-    // =========================
-    // Firebase
-    // =========================
     const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // =========================
-    // State
-    // =========================
     let isManager = false;
     let currentFilter = "all";
     let latestDataCache = {};
@@ -251,19 +228,15 @@
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
 
-    // exceptions = peuvent éditer hA aujourd'hui même hors gérant
     const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
 
-    // =========================
-    // Helpers
-    // =========================
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'Africa/Casablanca',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-      }).format(new Date()); // YYYY-MM-DD
+      }).format(new Date());
 
     function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
     function fullName(emp){ return `${emp.nom} ${emp.prenom}`; }
@@ -300,17 +273,11 @@
       return map[mm] || mm;
     }
 
-    // =========================
-    // UI manager actions
-    // =========================
     function refreshManagerUI(){
       const box = document.getElementById("managerActions");
       if(box) box.classList.toggle("hidden", !isManager);
     }
 
-    // =========================
-    // Filters
-    // =========================
     function setFilter(f){
       currentFilter = f;
       document.querySelectorAll(".chipBtn").forEach(b => b.classList.remove("active"));
@@ -336,9 +303,6 @@
       });
     }
 
-    // =========================
-    // Manager
-    // =========================
     function toggleManager(){
       if(!isManager){
         if(prompt("Code Manager :") === "2026"){
@@ -355,15 +319,11 @@
       load();
     }
 
-    // =========================
-    // CRUD
-    // =========================
     function upd(id, f, v){
-      const date = document.getElementById('datePicker').value; // YYYY-MM-DD
+      const date = document.getElementById('datePicker').value;
       database.ref('presences/'+date+'/'+id).update({[f]:v});
     }
 
-    // ✅ IMPORTANT : crée automatiquement la journée si elle n'existe pas
     async function ensureDayExists(selectedDate){
       const ref = database.ref('presences/' + selectedDate);
       const snap = await ref.once('value');
@@ -376,9 +336,6 @@
       await ref.set(init);
     }
 
-    // =========================
-    // KPI
-    // =========================
     function computeKPIs(){
       const total = EQUIPE.length;
       let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
@@ -400,9 +357,6 @@
       document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
 
-    // =========================
-    // Render
-    // =========================
     function render(){
       const selectedDate = document.getElementById('datePicker').value;
       const lock = isLocked(selectedDate);
@@ -410,7 +364,6 @@
       const list = document.getElementById('staffList');
       list.innerHTML = "";
 
-      // group by poste
       const groupes = EQUIPE.reduce((acc, emp) => {
         (acc[emp.poste] = acc[emp.poste] || []).push(emp);
         return acc;
@@ -446,7 +399,6 @@
           .slice()
           .sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom))
           .forEach(emp => {
-
             const id = empId(emp);
             const d = latestDataCache[id] || {};
             const estEx = exceptions.includes(id);
@@ -528,7 +480,6 @@
                 </div>
               </div>
             `;
-
             body.appendChild(card);
           });
 
@@ -541,13 +492,8 @@
       applyFilters();
     }
 
-    // =========================
-    // Load (avec création auto du jour)
-    // =========================
     async function load(){
       const selectedDate = document.getElementById('datePicker').value;
-
-      // ✅ créer la journée si n'existe pas
       await ensureDayExists(selectedDate);
 
       if(activeListenerRef){ activeListenerRef.off(); }
@@ -559,9 +505,6 @@
       });
     }
 
-    // =========================
-    // PDF Helpers
-    // =========================
     function pdfKpi(label, value){
       return `
         <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
@@ -581,9 +524,6 @@
       el.style.display = "none";
     }
 
-    // =========================
-    // PDF Journalier (stable)
-    // =========================
     function buildDailyPDF(){
       const date = document.getElementById('datePicker').value;
 
@@ -686,7 +626,6 @@
       const date = document.getElementById('datePicker').value;
 
       const element = showPdfArea();
-
       try{
         await html2pdf().set({
           margin: 8,
@@ -741,7 +680,7 @@
     }
 
     // =========================
-    // Export mensuel (1 employé) - léger + stable (pas de pages vides)
+    // ✅ MENSUEL: REPOS = JOUR OUT (off=true)
     // =========================
     function fillEmployeeSelect(){
       const sel = document.getElementById("exportEmp");
@@ -784,11 +723,14 @@
       return snap.val() || {};
     }
 
-    function isRepos(dayEmpData){
-      if(!dayEmpData) return false;
-      return (String(dayEmpData.type || "").toLowerCase() === "repos");
+    function isPresentDay(d){ return !!d?.on; }
+
+    // ✅ REPOS = off=true (OUT). On accepte aussi type=repos si tu l’utilises encore.
+    function isReposDay(d){
+      if(!d) return false;
+      if(!!d.off) return true; // <<<<< règle demandée
+      return (String(d.type || "").toLowerCase() === "repos");
     }
-    function isPresentDay(dayEmpData){ return !!dayEmpData?.on; }
 
     function buildMonthlySingleEmployeePDF(empObj, empIdStr, year, month, monthData){
       const titleMonth = `${monthNameFR(month)} ${year}`;
@@ -806,7 +748,7 @@
         const d = dayData[empIdStr] || null;
 
         const present = isPresentDay(d);
-        const repos = isRepos(d);
+        const repos = isReposDay(d);
 
         if(present) cPresent++;
         if(repos) cRepos++;
@@ -815,6 +757,7 @@
         const lateTxt = (lm !== null && lm > 0) ? `+${lm} min` : "";
         if(lm !== null && lm > 0){ cLate++; cLateMin += lm; }
 
+        // ✅ Statut: Présent > Repos (OUT) > —
         const status = present ? "✅ Présent" : (repos ? "🌿 Repos" : "—");
 
         return `
@@ -824,7 +767,7 @@
             <td style="text-align:center;">${d?.hP || ""}</td>
             <td style="text-align:center;">${d?.hA || ""}</td>
             <td style="text-align:center;">${lateTxt}</td>
-            <td style="text-align:center;">${d?.off ? "OFF" : ""}</td>
+            <td style="text-align:center;">${d?.off ? "OUT" : ""}</td>
           </tr>
         `;
       }).join("");
@@ -838,7 +781,7 @@
           </div>
           <div style="text-align:right;">
             <div style="font-weight:900;color:#111827;font-size:12px;">Période : ${titleMonth}</div>
-            <div style="font-weight:700;color:#6b7280;font-size:10px;">Présent: on=true • Repos: type=repos</div>
+            <div style="font-weight:700;color:#6b7280;font-size:10px;">Repos = jour OUT (off=true)</div>
           </div>
         </div>
         <hr style="margin:14px 0;border:none;border-top:1px solid #e5e7eb;" />
@@ -853,7 +796,7 @@
 
           <div style="margin-top:12px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
             ${pdfKpi("Présents", cPresent)}
-            ${pdfKpi("Repos", cRepos)}
+            ${pdfKpi("Repos (OUT)", cRepos)}
             ${pdfKpi("Retards", cLate)}
             ${pdfKpi("Min. retard", cLateMin)}
             ${pdfKpi("Jours", lastDay)}
@@ -907,7 +850,6 @@
         const element = showPdfArea();
         const filename = `GC_MENSUEL_${year}-${month}_${empIdStr}.pdf`;
 
-        // ✅ mensuel stable: PAS de avoid-all (sinon pages vides)
         const opt = {
           margin: 8,
           filename,
@@ -951,9 +893,6 @@
       }
     }
 
-    // =========================
-    // Init
-    // =========================
     function initApp(){
       const dp = document.getElementById('datePicker');
       dp.value = getMarocDate();
