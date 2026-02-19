@@ -3,10 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Grey Corner • Présences (Refonte)</title>
+  <title>Grey Corner • Présences (Dashboard + PDF Jour & Mensuel)</title>
 
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
@@ -41,22 +46,28 @@
     .toggleWrap{background: rgba(15,23,42,.04); border:1px solid rgba(2,6,23,.08)}
     .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
     .stickyTop{position:sticky;top:0;z-index:50}
+
+    /* PDF-only area */
     #pdfArea{display:none}
     .pdfPage{background:#fff;color:#111827}
     .pdfTable th,.pdfTable td{border:1px solid #e5e7eb;padding:8px;font-size:11px}
     .pdfTable th{background:#f3f4f6;font-weight:800}
+
+    /* Modal */
+    #empModal.hidden{display:none}
   </style>
 </head>
 
 <body class="pb-16">
 
+  <!-- Top bar -->
   <div class="stickyTop glass border-b border-black/5">
     <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
       <div class="flex-1 min-w-0">
         <div class="text-[10px] tracking-[0.22em] font-extrabold uppercase text-[color:var(--accent)]">Fès — Maroc</div>
         <div class="flex items-baseline gap-2">
           <h1 class="text-lg sm:text-xl font-extrabold tracking-tight truncate">GREY CORNER</h1>
-          <span class="text-[11px] font-bold text-slate-500">• Feuille de présence</span>
+          <span class="text-[11px] font-bold text-slate-500">• Présences</span>
         </div>
       </div>
 
@@ -69,24 +80,32 @@
     <div class="max-w-3xl mx-auto px-4 pb-3">
       <div class="grid grid-cols-1 gap-3">
 
-        <!-- ✅ Mode Jour / Mensuel -->
-        <div class="flex gap-2 flex-wrap">
-          <button id="mode-day" onclick="setMode('day')" class="chip px-3 py-2 rounded-full text-[11px] font-extrabold chip active">📅 Jour</button>
-          <button id="mode-month" onclick="setMode('month')" class="chip px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">🗓️ Mensuel</button>
-          <span id="modeHint" class="text-[11px] font-bold text-slate-500 self-center ml-1">PDF journalier (date)</span>
+        <!-- Mode switch -->
+        <div class="card rounded-2xl p-2 flex gap-2">
+          <button id="modeDayBtn" onclick="setMode('day')"
+                  class="btn flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider bg-[color:var(--primary)] text-white">
+            Jour
+          </button>
+          <button id="modeMonthBtn" onclick="setMode('month')"
+                  class="btn flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider bg-white border border-slate-200 text-slate-800">
+            Mensuel
+          </button>
         </div>
 
+        <!-- Date/Month + filters + actions -->
         <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
 
-          <!-- Pickers -->
-          <div class="grid grid-cols-1 sm:grid-cols-[220px_220px_1fr] gap-3 items-center">
+          <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 items-center">
+
+            <!-- Day picker -->
             <input type="date" id="datePicker"
                    class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
 
+            <!-- Month picker (hidden in day mode) -->
             <input type="month" id="monthPicker"
-                   class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white hidden" />
+                   class="hidden w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
 
-            <div class="flex gap-2 flex-wrap" id="filtersWrap">
+            <div class="flex gap-2 flex-wrap">
               <button onclick="setFilter('all')" id="chip-all" class="chip chipBtn chip active px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Tous</button>
               <button onclick="setFilter('present')" id="chip-present" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Présents</button>
               <button onclick="setFilter('absent')" id="chip-absent" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Absents</button>
@@ -95,12 +114,12 @@
             </div>
           </div>
 
-          <!-- Actions -->
           <div class="flex gap-2 sm:justify-end items-stretch">
             <input id="searchInput" oninput="applyFilters()"
                    placeholder="Rechercher un nom…"
                    class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
 
+            <!-- PDF day/month -->
             <button onclick="downloadPDF()"
                     class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
               📄 PDF
@@ -119,8 +138,8 @@
 
   <main class="max-w-3xl mx-auto px-4 pt-4">
 
-    <!-- Summary (Jour) -->
-    <div id="dayKpis" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+    <!-- Summary -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
       <div class="card rounded-2xl p-3">
         <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
         <div id="kpiTotal" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
@@ -143,6 +162,39 @@
       </div>
     </div>
 
+    <!-- ✅ Mode Mensuel : PDF détaillé par employé -->
+    <div id="monthlyEmployeePanel" class="hidden mb-5">
+      <div class="card rounded-3xl p-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">PDF Mensuel détaillé</div>
+            <div class="text-sm font-extrabold text-slate-900 mt-1">Par employé (jour par jour)</div>
+          </div>
+
+          <button onclick="openMonthlyEmployeePicker()"
+                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-white border border-slate-200 text-slate-900 font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+            👤 Choisir
+          </button>
+        </div>
+
+        <div id="monthlyEmployeeChosen" class="mt-3 text-[12px] font-bold text-slate-600">
+          Aucun employé sélectionné.
+        </div>
+
+        <div class="mt-3 flex gap-2 flex-wrap">
+          <button onclick="downloadMonthlyEmployeePDF()"
+                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+            📄 PDF employé
+          </button>
+
+          <button onclick="shareMonthlyEmployeePDFtoWhatsApp()"
+                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-green-600 text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+            📤 WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Staff list -->
     <div id="staffList" class="space-y-6"></div>
 
@@ -151,32 +203,49 @@
     </div>
   </main>
 
-  <!-- Hidden PDF area -->
+  <!-- Hidden PDF area (built dynamically before export) -->
   <div id="pdfArea" class="pdfPage p-6">
     <div id="pdfHeader" class="mb-4"></div>
     <div id="pdfSummary" class="mb-4"></div>
     <div id="pdfTables" class="space-y-6"></div>
   </div>
 
+  <!-- ✅ Modal employé -->
+  <div id="empModal" class="hidden fixed inset-0 z-[999] bg-black/40 items-end justify-center" onclick="closeEmpModal()">
+    <div class="bg-white w-full max-w-3xl rounded-t-[28px] p-4" onclick="event.stopPropagation()">
+      <div class="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-3"></div>
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-sm font-extrabold text-slate-900">Choisir un employé</div>
+        <button class="text-slate-500 font-extrabold" onclick="closeEmpModal()">✕</button>
+      </div>
+      <input id="empModalSearch" class="w-full px-4 py-3 rounded-2xl border border-slate-200 font-semibold"
+             placeholder="Rechercher..." oninput="renderEmpModalList()" />
+      <div id="empModalList" class="mt-3 max-h-[55vh] overflow-y-auto space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
+    // ===== Firebase =====
     const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
+    // ===== State =====
     let isManager = false;
     let currentFilter = "all";
     let latestDataCache = {};
     let activeListenerRef = null;
 
-    // ✅ Mode: day | month
-    let currentMode = "day";
+    let currentMode = "day"; // 'day' | 'month'
+    let selectedMonthlyEmpId = null;
 
-    // ✅ Chef cuisine ajouté
+    // ✅ Chef cuisine ajouté (hA only)
     const EQUIPE = [
-      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'}, // Chef cuisine (hA only)
+      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'}, // ✅ Chef cuisine
       {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
       {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
       {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
@@ -191,9 +260,13 @@
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
 
+    // exceptions historiques (inchangées)
     const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
+
+    // ✅ hA seulement (sans hP)
     const haOnly = ["BOUCHNAK_NAOUAL"];
 
+    // ===== Helpers =====
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'Africa/Casablanca',
@@ -202,34 +275,12 @@
         day: '2-digit'
       }).format(new Date());
 
-    const getMarocMonth = () =>
-      new Intl.DateTimeFormat('fr-CA', {
-        timeZone: 'Africa/Casablanca',
-        year: 'numeric',
-        month: '2-digit'
-      }).format(new Date()).slice(0,7); // YYYY-MM
-
-    function timeToMin(t){
-      if(!t || typeof t !== "string" || !t.includes(":")) return null;
-      const [h,m] = t.split(":").map(Number);
-      if(Number.isNaN(h) || Number.isNaN(m)) return null;
-      return h*60+m;
-    }
-
-    // ✅ late: Chef hA-only => 0
-    function lateMinutes(hP, hA, isHaOnly=false){
-      if(isHaOnly) return 0;
-      const p = timeToMin(hP);
-      const a = timeToMin(hA);
-      if(p === null || a === null) return null;
-      return Math.max(0, a - p);
-    }
-
-    function fmtLate(min){
-      if(min === null) return "—";
-      if(min <= 0) return "À l'heure";
-      return `+${min} min`;
-    }
+    const getMarocMonth = () => {
+      const d = new Date();
+      const y = new Intl.DateTimeFormat('fr-CA',{timeZone:'Africa/Casablanca',year:'numeric'}).format(d);
+      const m = new Intl.DateTimeFormat('fr-CA',{timeZone:'Africa/Casablanca',month:'2-digit'}).format(d);
+      return `${y}-${m}`; // YYYY-MM
+    };
 
     function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
 
@@ -242,50 +293,43 @@
       return isManager || (estEx && selectedDate === getMarocDate());
     }
 
-    // ✅ Mode switching
-    function setMode(mode){
-      currentMode = mode;
+    function timeToMin(t){
+      if(!t || typeof t !== "string" || !t.includes(":")) return null;
+      const [h,m] = t.split(":").map(Number);
+      if(Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h*60+m;
+    }
 
-      document.getElementById("mode-day").classList.remove("active");
-      document.getElementById("mode-month").classList.remove("active");
+    function lateMinutes(hP, hA){
+      const p = timeToMin(hP);
+      const a = timeToMin(hA);
+      if(p === null || a === null) return null;
+      return Math.max(0, a - p);
+    }
 
-      if(mode === "day"){
-        document.getElementById("mode-day").classList.add("active");
-        document.getElementById("modeHint").textContent = "PDF journalier (date)";
+    function fmtLate(min){
+      if(min === null) return "—";
+      if(min <= 0) return "À l'heure";
+      return `+${min} min`;
+    }
 
-        document.getElementById("datePicker").classList.remove("hidden");
-        document.getElementById("monthPicker").classList.add("hidden");
-        document.getElementById("filtersWrap").classList.remove("hidden");
-        document.getElementById("dayKpis").classList.remove("hidden");
-        load(); // listener live
-      }else{
-        document.getElementById("mode-month").classList.add("active");
-        document.getElementById("modeHint").textContent = "PDF mensuel (bilan du mois)";
+    function isValidHHMM(t){
+      return typeof t === "string" && /^\d{2}:\d{2}$/.test(t);
+    }
 
-        document.getElementById("datePicker").classList.add("hidden");
-        document.getElementById("monthPicker").classList.remove("hidden");
-        document.getElementById("filtersWrap").classList.add("hidden"); // filtres jour pas utiles en mensuel
-        document.getElementById("dayKpis").classList.add("hidden");
-
-        // stop listener live day
-        if(activeListenerRef){ activeListenerRef.off(); activeListenerRef = null; }
-        renderMonthlyPlaceholder();
+    function getDatesOfMonth(yyyyMm){
+      // yyyyMm = "2026-01"
+      const [y,m] = yyyyMm.split("-").map(Number);
+      const d = new Date(Date.UTC(y, m-1, 1));
+      const dates = [];
+      while(d.getUTCMonth() === (m-1)){
+        dates.push(d.toISOString().slice(0,10)); // YYYY-MM-DD
+        d.setUTCDate(d.getUTCDate()+1);
       }
+      return dates;
     }
 
-    function renderMonthlyPlaceholder(){
-      const list = document.getElementById('staffList');
-      list.innerHTML = `
-        <div class="card rounded-3xl p-5">
-          <div class="text-sm font-extrabold text-slate-900">Mode Mensuel</div>
-          <div class="text-[12px] font-semibold text-slate-500 mt-1">
-            Choisis un mois puis clique sur <b>📄 PDF</b> (ou <b>📤 WhatsApp</b>) pour générer le bilan mensuel.
-          </div>
-        </div>
-      `;
-    }
-
-    // ===== Filters (day only) =====
+    // ===== Filters =====
     function setFilter(f){
       currentFilter = f;
       document.querySelectorAll(".chipBtn").forEach(b => b.classList.remove("active"));
@@ -295,11 +339,8 @@
     }
 
     function applyFilters(){
-      if(currentMode !== "day") return;
-
       const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
       const cards = document.querySelectorAll("#staffList .empCard");
-
       cards.forEach(card => {
         const matchName = (card.dataset.name || "").includes(q);
 
@@ -326,7 +367,34 @@
         isManager = false;
         location.reload();
       }
-      if(currentMode === "day") load();
+      load();
+    }
+
+    // ===== Mode =====
+    function setMode(mode){
+      currentMode = mode;
+
+      const dayBtn = document.getElementById("modeDayBtn");
+      const monthBtn = document.getElementById("modeMonthBtn");
+      const datePicker = document.getElementById("datePicker");
+      const monthPicker = document.getElementById("monthPicker");
+      const monthlyPanel = document.getElementById("monthlyEmployeePanel");
+
+      if(mode === "day"){
+        dayBtn.className = "btn flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider bg-[color:var(--primary)] text-white";
+        monthBtn.className = "btn flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider bg-white border border-slate-200 text-slate-800";
+        datePicker.classList.remove("hidden");
+        monthPicker.classList.add("hidden");
+        monthlyPanel.classList.add("hidden");
+      }else{
+        monthBtn.className = "btn flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider bg-[color:var(--primary)] text-white";
+        dayBtn.className = "btn flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wider bg-white border border-slate-200 text-slate-800";
+        datePicker.classList.add("hidden");
+        monthPicker.classList.remove("hidden");
+        monthlyPanel.classList.remove("hidden");
+      }
+
+      load();
     }
 
     // ===== CRUD =====
@@ -335,8 +403,8 @@
       database.ref('presences/'+date+'/'+id).update({[f]:v});
     }
 
-    // ===== Render (day) =====
-    function render(){
+    // ===== Render (DAY UI) =====
+    function renderDay(){
       const selectedDate = document.getElementById('datePicker').value;
       const lock = isLocked(selectedDate);
 
@@ -367,7 +435,6 @@
 
         const body = document.createElement('div');
         body.className = "px-4 pb-4 space-y-3";
-
         let open = true;
         header.addEventListener('click', () => {
           open = !open;
@@ -377,23 +444,24 @@
         groupes[poste]
           .slice()
           .sort((a,b)=>{
-            const A = `${a.nom}_${a.prenom}`;
-            const B = `${b.nom}_${b.prenom}`;
+            const A = empId(a);
+            const B = empId(b);
             if (A === "BOUCHNAK_NAOUAL") return -1;
             if (B === "BOUCHNAK_NAOUAL") return 1;
             return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);
           })
           .forEach(emp => {
+
             const id = empId(emp);
             const d = latestDataCache[id] || {};
 
             const estEx = exceptions.includes(id);
             const isHaOnly = haOnly.includes(id);
 
-            // ✅ editHA: manager OR exceptions OR chef today OR chef manager (pour saisie janvier)
-            const editHA = canEditHA(id, selectedDate) || (isHaOnly && (isManager || selectedDate === getMarocDate()));
+            // hA editable: manager OR exceptions OR chef hA-only (today)
+            const editHA = canEditHA(id, selectedDate) || (isHaOnly && selectedDate === getMarocDate());
 
-            const late = lateMinutes(d.hP, d.hA, isHaOnly);
+            const late = lateMinutes(d.hP, d.hA);
 
             const isPresent = !!d.on;
             const isOut = !!d.off;
@@ -409,7 +477,7 @@
             const statusBadges = [];
             if(isPresent) statusBadges.push(`<span class="badge ok">Présent</span>`);
             else statusBadges.push(`<span class="badge bad">Absent</span>`);
-            if(isOut) statusBadges.push(`<span class="badge">Repos/OUT</span>`);
+            if(isOut) statusBadges.push(`<span class="badge">Sorti</span>`);
             if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
             if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
             if(estEx) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 Exception</span>`);
@@ -441,7 +509,7 @@
                       onchange="upd('${id}','on',this.checked)">
                   </label>
                   <label class="flex flex-col items-center px-1">
-                    <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OFF</span>
+                    <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
                     <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
                       ${isOut ? "checked" : ""} ${lock ? "disabled" : ""}
                       onchange="upd('${id}','off',this.checked)">
@@ -484,11 +552,11 @@
         list.appendChild(section);
       });
 
-      computeKPIs();
+      computeKPIsDay();
       applyFilters();
     }
 
-    function computeKPIs(){
+    function computeKPIsDay(){
       const total = EQUIPE.length;
       let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
 
@@ -498,8 +566,7 @@
         const isPresent = !!d.on;
         if(isPresent) present++; else absent++;
 
-        const isHaOnly = haOnly.includes(id);
-        const lm = lateMinutes(d.hP, d.hA, isHaOnly);
+        const lm = lateMinutes(d.hP, d.hA);
         if(lm !== null && lm > 0){
           lateCount++;
           lateMinSum += lm;
@@ -513,24 +580,210 @@
       document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
 
-    // ===== Load (day) =====
-    function load(){
-      if(currentMode !== "day") return;
+    // ===== Render (MONTH UI = simple cards by poste showing counters) =====
+    function renderMonth(statsByEmp){
+      const list = document.getElementById('staffList');
+      list.innerHTML = "";
 
-      const selectedDate = document.getElementById('datePicker').value;
+      const groupes = EQUIPE.reduce((acc, emp) => {
+        (acc[emp.poste] = acc[emp.poste] || []).push(emp);
+        return acc;
+      }, {});
 
-      if(activeListenerRef){
-        activeListenerRef.off();
-      }
+      Object.keys(groupes).sort().forEach(poste => {
+        const section = document.createElement('section');
+        section.className = "card rounded-3xl overflow-hidden";
 
-      activeListenerRef = database.ref('presences/' + selectedDate);
-      activeListenerRef.on('value', snap => {
-        latestDataCache = snap.val() || {};
-        render();
+        const header = document.createElement('div');
+        header.className = "w-full flex items-center justify-between px-4 py-4 bg-white";
+        header.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="sectionTitle text-xs font-extrabold tracking-[0.18em] uppercase text-slate-500">${poste}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="badge">${groupes[poste].length} pers.</span>
+          </div>
+        `;
+
+        const body = document.createElement('div');
+        body.className = "px-4 pb-4 space-y-3";
+
+        groupes[poste]
+          .slice()
+          .sort((a,b)=>{
+            const A = empId(a);
+            const B = empId(b);
+            if (A === "BOUCHNAK_NAOUAL") return -1;
+            if (B === "BOUCHNAK_NAOUAL") return 1;
+            return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);
+          })
+          .forEach(emp => {
+            const id = empId(emp);
+            const s = statsByEmp[id] || { present:0, off:0, absent:0, incomplete:0, lateDays:0, lateMin:0 };
+
+            const badges = [];
+            badges.push(`<span class="badge ok">Présent ${s.present}</span>`);
+            badges.push(`<span class="badge">Repos ${s.off}</span>`);
+            badges.push(`<span class="badge bad">Absent ${s.absent}</span>`);
+            if(s.incomplete>0) badges.push(`<span class="badge warn">Incomplet ${s.incomplete}</span>`);
+            if(s.lateDays>0) badges.push(`<span class="badge warn">Retards ${s.lateDays}</span>`);
+            if(haOnly.includes(id)) badges.push(`<span class="badge" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10);color:#166534">👩‍🍳 Chef</span>`);
+
+            const card = document.createElement('div');
+            card.className = "card rounded-2xl p-4 empCard";
+            card.dataset.name = `${emp.nom} ${emp.prenom}`.toLowerCase();
+
+            // For filters in monthly mode: we map "present" if present>0, "absent" if absent>0, etc.
+            card.dataset.present = (s.present > 0) ? "1" : "0";
+            card.dataset.late = (s.lateDays > 0) ? "1" : "0";
+            card.dataset.incomplete = (s.incomplete > 0) ? "1" : "0";
+
+            card.innerHTML = `
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="font-extrabold text-sm tracking-tight text-slate-900 truncate">
+                    ${emp.nom} ${emp.prenom}
+                  </div>
+                  <div class="mt-2 flex gap-2 flex-wrap">
+                    ${badges.join("")}
+                  </div>
+                </div>
+
+                <button class="btn px-3 py-2 rounded-2xl border border-slate-200 bg-white text-[11px] font-extrabold"
+                        onclick="quickSelectMonthlyEmp('${id}')">
+                  PDF 👤
+                </button>
+              </div>
+
+              <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div class="rounded-xl bg-slate-50 border border-slate-100 p-2">
+                  <div class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Retards min</div>
+                  <div class="text-sm font-extrabold text-slate-900 mt-1">${s.lateMin}</div>
+                </div>
+                <div class="rounded-xl bg-slate-50 border border-slate-100 p-2">
+                  <div class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Retards jours</div>
+                  <div class="text-sm font-extrabold text-slate-900 mt-1">${s.lateDays}</div>
+                </div>
+                <div class="rounded-xl bg-slate-50 border border-slate-100 p-2">
+                  <div class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Incomplets</div>
+                  <div class="text-sm font-extrabold text-slate-900 mt-1">${s.incomplete}</div>
+                </div>
+              </div>
+            `;
+
+            body.appendChild(card);
+          });
+
+        section.appendChild(header);
+        section.appendChild(body);
+        list.appendChild(section);
       });
+
+      computeKPIsMonth(statsByEmp);
+      applyFilters();
     }
 
-    // ===== PDF builders =====
+    function computeKPIsMonth(statsByEmp){
+      const total = EQUIPE.length;
+      let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
+
+      Object.keys(statsByEmp).forEach(id=>{
+        const s = statsByEmp[id];
+        if(s.present>0) present++;
+        if(s.absent>0) absent++;
+        if(s.lateDays>0) lateCount++;
+        lateMinSum += (s.lateMin || 0);
+      });
+
+      document.getElementById("kpiTotal").textContent = total;
+      document.getElementById("kpiPresent").textContent = present;
+      document.getElementById("kpiAbsent").textContent = absent;
+      document.getElementById("kpiLate").textContent = lateCount;
+      document.getElementById("kpiLateMin").textContent = lateMinSum;
+    }
+
+    // ===== Load =====
+    function load(){
+      // avoid stacking listeners
+      if(activeListenerRef){
+        activeListenerRef.off();
+        activeListenerRef = null;
+      }
+
+      if(currentMode === "day"){
+        const selectedDate = document.getElementById('datePicker').value;
+        activeListenerRef = database.ref('presences/' + selectedDate);
+        activeListenerRef.on('value', snap => {
+          latestDataCache = snap.val() || {};
+          renderDay();
+        });
+      }else{
+        // monthly: compute stats across all days in month (one-time, no realtime)
+        loadMonthStats().then(stats => {
+          latestDataCache = {}; // not used
+          renderMonth(stats);
+        });
+      }
+    }
+
+    async function loadMonthStats(){
+      const month = document.getElementById("monthPicker").value;
+      const dates = getDatesOfMonth(month);
+
+      const stats = {};
+      EQUIPE.forEach(e => {
+        const id = empId(e);
+        stats[id] = { present:0, off:0, absent:0, incomplete:0, lateDays:0, lateMin:0 };
+      });
+
+      const snaps = await Promise.all(dates.map(d => database.ref('presences/'+d).once('value')));
+
+      snaps.forEach((snap, idx) => {
+        const dayData = snap.val() || {};
+        if(dayData.disabled) return;
+
+        EQUIPE.forEach(emp=>{
+          const id = empId(emp);
+          const entry = dayData[id] || {};
+          const isHaOnlyEmp = haOnly.includes(id);
+
+          const off = !!entry.off;
+          const on = !!entry.on || !!entry.hA;
+          const hp = entry.hP || "";
+          const ha = entry.hA || "";
+
+          if(off){
+            stats[id].off++;
+            return;
+          }
+
+          if(!on && !ha && !hp){
+            stats[id].absent++;
+            return;
+          }
+
+          if(on) stats[id].present++;
+
+          const hasHP = !!hp;
+          const hasHA = !!ha;
+
+          const incomplete = isHaOnlyEmp ? !hasHA : (!hasHP || !hasHA);
+          if(incomplete) stats[id].incomplete++;
+
+          if(!isHaOnlyEmp && isValidHHMM(hp) && isValidHHMM(ha)){
+            const lm = lateMinutes(hp, ha);
+            if(lm && lm > 0){
+              stats[id].lateDays++;
+              stats[id].lateMin += lm;
+            }
+          }
+        });
+      });
+
+      return stats;
+    }
+
+    // ===== PDF Helpers =====
     function pdfKpi(label, value){
       return `
         <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
@@ -540,27 +793,32 @@
       `;
     }
 
-    function buildPDFHeader(titleRight){
+    function buildPDFHeader(title){
+      const right = currentMode === "day"
+        ? `Date : ${document.getElementById('datePicker').value}`
+        : `Mois : ${document.getElementById('monthPicker').value}`;
       return `
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;">
           <div>
             <div style="font-weight:900;letter-spacing:.12em;color:#b0892f;font-size:10px;text-transform:uppercase;">Fès — Maroc</div>
             <div style="font-weight:900;font-size:20px;letter-spacing:-.02em;">GREY CORNER</div>
-            <div style="font-weight:800;color:#374151;font-size:12px;margin-top:2px;">${titleRight}</div>
+            <div style="font-weight:800;color:#374151;font-size:12px;margin-top:2px;">${title}</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-weight:900;color:#111827;font-size:12px;">${currentMode === "day" ? ("Date : " + document.getElementById('datePicker').value) : ("Mois : " + document.getElementById('monthPicker').value)}</div>
-            <div style="font-weight:700;color:#6b7280;font-size:10px;">Généré depuis l’outil</div>
+            <div style="font-weight:900;color:#111827;font-size:12px;">${right}</div>
+            <div style="font-weight:700;color:#6b7280;font-size:10px;">Généré depuis l’outil de présence</div>
           </div>
         </div>
         <hr style="margin:14px 0;border:none;border-top:1px solid #e5e7eb;" />
       `;
     }
 
-    function buildDayPDF(){
+    // ===== PDF: DAY (rapport journalier) =====
+    function buildPDFDay(){
       const date = document.getElementById('datePicker').value;
 
-      document.getElementById("pdfHeader").innerHTML = buildPDFHeader("Rapport journalier — Présences");
+      document.getElementById("pdfHeader").innerHTML =
+        buildPDFHeader("Rapport journalier — Présences");
 
       const total = EQUIPE.length;
       let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
@@ -569,9 +827,7 @@
         const d = latestDataCache[empId(emp)] || {};
         const isPresent = !!d.on;
         if(isPresent) present++; else absent++;
-
-        const isHaOnly = haOnly.includes(empId(emp));
-        const lm = lateMinutes(d.hP, d.hA, isHaOnly);
+        const lm = lateMinutes(d.hP, d.hA);
         if(lm !== null && lm > 0){ lateCount++; lateMinSum += lm; }
       });
 
@@ -597,8 +853,7 @@
         const rows = groupes[poste]
           .slice()
           .sort((a,b)=>{
-            const A = `${a.nom}_${a.prenom}`;
-            const B = `${b.nom}_${b.prenom}`;
+            const A = empId(a), B = empId(b);
             if (A === "BOUCHNAK_NAOUAL") return -1;
             if (B === "BOUCHNAK_NAOUAL") return 1;
             return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);
@@ -606,22 +861,19 @@
           .map(emp => {
             const id = empId(emp);
             const d = latestDataCache[id] || {};
-            const isHaOnly = haOnly.includes(id);
-            const lm = lateMinutes(d.hP, d.hA, isHaOnly);
-
+            const lm = lateMinutes(d.hP, d.hA);
             const presentTxt = d.on ? "Oui" : "Non";
-            const offTxt = d.off ? "Oui" : "Non";
+            const outTxt = d.off ? "Oui" : "Non";
             const hp = d.hP || "";
             const ha = d.hA || "";
             const retard = (lm === null) ? "" : (lm > 0 ? `+${lm} min` : "0");
             const ex = exceptions.includes(id) ? "🌿" : "";
-            const chef = isHaOnly ? "👩‍🍳" : "";
-
+            const chef = haOnly.includes(id) ? "👩‍🍳" : "";
             return `
               <tr>
                 <td>${emp.nom} ${emp.prenom} ${chef} ${ex}</td>
                 <td style="text-align:center;">${presentTxt}</td>
-                <td style="text-align:center;">${offTxt}</td>
+                <td style="text-align:center;">${outTxt}</td>
                 <td style="text-align:center;">${hp}</td>
                 <td style="text-align:center;">${ha}</td>
                 <td style="text-align:center;">${retard}</td>
@@ -639,7 +891,7 @@
               <tr>
                 <th style="text-align:left;">Employé</th>
                 <th style="text-align:center;">Présent</th>
-                <th style="text-align:center;">OFF</th>
+                <th style="text-align:center;">OUT</th>
                 <th style="text-align:center;">Prévu</th>
                 <th style="text-align:center;">Arrivée</th>
                 <th style="text-align:center;">Retard</th>
@@ -652,209 +904,296 @@
       });
     }
 
-    function getDatesOfMonth(yyyyMm){
-      const [yStr,mStr] = (yyyyMm || "").split("-");
-      const y = Number(yStr);
-      const m = Number(mStr);
-      if(!y || !m) return [];
-      const dates = [];
-      const d = new Date(Date.UTC(y, m-1, 1));
-      while(d.getUTCMonth() === (m-1)){
-        const iso = d.toISOString().slice(0,10);
-        dates.push(iso);
-        d.setUTCDate(d.getUTCDate()+1);
-      }
-      return dates;
-    }
+    // ===== PDF: MONTH (global) =====
+    async function buildPDFMonthGlobal(){
+      const month = document.getElementById("monthPicker").value;
+      const stats = await loadMonthStats();
 
-    async function buildMonthPDF(){
-      const month = document.getElementById('monthPicker').value; // YYYY-MM
-      const dates = getDatesOfMonth(month);
+      document.getElementById("pdfHeader").innerHTML =
+        buildPDFHeader("Bilan mensuel — Présences (Global)");
 
-      document.getElementById("pdfHeader").innerHTML = buildPDFHeader("Bilan mensuel — Présences");
-      document.getElementById("pdfSummary").innerHTML = "";
+      // Summary global (combines)
+      const total = EQUIPE.length;
+      let presentEmp = 0, absentEmp = 0, lateEmp = 0, lateMinSum = 0;
 
-      const stats = {};
-      EQUIPE.forEach(emp => {
-        const id = empId(emp);
-        stats[id] = { emp, present:0, off:0, lateDays:0, lateMin:0, incomplete:0 };
+      Object.keys(stats).forEach(id=>{
+        const s = stats[id];
+        if(s.present > 0) presentEmp++;
+        if(s.absent > 0) absentEmp++;
+        if(s.lateDays > 0) lateEmp++;
+        lateMinSum += s.lateMin;
       });
-
-      // charge chaque jour du mois
-      const snaps = await Promise.all(dates.map(d => database.ref('presences/'+d).once('value')));
-
-      snaps.forEach((snap, idx) => {
-        const dayData = snap.val() || {};
-        if(dayData.disabled) return;
-
-        Object.keys(stats).forEach(id => {
-          const entry = dayData[id] || {};
-          const st = stats[id];
-
-          const isHaOnly = haOnly.includes(id);
-
-          const isOff = !!entry.off;
-          const isPresent = !!entry.on || !!entry.hA; // si hA existe, on considère présence même si on oublié on
-          const hasHP = !!entry.hP;
-          const hasHA = !!entry.hA;
-
-          if(isOff){ st.off++; return; }
-
-          if(isPresent){
-            st.present++;
-
-            const lm = lateMinutes(entry.hP, entry.hA, isHaOnly);
-            if(lm !== null && lm > 0){
-              st.lateDays++;
-              st.lateMin += lm;
-            }
-
-            // incomplet : normal => HP+HA ; Chef => HA seulement
-            const inc = isHaOnly ? !hasHA : (!hasHP || !hasHA);
-            if(inc) st.incomplete++;
-          }else{
-            // absent: rien à incrémenter ici (tu peux ajouter absent si tu veux)
-          }
-        });
-      });
-
-      // KPIs mensuels (global)
-      const totalEmp = EQUIPE.length;
-      const totalPres = Object.values(stats).reduce((a,s)=>a+s.present,0);
-      const totalOff = Object.values(stats).reduce((a,s)=>a+s.off,0);
-      const totalLateDays = Object.values(stats).reduce((a,s)=>a+s.lateDays,0);
-      const totalLateMin = Object.values(stats).reduce((a,s)=>a+s.lateMin,0);
 
       document.getElementById("pdfSummary").innerHTML = `
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
-          ${pdfKpi("Employés", totalEmp)}
-          ${pdfKpi("Présences", totalPres)}
-          ${pdfKpi("Repos", totalOff)}
-          ${pdfKpi("Jours retard", totalLateDays)}
-          ${pdfKpi("Minutes retard", totalLateMin)}
+          ${pdfKpi("Employés", total)}
+          ${pdfKpi("Ont pointé", presentEmp)}
+          ${pdfKpi("Absences", absentEmp)}
+          ${pdfKpi("Retardataires", lateEmp)}
+          ${pdfKpi("Minutes retard", lateMinSum)}
         </div>
       `;
 
-      // Table mensuelle
+      const groupes = EQUIPE.reduce((acc, emp) => {
+        (acc[emp.poste] = acc[emp.poste] || []).push(emp);
+        return acc;
+      }, {});
+
       const wrap = document.getElementById("pdfTables");
       wrap.innerHTML = "";
 
-      const rows = Object.values(stats)
-        .sort((a,b)=>{
-          const A = empId(a.emp);
-          const B = empId(b.emp);
-          if(A === "BOUCHNAK_NAOUAL") return -1;
-          if(B === "BOUCHNAK_NAOUAL") return 1;
-          return (a.emp.poste+a.emp.nom+a.emp.prenom).localeCompare(b.emp.poste+b.emp.nom+b.emp.prenom);
-        })
-        .map(s=>{
-          const id = empId(s.emp);
-          const isHaOnly = haOnly.includes(id);
-          const tag = isHaOnly ? "👩‍🍳" : (exceptions.includes(id) ? "🌿" : "");
-          return `
-            <tr>
-              <td>${s.emp.poste}</td>
-              <td>${s.emp.nom} ${s.emp.prenom} ${tag}</td>
-              <td style="text-align:center;">${s.present}</td>
-              <td style="text-align:center;">${s.off}</td>
-              <td style="text-align:center;">${s.incomplete}</td>
-              <td style="text-align:center;">${s.lateDays}</td>
-              <td style="text-align:center;">${s.lateMin}</td>
-            </tr>
-          `;
-        }).join("");
+      Object.keys(groupes).sort().forEach(poste => {
+        const rows = groupes[poste]
+          .slice()
+          .sort((a,b)=>{
+            const A = empId(a), B = empId(b);
+            if (A === "BOUCHNAK_NAOUAL") return -1;
+            if (B === "BOUCHNAK_NAOUAL") return 1;
+            return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);
+          })
+          .map(emp=>{
+            const id = empId(emp);
+            const s = stats[id] || { present:0, off:0, absent:0, incomplete:0, lateDays:0, lateMin:0 };
+            const chef = haOnly.includes(id) ? "👩‍🍳" : "";
+            return `
+              <tr>
+                <td>${emp.nom} ${emp.prenom} ${chef}</td>
+                <td style="text-align:center;">${s.present}</td>
+                <td style="text-align:center;">${s.off}</td>
+                <td style="text-align:center;">${s.absent}</td>
+                <td style="text-align:center;">${s.incomplete}</td>
+                <td style="text-align:center;">${s.lateDays}</td>
+                <td style="text-align:center;">${s.lateMin}</td>
+              </tr>
+            `;
+          }).join("");
+
+        const block = document.createElement("div");
+        block.innerHTML = `
+          <div style="margin-top:14px;margin-bottom:8px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#6b7280;font-size:11px;">
+            ${poste}
+          </div>
+          <table class="pdfTable" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">Employé</th>
+                <th style="text-align:center;">Présences</th>
+                <th style="text-align:center;">Repos</th>
+                <th style="text-align:center;">Absences</th>
+                <th style="text-align:center;">Incomplets</th>
+                <th style="text-align:center;">Retards j</th>
+                <th style="text-align:center;">Retards min</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+        wrap.appendChild(block);
+      });
+
+      return { month };
+    }
+
+    // ===== PDF: MONTH (détaillé par employé) =====
+    function dayStatusForEmployee(entry, isHaOnlyEmp){
+      const on = !!entry.on || !!entry.hA;
+      const off = !!entry.off;
+      const hp = entry.hP || "";
+      const ha = entry.hA || "";
+
+      if(off) return { label:"REPOS", kind:"repos", lateMin:0 };
+      if(!on && !ha && !hp) return { label:"ABSENT", kind:"absent", lateMin:0 };
+
+      const hasHP = !!hp;
+      const hasHA = !!ha;
+
+      const incomplete = isHaOnlyEmp ? !hasHA : (!hasHP || !hasHA);
+
+      let lateMin = 0;
+      if(!isHaOnlyEmp && isValidHHMM(hp) && isValidHHMM(ha)){
+        const lm = lateMinutes(hp, ha);
+        lateMin = lm === null ? 0 : lm;
+      }
+
+      if(incomplete) return { label:"INCOMPLET", kind:"incomplete", lateMin };
+      if(lateMin > 0) return { label:`RETARD +${lateMin}m`, kind:"late", lateMin };
+      return { label:"OK", kind:"ok", lateMin:0 };
+    }
+
+    async function buildMonthEmployeePDF(empIdTarget){
+      const month = document.getElementById('monthPicker').value;
+      const dates = getDatesOfMonth(month);
+
+      const emp = EQUIPE.find(e => empId(e) === empIdTarget);
+      if(!emp) throw new Error("Employé introuvable");
+
+      const isHaOnlyEmp = haOnly.includes(empIdTarget);
+
+      document.getElementById("pdfHeader").innerHTML =
+        buildPDFHeader(`Bilan mensuel détaillé — ${emp.nom} ${emp.prenom} (${emp.poste})`);
+
+      const snaps = await Promise.all(dates.map(d => database.ref('presences/'+d).once('value')));
+
+      let present=0, off=0, absent=0, incomplete=0, lateDays=0, lateMin=0;
+      const rows = [];
+
+      snaps.forEach((snap, idx) => {
+        const day = dates[idx];
+        const dayData = snap.val() || {};
+        if(dayData.disabled) return;
+
+        const entry = dayData[empIdTarget] || {};
+        const hp = entry.hP || "";
+        const ha = entry.hA || "";
+        const on = !!entry.on || !!entry.hA;
+        const isOff = !!entry.off;
+
+        const st = dayStatusForEmployee(entry, isHaOnlyEmp);
+
+        if(isOff){
+          off++;
+        }else if(!on && !ha && !hp){
+          absent++;
+        }else{
+          if(on) present++;
+          if(st.kind === "incomplete") incomplete++;
+          if(st.lateMin > 0){ lateDays++; lateMin += st.lateMin; }
+        }
+
+        rows.push({
+          day,
+          on: on ? "Oui" : "Non",
+          off: isOff ? "Oui" : "Non",
+          hp,
+          ha,
+          retard: st.kind === "late" ? `+${st.lateMin}` : (st.kind === "ok" ? "0" : ""),
+          statut: st.label
+        });
+      });
+
+      document.getElementById("pdfSummary").innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+          ${pdfKpi("Présences", present)}
+          ${pdfKpi("Repos", off)}
+          ${pdfKpi("Absences", absent)}
+          ${pdfKpi("Retards (jours)", lateDays)}
+          ${pdfKpi("Retards (min)", lateMin)}
+        </div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+          ${pdfKpi("Incomplets", incomplete)}
+          ${pdfKpi("Règle", isHaOnlyEmp ? "Chef hA-only" : "HP + HA")}
+        </div>
+      `;
+
+      const wrap = document.getElementById("pdfTables");
+      wrap.innerHTML = "";
+
+      const tbody = rows.map(r => `
+        <tr>
+          <td style="text-align:center;">${r.day}</td>
+          <td style="text-align:center;">${r.on}</td>
+          <td style="text-align:center;">${r.off}</td>
+          <td style="text-align:center;">${r.hp}</td>
+          <td style="text-align:center;">${r.ha}</td>
+          <td style="text-align:center;">${r.retard}</td>
+          <td style="text-align:center;">${r.statut}</td>
+        </tr>
+      `).join("");
 
       const block = document.createElement("div");
       block.innerHTML = `
         <div style="margin-top:8px;margin-bottom:8px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#6b7280;font-size:11px;">
-          Bilan par employé
+          Détail jour par jour
         </div>
         <table class="pdfTable" style="width:100%;border-collapse:collapse;">
           <thead>
             <tr>
-              <th style="text-align:left;">Poste</th>
-              <th style="text-align:left;">Employé</th>
-              <th style="text-align:center;">Prés.</th>
-              <th style="text-align:center;">Repos</th>
-              <th style="text-align:center;">Incompl.</th>
-              <th style="text-align:center;">Retards (j)</th>
-              <th style="text-align:center;">Retards (min)</th>
+              <th style="text-align:center;">Date</th>
+              <th style="text-align:center;">IN</th>
+              <th style="text-align:center;">OFF</th>
+              <th style="text-align:center;">hP</th>
+              <th style="text-align:center;">hA</th>
+              <th style="text-align:center;">Retard</th>
+              <th style="text-align:center;">Statut</th>
             </tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody>${tbody}</tbody>
         </table>
       `;
       wrap.appendChild(block);
+
+      return { emp, month };
     }
 
-    async function buildPDF(){
-      if(currentMode === "day"){
-        buildDayPDF();
-      }else{
-        await buildMonthPDF();
+    // ===== PDF actions (Day or Month) =====
+    async function downloadPDF(){
+      const element = document.getElementById('pdfArea');
+      element.style.display = "block";
+
+      try{
+        if(currentMode === "day"){
+          buildPDFDay();
+          const date = document.getElementById('datePicker').value;
+
+          await html2pdf().set({
+            margin: 8,
+            filename: `GC_RAPPORT_${date}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 3, useCORS: true },
+            jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          }).from(element).save();
+
+        }else{
+          const { month } = await buildPDFMonthGlobal();
+          await html2pdf().set({
+            margin: 8,
+            filename: `GC_BILAN_${month}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 3, useCORS: true },
+            jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          }).from(element).save();
+        }
+      } finally {
+        element.style.display = "none";
       }
     }
 
-    async function downloadPDF(){
-      await buildPDF();
-
-      const fileLabel = (currentMode === "day")
-        ? document.getElementById('datePicker').value
-        : document.getElementById('monthPicker').value;
-
-      const filename = (currentMode === "day")
-        ? `GC_RAPPORT_${fileLabel}.pdf`
-        : `GC_BILAN_${fileLabel}.pdf`;
-
-      const element = document.getElementById('pdfArea');
-      element.style.display = "block";
-
-      html2pdf().set({
-        margin: 8,
-        filename,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      }).from(element).save().then(() => {
-        element.style.display = "none";
-      }).catch(() => {
-        element.style.display = "none";
-      });
-    }
-
     async function sharePDFtoWhatsApp(){
-      await buildPDF();
-
-      const label = (currentMode === "day")
-        ? document.getElementById('datePicker').value
-        : document.getElementById('monthPicker').value;
-
-      const filename = (currentMode === "day")
-        ? `GC_RAPPORT_${label}.pdf`
-        : `GC_BILAN_${label}.pdf`;
-
       const element = document.getElementById('pdfArea');
       element.style.display = "block";
-
-      const opt = {
-        margin: 8,
-        filename,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 3, useCORS: true },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      };
 
       try{
+        let filename = "GC.pdf";
+        let msg = "Rapport du jour";
+
+        if(currentMode === "day"){
+          buildPDFDay();
+          const date = document.getElementById('datePicker').value;
+          filename = `GC_RAPPORT_${date}.pdf`;
+          msg = "Rapport du jour";
+        }else{
+          const { month } = await buildPDFMonthGlobal();
+          filename = `GC_BILAN_${month}.pdf`;
+          msg = `Bilan mensuel ${month}`;
+        }
+
+        const opt = {
+          margin: 8,
+          filename,
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: { scale: 3, useCORS: true },
+          jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
         const worker = html2pdf().set(opt).from(element);
         const pdfBlob = await worker.outputPdf('blob');
 
         element.style.display = "none";
 
         const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-
-        const msg = currentMode === "day" ? "Rapport du jour" : `Bilan mensuel ${label}`;
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
@@ -868,7 +1207,7 @@
           }, 400);
 
         } else {
-          alert("Le partage direct n'est pas supporté ici. Le PDF va être téléchargé.");
+          alert("Partage direct non supporté ici. Le PDF va être téléchargé.");
           await downloadPDF();
           setTimeout(() => {
             window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
@@ -880,6 +1219,143 @@
       }
     }
 
+    // ===== Monthly detailed per employee (buttons) =====
+    function quickSelectMonthlyEmp(id){
+      selectedMonthlyEmpId = id;
+      const emp = EQUIPE.find(e => empId(e) === id);
+      document.getElementById("monthlyEmployeeChosen").innerHTML =
+        `Sélectionné : <b>${emp.nom} ${emp.prenom}</b> <span class="text-slate-400">(${emp.poste})</span>`;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function downloadMonthlyEmployeePDF(){
+      if(currentMode !== "month"){
+        alert("Passe en mode Mensuel.");
+        return;
+      }
+      if(!selectedMonthlyEmpId){
+        alert("Choisis un employé.");
+        return;
+      }
+
+      const element = document.getElementById('pdfArea');
+      element.style.display = "block";
+
+      try{
+        const { emp, month } = await buildMonthEmployeePDF(selectedMonthlyEmpId);
+        const filename = `GC_DETAIL_${month}_${emp.nom}_${emp.prenom}.pdf`;
+
+        await html2pdf().set({
+          margin: 8,
+          filename,
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: { scale: 3, useCORS: true },
+          jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        }).from(element).save();
+
+      } finally {
+        element.style.display = "none";
+      }
+    }
+
+    async function shareMonthlyEmployeePDFtoWhatsApp(){
+      if(currentMode !== "month"){
+        alert("Passe en mode Mensuel.");
+        return;
+      }
+      if(!selectedMonthlyEmpId){
+        alert("Choisis un employé.");
+        return;
+      }
+
+      const element = document.getElementById('pdfArea');
+      element.style.display = "block";
+
+      try{
+        const { emp, month } = await buildMonthEmployeePDF(selectedMonthlyEmpId);
+        const filename = `GC_DETAIL_${month}_${emp.nom}_${emp.prenom}.pdf`;
+        const msg = `Bilan détaillé ${month} — ${emp.nom} ${emp.prenom}`;
+
+        const opt = {
+          margin: 8,
+          filename,
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: { scale: 3, useCORS: true },
+          jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        const worker = html2pdf().set(opt).from(element);
+        const pdfBlob = await worker.outputPdf('blob');
+
+        element.style.display = "none";
+
+        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ title:"Grey Corner", text: msg, files:[file] });
+          setTimeout(() => window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg), 400);
+        } else {
+          alert("Partage direct non supporté. Téléchargement du PDF.");
+          await downloadMonthlyEmployeePDF();
+          setTimeout(() => window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg), 700);
+        }
+      } catch(e){
+        element.style.display = "none";
+        alert("Erreur lors de la génération/partage du PDF.");
+      }
+    }
+
+    // ===== Modal picker employé =====
+    function openMonthlyEmployeePicker(){
+      const m = document.getElementById("empModal");
+      m.classList.remove("hidden");
+      m.classList.add("flex");
+      document.getElementById("empModalSearch").value = "";
+      renderEmpModalList();
+    }
+
+    function closeEmpModal(){
+      const m = document.getElementById("empModal");
+      m.classList.add("hidden");
+      m.classList.remove("flex");
+    }
+
+    function renderEmpModalList(){
+      const q = (document.getElementById("empModalSearch").value || "").trim().toLowerCase();
+      const box = document.getElementById("empModalList");
+      box.innerHTML = "";
+
+      const items = EQUIPE.slice().sort((a,b)=>{
+        const A = empId(a), B = empId(b);
+        if(A === "BOUCHNAK_NAOUAL") return -1;
+        if(B === "BOUCHNAK_NAOUAL") return 1;
+        return (a.poste+a.nom+a.prenom).localeCompare(b.poste+b.nom+b.prenom);
+      }).filter(e => (`${e.nom} ${e.prenom} ${e.poste}`).toLowerCase().includes(q));
+
+      items.forEach(e=>{
+        const id = empId(e);
+        const btn = document.createElement("button");
+        btn.className = "w-full text-left p-3 rounded-2xl border border-slate-200 hover:bg-slate-50";
+        btn.innerHTML = `
+          <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">${e.poste}</div>
+          <div class="text-sm font-extrabold text-slate-900">${e.nom} ${e.prenom} ${haOnly.includes(id) ? "👩‍🍳" : ""}</div>
+        `;
+        btn.onclick = ()=>{
+          selectedMonthlyEmpId = id;
+          document.getElementById("monthlyEmployeeChosen").innerHTML =
+            `Sélectionné : <b>${e.nom} ${e.prenom}</b> <span class="text-slate-400">(${e.poste})</span>`;
+          closeEmpModal();
+        };
+        box.appendChild(btn);
+      });
+
+      if(!items.length){
+        box.innerHTML = `<div class="text-center text-slate-400 font-bold py-6">Aucun résultat</div>`;
+      }
+    }
+
     // ===== Init =====
     function initApp(){
       const dp = document.getElementById('datePicker');
@@ -888,11 +1364,10 @@
       dp.value = getMarocDate();
       mp.value = getMarocMonth();
 
-      dp.addEventListener('change', load);
-      mp.addEventListener('change', renderMonthlyPlaceholder);
+      dp.addEventListener('change', () => { if(currentMode==="day") load(); });
+      mp.addEventListener('change', () => { if(currentMode==="month") load(); });
 
       setMode("day");
-      load();
     }
 
     initApp();
