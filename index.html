@@ -47,7 +47,7 @@
     .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
     .stickyTop{position:sticky;top:0;z-index:50}
 
-    /* PDF-only area: ne pas mettre display:none sinon html2pdf sort parfois un PDF vide */
+    /* ✅ PDF area: hors écran (évite PDF vide) */
     #pdfArea{
       position: fixed;
       left: -9999px;
@@ -56,11 +56,10 @@
       background:#fff;
       color:#111827;
     }
-    .pdfPage{background:#fff;color:#111827}
     .pdfTable th,.pdfTable td{border:1px solid #e5e7eb;padding:8px;font-size:11px}
     .pdfTable th{background:#f3f4f6;font-weight:800}
 
-    /* Modal export mois */
+    /* Modal export mensuel */
     #monthModalBackdrop{display:none}
   </style>
 </head>
@@ -160,7 +159,7 @@
   </main>
 
   <!-- PDF area (hors écran) -->
-  <div id="pdfArea" class="pdfPage p-6">
+  <div id="pdfArea" class="p-6">
     <div id="pdfHeader" class="mb-4"></div>
     <div id="pdfSummary" class="mb-4"></div>
     <div id="pdfTables" class="space-y-6"></div>
@@ -199,7 +198,7 @@
         </div>
 
         <div class="flex gap-2">
-          <button onclick="exportMonthlyPerEmployeePDF()"
+          <button onclick="exportMonthlyPerEmployeePDF(false)"
                   class="btn flex-1 px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide">
             📄 Générer PDF
           </button>
@@ -219,20 +218,23 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
-    // ===== Firebase =====
+    // =========================
+    // Firebase
+    // =========================
     const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // ===== State =====
+    // =========================
+    // State
+    // =========================
     let isManager = false;
     let currentFilter = "all";
     let latestDataCache = {};
     let activeListenerRef = null;
 
-    // Mensuel
     let monthlyCache = null;
-    let monthlyMeta = null; // {year, month}
+    let monthlyMeta = null;
 
     const EQUIPE = [
       {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
@@ -248,10 +250,11 @@
       {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'}, {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
-
     const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
 
-    // ===== Helpers =====
+    // =========================
+    // Helpers
+    // =========================
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'Africa/Casablanca',
@@ -288,18 +291,15 @@
       return isManager || (estEx && selectedDate === getMarocDate());
     }
 
-    function daysInMonth(year, month){ // month "01".."12"
-      return new Date(Number(year), Number(month), 0).getDate();
-    }
+    function daysInMonth(year, month){ return new Date(Number(year), Number(month), 0).getDate(); }
     function monthNameFR(mm){
-      const map = {
-        "01":"Janvier","02":"Février","03":"Mars","04":"Avril","05":"Mai","06":"Juin",
-        "07":"Juillet","08":"Août","09":"Septembre","10":"Octobre","11":"Novembre","12":"Décembre"
-      };
+      const map = {"01":"Janvier","02":"Février","03":"Mars","04":"Avril","05":"Mai","06":"Juin","07":"Juillet","08":"Août","09":"Septembre","10":"Octobre","11":"Novembre","12":"Décembre"};
       return map[mm] || mm;
     }
 
-    // ===== Filters =====
+    // =========================
+    // Filters
+    // =========================
     function setFilter(f){
       currentFilter = f;
       document.querySelectorAll(".chipBtn").forEach(b => b.classList.remove("active"));
@@ -310,18 +310,23 @@
     function applyFilters(){
       const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
       const cards = document.querySelectorAll("#staffList .empCard");
+
       cards.forEach(card => {
         const matchName = (card.dataset.name || "").includes(q);
+
         let matchFilter = true;
         if(currentFilter === "present") matchFilter = card.dataset.present === "1";
         if(currentFilter === "absent") matchFilter = card.dataset.present === "0";
         if(currentFilter === "late") matchFilter = card.dataset.late === "1";
         if(currentFilter === "incomplete") matchFilter = card.dataset.incomplete === "1";
+
         card.style.display = (matchName && matchFilter) ? "block" : "none";
       });
     }
 
-    // ===== Manager =====
+    // =========================
+    // Manager
+    // =========================
     function toggleManager(){
       if(!isManager){
         if(prompt("Code Manager :") === "2026"){
@@ -337,13 +342,30 @@
       load();
     }
 
-    // ===== CRUD =====
+    // =========================
+    // CRUD
+    // =========================
     function upd(id, f, v){
       const date = document.getElementById('datePicker').value; // YYYY-MM-DD
       database.ref('presences/'+date+'/'+id).update({[f]:v});
     }
 
-    // ===== KPI =====
+    // ✅ IMPORTANT : crée automatiquement la journée si elle n'existe pas
+    async function ensureDayExists(selectedDate){
+      const ref = database.ref('presences/' + selectedDate);
+      const snap = await ref.once('value');
+      if(snap.exists()) return;
+
+      const init = {};
+      EQUIPE.forEach(emp => {
+        init[empId(emp)] = { on:false, off:false, hP:"", hA:"" };
+      });
+      await ref.set(init);
+    }
+
+    // =========================
+    // KPI
+    // =========================
     function computeKPIs(){
       const total = EQUIPE.length;
       let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
@@ -355,10 +377,7 @@
         if(isPresent) present++; else absent++;
 
         const lm = lateMinutes(d.hP, d.hA);
-        if(lm !== null && lm > 0){
-          lateCount++;
-          lateMinSum += lm;
-        }
+        if(lm !== null && lm > 0){ lateCount++; lateMinSum += lm; }
       });
 
       document.getElementById("kpiTotal").textContent = total;
@@ -368,7 +387,9 @@
       document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
 
-    // ===== Render =====
+    // =========================
+    // Render
+    // =========================
     function render(){
       const selectedDate = document.getElementById('datePicker').value;
       const lock = isLocked(selectedDate);
@@ -502,17 +523,21 @@
         list.appendChild(section);
       });
 
-      computeKPIs();     // ✅ KPI corrigés
+      computeKPIs();
       applyFilters();
     }
 
-    // ===== Load =====
-    function load(){
+    // =========================
+    // Load (avec création auto du jour)
+    // =========================
+    async function load(){
       const selectedDate = document.getElementById('datePicker').value;
 
-      if(activeListenerRef){
-        activeListenerRef.off();
-      }
+      // ✅ créer la journée si n'existe pas
+      await ensureDayExists(selectedDate);
+
+      // stop ancien listener
+      if(activeListenerRef){ activeListenerRef.off(); }
 
       activeListenerRef = database.ref('presences/' + selectedDate);
       activeListenerRef.on('value', snap => {
@@ -521,7 +546,9 @@
       });
     }
 
-    // ===== PDF (journalier) =====
+    // =========================
+    // PDF (journalier)
+    // =========================
     function pdfKpi(label, value){
       return `
         <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
@@ -629,7 +656,6 @@
 
     async function downloadPDF(){
       buildDailyPDF();
-
       const date = document.getElementById('datePicker').value;
       const element = document.getElementById('pdfArea');
 
@@ -682,10 +708,9 @@
       }
     }
 
-    // ============================================================
-    // ✅ Export mensuel par employé (jours du calendrier complet)
-    // ============================================================
-
+    // =========================
+    // Export mensuel (par employé)
+    // =========================
     function openMonthExport(){
       const d = (document.getElementById('datePicker').value || getMarocDate());
       const [y,m] = d.split("-");
@@ -694,12 +719,8 @@
       setExportStatus("");
       document.getElementById("monthModalBackdrop").style.display = "flex";
     }
-    function closeMonthExport(){
-      document.getElementById("monthModalBackdrop").style.display = "none";
-    }
-    function setExportStatus(msg){
-      document.getElementById("exportStatus").textContent = msg || "";
-    }
+    function closeMonthExport(){ document.getElementById("monthModalBackdrop").style.display = "none"; }
+    function setExportStatus(msg){ document.getElementById("exportStatus").textContent = msg || ""; }
 
     function fetchMonthData(year, month){
       const lastDay = String(daysInMonth(year, month)).padStart(2,"0");
@@ -718,22 +739,18 @@
       if(!dayEmpData) return false;
       return (String(dayEmpData.type || "").toLowerCase() === "repos");
     }
-    function isTravail(dayEmpData){
-      return !!dayEmpData?.on;
-    }
+    function isTravail(dayEmpData){ return !!dayEmpData?.on; }
     function statusLabel(dayEmpData){
       if(isTravail(dayEmpData)) return "✅ Travail";
       if(isRepos(dayEmpData)) return "🌿 Repos";
-      return "💤 Congé"; // calculé = reste
+      return "💤 Congé";
     }
 
     function buildMonthlyPerEmployeePDF(){
-      if(!monthlyCache || !monthlyMeta) return;
-
       const {year, month} = monthlyMeta;
       const titleMonth = `${monthNameFR(month)} ${year}`;
+      const lastDay = daysInMonth(year, month);
 
-      // Header
       document.getElementById("pdfHeader").innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;">
           <div>
@@ -749,7 +766,6 @@
         <hr style="margin:14px 0;border:none;border-top:1px solid #e5e7eb;" />
       `;
 
-      const lastDay = daysInMonth(year, month);
       document.getElementById("pdfSummary").innerHTML = `
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
           ${pdfKpi("Mois", titleMonth)}
@@ -763,18 +779,15 @@
       const wrap = document.getElementById("pdfTables");
       wrap.innerHTML = "";
 
-      // Liste complète des jours du mois (même si absent dans DB)
       const allDays = [];
       for(let d=1; d<=lastDay; d++){
         allDays.push(`${year}-${month}-${String(d).padStart(2,"0")}`);
       }
 
-      EQUIPE
-        .slice()
-        .sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom))
+      EQUIPE.slice().sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom))
         .forEach((emp, idx) => {
-
           const id = empId(emp);
+
           let cTravail=0, cRepos=0, cConge=0, cLate=0, cLateMin=0;
 
           const rows = allDays.map(dayKey => {
@@ -783,7 +796,7 @@
 
             if(isTravail(d)) cTravail++;
             else if(isRepos(d)) cRepos++;
-            else cConge++; // reste
+            else cConge++;
 
             const lm = lateMinutes(d?.hP, d?.hA);
             const lateTxt = (lm !== null && lm > 0) ? `+${lm}` : "";
@@ -851,15 +864,14 @@
         });
     }
 
-    async function exportMonthlyPerEmployeePDF(sendToWhatsApp=false){
+    async function exportMonthlyPerEmployeePDF(sendToWhatsApp){
       const year = document.getElementById("exportYear").value;
       const month = document.getElementById("exportMonth").value;
 
       setExportStatus("Chargement des données du mois…");
 
       try{
-        const data = await fetchMonthData(year, month);
-        monthlyCache = data;
+        monthlyCache = await fetchMonthData(year, month);
         monthlyMeta = {year, month};
 
         setExportStatus("Génération du PDF…");
@@ -912,14 +924,15 @@
       }
     }
 
-    // ===== Init =====
+    // =========================
+    // Init
+    // =========================
     function initApp(){
       const dp = document.getElementById('datePicker');
-      dp.value = getMarocDate();          // ✅ format correct YYYY-MM-DD
+      dp.value = getMarocDate();
       dp.addEventListener('change', load);
       load();
     }
-
     initApp();
   </script>
 </body>
