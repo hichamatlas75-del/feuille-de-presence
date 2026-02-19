@@ -47,15 +47,24 @@
     .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
     .stickyTop{position:sticky;top:0;z-index:50}
 
-    /* ✅ PDF area: visible mais hors écran (évite PDF blanc) */
+    /* ✅ PDF area: DOIT rester "rendu" (pas offscreen / pas display:none) */
     #pdfArea{
       position: fixed;
-      left: -99999px;
-      top: 0;
-      width: 980px;
+      inset: 0;
       background:#fff;
       color:#111827;
+      z-index: -1;
+      pointer-events: none;
+      overflow: auto;
       padding: 24px;
+      visibility: hidden; /* ✅ ok pour html2canvas si on le met visible au moment export */
+    }
+    .pdfPage{
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background:#fff;
+      color:#111827;
     }
     .pdfTable th,.pdfTable td{border:1px solid #e5e7eb;padding:8px;font-size:11px}
     .pdfTable th{background:#f3f4f6;font-weight:800}
@@ -105,23 +114,44 @@
                  placeholder="Rechercher un nom…"
                  class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
 
-          <!-- ✅ Boutons PDF/WhatsApp : visibles uniquement en mode gérant -->
-          <button id="btnDailyPDF" onclick="downloadDailyPDF()"
-                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap hidden">
-            📄 PDF Journalier
-          </button>
+          <!-- ✅ Actions manager only -->
+          <div id="managerActions" class="hidden sm:flex gap-2">
+            <button id="btnDailyPdf" onclick="downloadPDF()"
+                    class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+              📄 PDF Journalier
+            </button>
 
-          <button id="btnMonthlyPDF" onclick="openMonthExport()"
-                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--accent)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap hidden">
-            🗓️ PDF Mensuel
-          </button>
+            <button id="btnMonthlyPdf" onclick="openMonthExport()"
+                    class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--accent)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+              🗓️ PDF Mensuel
+            </button>
 
-          <button id="btnWapp" onclick="shareDailyPDFtoWhatsApp()"
-                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-green-600 text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap hidden">
-            📤 WhatsApp
-          </button>
+            <button id="btnWhats" onclick="sharePDFtoWhatsApp()"
+                    class="btn px-4 py-3 rounded-2xl shadowSoft bg-green-600 text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+              📤 WhatsApp
+            </button>
+          </div>
         </div>
 
+      </div>
+
+      <!-- mobile manager actions -->
+      <div id="managerActionsMobile" class="hidden mt-3">
+        <div class="grid grid-cols-3 gap-2">
+          <button id="btnDailyPdfM" onclick="downloadPDF()"
+                  class="btn px-3 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide">
+            📄 PDF
+          </button>
+          <button id="btnMonthlyPdfM" onclick="openMonthExport()"
+                  class="btn px-3 py-3 rounded-2xl shadowSoft bg-[color:var(--accent)] text-white font-extrabold text-[12px] tracking-wide">
+            🗓️ Mensuel
+          </button>
+          <button id="btnWhatsM" onclick="sharePDFtoWhatsApp()"
+                  class="btn px-3 py-3 rounded-2xl shadowSoft bg-green-600 text-white font-extrabold text-[12px] tracking-wide">
+            📤 Whats
+          </button>
+        </div>
+        <div id="loadHint" class="mt-2 text-xs font-extrabold text-slate-500"></div>
       </div>
     </div>
   </div>
@@ -135,7 +165,7 @@
         <div id="kpiTotal" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
       </div>
       <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Présents</div>
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">IN</div>
         <div id="kpiPresent" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
       </div>
       <div class="card rounded-2xl p-3">
@@ -160,24 +190,26 @@
     </div>
   </main>
 
-  <!-- PDF area (hors écran) -->
+  <!-- PDF area (DOIT être rendu) -->
   <div id="pdfArea">
-    <div id="pdfHeader" class="mb-4"></div>
-    <div id="pdfSummary" class="mb-4"></div>
-    <div id="pdfTables" class="space-y-6"></div>
+    <div class="pdfPage">
+      <div id="pdfHeader" class="mb-4"></div>
+      <div id="pdfSummary" class="mb-4"></div>
+      <div id="pdfTables" class="space-y-6"></div>
+    </div>
   </div>
 
   <!-- Modal export mensuel -->
   <div id="monthModalBackdrop" class="fixed inset-0 bg-black/40 z-[80] flex items-end sm:items-center justify-center p-3">
     <div class="card w-full max-w-md rounded-3xl shadowSoft overflow-hidden">
       <div class="px-5 py-4 bg-white border-b border-black/5 flex items-center justify-between">
-        <div class="font-extrabold tracking-tight text-slate-900">Export PDF mensuel</div>
+        <div class="font-extrabold tracking-tight text-slate-900">Export PDF mensuel (par employé)</div>
         <button onclick="closeMonthExport()" class="btn px-3 py-2 rounded-xl bg-slate-100 font-extrabold text-slate-700">✕</button>
       </div>
 
       <div class="p-5 space-y-4">
         <div class="text-sm text-slate-600 font-semibold">
-          Mensuel : <b>Travaillé</b> si <code>on=true</code> • <b>Repos</b> si <code>off=true</code> • Sinon = vide.
+          Mensuel : <b>IN/OUT</b> + <b>hP/hA</b>. Aucun calcul congé/repos.
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -198,11 +230,11 @@
         </div>
 
         <div class="flex gap-2">
-          <button onclick="exportMonthlyPDF(false)"
+          <button onclick="exportMonthlyPerEmployeePDF(false)"
                   class="btn flex-1 px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide">
             📄 Générer PDF
           </button>
-          <button onclick="exportMonthlyPDF(true)"
+          <button onclick="exportMonthlyPerEmployeePDF(true)"
                   class="btn flex-1 px-4 py-3 rounded-2xl shadowSoft bg-green-600 text-white font-extrabold text-[12px] tracking-wide">
             📤 WhatsApp
           </button>
@@ -233,6 +265,8 @@
     let latestDataCache = {};
     let activeListenerRef = null;
 
+    let isDayLoaded = false;
+
     let monthlyCache = null;
     let monthlyMeta = null;
 
@@ -250,6 +284,7 @@
       {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'}, {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
+
     const exceptions = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA", "KHALOUQ_RACHID"];
 
     // =========================
@@ -277,6 +312,11 @@
       if(p === null || a === null) return null;
       return Math.max(0, a - p);
     }
+    function fmtLate(min){
+      if(min === null) return "—";
+      if(min <= 0) return "À l'heure";
+      return `+${min} min`;
+    }
 
     function isLocked(selectedDate){
       return (selectedDate !== getMarocDate()) && !isManager;
@@ -292,13 +332,41 @@
       return map[mm] || mm;
     }
 
-    function updateManagerUI(){
-      const ids = ["btnDailyPDF","btnMonthlyPDF","btnWapp"];
-      ids.forEach(id => {
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    // =========================
+    // Manager Actions UI
+    // =========================
+    function refreshManagerUI(){
+      const desktop = document.getElementById("managerActions");
+      const mobile  = document.getElementById("managerActionsMobile");
+      if(isManager){
+        desktop.classList.remove("hidden");
+        mobile.classList.remove("hidden");
+      }else{
+        desktop.classList.add("hidden");
+        mobile.classList.add("hidden");
+      }
+      updateExportButtonsState();
+    }
+
+    function updateExportButtonsState(){
+      const hint = document.getElementById("loadHint");
+      if(!isManager) return;
+
+      const disabled = !isDayLoaded;
+
+      ["btnDailyPdf","btnMonthlyPdf","btnWhats","btnDailyPdfM","btnMonthlyPdfM","btnWhatsM"].forEach(id=>{
         const el = document.getElementById(id);
         if(!el) return;
-        el.classList.toggle("hidden", !isManager);
+        el.disabled = disabled;
+        el.style.opacity = disabled ? "0.55" : "1";
+        el.style.pointerEvents = disabled ? "none" : "auto";
       });
+
+      if(hint){
+        hint.textContent = disabled ? "Chargement des données… (export désactivé)" : "";
+      }
     }
 
     // =========================
@@ -338,12 +406,12 @@
           const btn = document.getElementById('managerToggle');
           btn.textContent = "🔒 Mode gérant actif";
           btn.className = "btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide bg-[#e67e22] text-white";
-          updateManagerUI();
         }
       } else {
         isManager = false;
         location.reload();
       }
+      refreshManagerUI();
       load();
     }
 
@@ -355,17 +423,44 @@
       database.ref('presences/'+date+'/'+id).update({[f]:v});
     }
 
-    // ✅ crée automatiquement la journée si elle n'existe pas
-    async function ensureDayExists(selectedDate){
+    // ✅ crée la journée si elle n'existe pas + complète les employés manquants
+    async function ensureDayReady(selectedDate){
       const ref = database.ref('presences/' + selectedDate);
       const snap = await ref.once('value');
-      if(snap.exists()) return;
+      const cur = snap.val() || {};
 
-      const init = {};
+      const patch = {};
+      let needPatch = false;
+
       EQUIPE.forEach(emp => {
-        init[empId(emp)] = { on:false, off:false, hP:"", hA:"" };
+        const id = empId(emp);
+        if(!cur[id]){
+          patch[id] = { on:false, off:false, hP:"", hA:"" };
+          needPatch = true;
+        }else{
+          // normalise champs
+          const d = cur[id] || {};
+          const norm = {
+            on: !!d.on,
+            off: !!d.off,
+            hP: (typeof d.hP === "string" ? d.hP : ""),
+            hA: (typeof d.hA === "string" ? d.hA : "")
+          };
+          // si structure ancienne/incomplète, patch
+          if(d.on !== norm.on || d.off !== norm.off || d.hP !== norm.hP || d.hA !== norm.hA){
+            patch[id] = norm;
+            needPatch = true;
+          }
+        }
       });
-      await ref.set(init);
+
+      if(!snap.exists()){
+        const init = {};
+        EQUIPE.forEach(emp => { init[empId(emp)] = { on:false, off:false, hP:"", hA:"" }; });
+        await ref.set(init);
+      } else if(needPatch){
+        await ref.update(patch);
+      }
     }
 
     // =========================
@@ -442,19 +537,21 @@
             const d = latestDataCache[id] || {};
             const estEx = exceptions.includes(id);
             const editHA = canEditHA(id, selectedDate);
-            const lm = lateMinutes(d.hP, d.hA);
+            const late = lateMinutes(d.hP, d.hA);
 
             const isPresent = !!d.on;
             const isOut = !!d.off;
+            const hasHP = !!d.hP;
+            const hasHA = !!d.hA;
 
-            // Incomplet = présent mais manque heures, ou absent mais a des heures/out
-            const incomplete = (isPresent && (!d.hP || !d.hA)) || (!isPresent && (d.hP || d.hA || isOut));
-            const isLate = (lm !== null && lm > 0);
+            const incomplete = (isPresent && (!hasHP || !hasHA)) || (!isPresent && (hasHP || hasHA || isOut));
+            const isLate = (late !== null && late > 0);
 
             const statusBadges = [];
-            statusBadges.push(isPresent ? `<span class="badge ok">IN</span>` : `<span class="badge bad">OFF</span>`);
+            if(isPresent) statusBadges.push(`<span class="badge ok">IN</span>`);
+            else statusBadges.push(`<span class="badge bad">Absent</span>`);
             if(isOut) statusBadges.push(`<span class="badge">OUT</span>`);
-            if(isLate) statusBadges.push(`<span class="badge warn">Retard +${lm} min</span>`);
+            if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
             if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
             if(estEx) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 Exception</span>`);
 
@@ -535,45 +632,48 @@
     // =========================
     async function load(){
       const selectedDate = document.getElementById('datePicker').value;
-      await ensureDayExists(selectedDate);
+
+      isDayLoaded = false;
+      updateExportButtonsState();
+
+      await ensureDayReady(selectedDate);
 
       if(activeListenerRef){ activeListenerRef.off(); }
 
       activeListenerRef = database.ref('presences/' + selectedDate);
       activeListenerRef.on('value', snap => {
         latestDataCache = snap.val() || {};
+        isDayLoaded = true;
         render();
+        updateExportButtonsState();
       });
     }
 
     // =========================
-    // PDF helpers (anti-vide)
+    // PDF helpers
     // =========================
     function pdfKpi(label, value){
       return `
         <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
           <div style="font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#6b7280;font-size:10px;">${label}</div>
-          <div style="font-weight:900;font-size:18px;margin-top:4px;color:#111827;word-break:break-word;">${value}</div>
+          <div style="font-weight:900;font-size:18px;margin-top:4px;color:#111827;">${value}</div>
         </div>
       `;
     }
 
-    function pdfReady(){
-      // ✅ si PDF vide: souvent fonts pas prêtes
-      // on attend 1 tick + fonts
-      return new Promise(resolve => {
-        const go = () => requestAnimationFrame(() => setTimeout(resolve, 30));
-        if(document.fonts && document.fonts.ready){
-          document.fonts.ready.then(go).catch(go);
-        } else {
-          go();
-        }
-      });
+    async function withPdfVisible(fn){
+      const pdf = document.getElementById("pdfArea");
+      const prevVis = pdf.style.visibility;
+      pdf.style.visibility = "visible";
+      await sleep(50); // ✅ laisse le navigateur “peindre” le contenu
+      try{
+        return await fn();
+      } finally {
+        await sleep(20);
+        pdf.style.visibility = prevVis || "hidden";
+      }
     }
 
-    // =========================
-    // PDF Journalier
-    // =========================
     function buildDailyPDF(){
       const date = document.getElementById('datePicker').value;
 
@@ -607,9 +707,9 @@
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
           ${pdfKpi("Total", total)}
           ${pdfKpi("IN", present)}
-          ${pdfKpi("OFF", absent)}
+          ${pdfKpi("Absents", absent)}
           ${pdfKpi("Retards", lateCount)}
-          ${pdfKpi("Min. retard", lateMinSum)}
+          ${pdfKpi("Minutes retard", lateMinSum)}
         </div>
       `;
 
@@ -629,15 +729,14 @@
             const id = empId(emp);
             const d = latestDataCache[id] || {};
             const lm = lateMinutes(d.hP, d.hA);
-
             return `
               <tr>
                 <td>${emp.nom} ${emp.prenom}</td>
-                <td style="text-align:center;">${d.on ? "IN" : "OFF"}</td>
-                <td style="text-align:center;">${d.off ? "OUT" : ""}</td>
+                <td style="text-align:center;">${d.on ? "Oui" : "Non"}</td>
+                <td style="text-align:center;">${d.off ? "Oui" : "Non"}</td>
                 <td style="text-align:center;">${d.hP || ""}</td>
                 <td style="text-align:center;">${d.hA || ""}</td>
-                <td style="text-align:center;">${(lm !== null && lm > 0) ? `+${lm} min` : ""}</td>
+                <td style="text-align:center;">${(lm !== null && lm > 0) ? `+${lm} min` : (lm === null ? "" : "0")}</td>
               </tr>
             `;
           }).join("");
@@ -651,10 +750,10 @@
             <thead>
               <tr>
                 <th style="text-align:left;">Employé</th>
-                <th style="text-align:center;">IN/OFF</th>
+                <th style="text-align:center;">IN</th>
                 <th style="text-align:center;">OUT</th>
-                <th style="text-align:center;">Prévu</th>
-                <th style="text-align:center;">Arrivée</th>
+                <th style="text-align:center;">hP</th>
+                <th style="text-align:center;">hA</th>
                 <th style="text-align:center;">Retard</th>
               </tr>
             </thead>
@@ -665,35 +764,37 @@
       });
     }
 
-    async function downloadDailyPDF(){
-      if(!isManager){ alert("Accès gérant requis."); return; }
-      buildDailyPDF();
-      await pdfReady();
+    async function downloadPDF(){
+      if(!isManager) return;
+      if(!isDayLoaded) { alert("Données pas encore chargées. Réessaie dans 2 secondes."); return; }
 
+      buildDailyPDF();
       const date = document.getElementById('datePicker').value;
       const element = document.getElementById('pdfArea');
 
-      await html2pdf().set({
-        margin: 8,
-        filename: `GC_JOURNALIER_${date}.pdf`,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 3, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      }).from(element).save();
+      await withPdfVisible(async () => {
+        await html2pdf().set({
+          margin: 8,
+          filename: `GC_JOUR_${date}.pdf`,
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: { scale: 3, useCORS: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        }).from(element).save();
+      });
     }
 
-    async function shareDailyPDFtoWhatsApp(){
-      if(!isManager){ alert("Accès gérant requis."); return; }
-      buildDailyPDF();
-      await pdfReady();
+    async function sharePDFtoWhatsApp(){
+      if(!isManager) return;
+      if(!isDayLoaded) { alert("Données pas encore chargées. Réessaie dans 2 secondes."); return; }
 
+      buildDailyPDF();
       const date = document.getElementById('datePicker').value;
       const element = document.getElementById('pdfArea');
 
       const opt = {
         margin: 8,
-        filename: `GC_JOURNALIER_${date}.pdf`,
+        filename: `GC_JOUR_${date}.pdf`,
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { scale: 3, useCORS: true, backgroundColor: "#ffffff" },
         jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
@@ -701,34 +802,36 @@
       };
 
       try{
-        const worker = html2pdf().set(opt).from(element);
-        const pdfBlob = await worker.outputPdf('blob');
-        const file = new File([pdfBlob], `GC_JOURNALIER_${date}.pdf`, { type: 'application/pdf' });
-        const msg = "Rapport du jour";
+        await withPdfVisible(async () => {
+          const worker = html2pdf().set(opt).from(element);
+          const pdfBlob = await worker.outputPdf('blob');
+          const file = new File([pdfBlob], `GC_JOUR_${date}.pdf`, { type: 'application/pdf' });
+          const msg = "Rapport du jour";
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ title: "Rapport Grey Corner", text: msg, files: [file] });
-          setTimeout(() => {
-            window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
-          }, 400);
-        } else {
-          alert("Partage direct non supporté. Téléchargement du PDF…");
-          await html2pdf().set(opt).from(element).save();
-          setTimeout(() => {
-            window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
-          }, 700);
-        }
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: "Rapport Grey Corner", text: msg, files: [file] });
+            setTimeout(() => {
+              window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
+            }, 400);
+          } else {
+            alert("Partage direct non supporté ici. Téléchargement du PDF…");
+            await html2pdf().set(opt).from(element).save();
+            setTimeout(() => {
+              window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
+            }, 700);
+          }
+        });
       } catch(e){
-        alert("Erreur génération/partage PDF.");
+        alert("Erreur lors de la génération/partage du PDF.");
         console.error(e);
       }
     }
 
     // =========================
-    // Export Mensuel (simple: IN = on:true, OUT = off:true)
+    // Mensuel
     // =========================
     function openMonthExport(){
-      if(!isManager){ alert("Accès gérant requis."); return; }
+      if(!isManager) return;
       const d = (document.getElementById('datePicker').value || getMarocDate());
       const [y,m] = d.split("-");
       document.getElementById("exportYear").value = y;
@@ -752,7 +855,7 @@
         .then(snap => snap.val() || {});
     }
 
-    function buildMonthlyPDF(){
+    function buildMonthlyPerEmployeePDF(){
       const {year, month} = monthlyMeta;
       const titleMonth = `${monthNameFR(month)} ${year}`;
       const lastDay = daysInMonth(year, month);
@@ -762,11 +865,11 @@
           <div>
             <div style="font-weight:900;letter-spacing:.12em;color:#b0892f;font-size:10px;text-transform:uppercase;">Fès — Maroc</div>
             <div style="font-weight:900;font-size:20px;letter-spacing:-.02em;">GREY CORNER</div>
-            <div style="font-weight:800;color:#374151;font-size:12px;margin-top:2px;">Rapport mensuel — Synthèse</div>
+            <div style="font-weight:800;color:#374151;font-size:12px;margin-top:2px;">Rapport mensuel — IN/OUT</div>
           </div>
           <div style="text-align:right;">
             <div style="font-weight:900;color:#111827;font-size:12px;">Période : ${titleMonth}</div>
-            <div style="font-weight:700;color:#6b7280;font-size:10px;">Statut basé sur IN (on) / OUT (off)</div>
+            <div style="font-weight:700;color:#6b7280;font-size:10px;">Statuts : on/off + hP/hA</div>
           </div>
         </div>
         <hr style="margin:14px 0;border:none;border-top:1px solid #e5e7eb;" />
@@ -777,7 +880,7 @@
           ${pdfKpi("Mois", titleMonth)}
           ${pdfKpi("Jours", lastDay)}
           ${pdfKpi("Employés", EQUIPE.length)}
-          ${pdfKpi("Règle", "IN=on:true / OUT=off:true")}
+          ${pdfKpi("Données", "presences/YYYY-MM-DD")}
         </div>
       `;
 
@@ -789,47 +892,84 @@
         allDays.push(`${year}-${month}-${String(d).padStart(2,"0")}`);
       }
 
-      const tableRows = EQUIPE.slice()
-        .sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom))
-        .map(emp => {
+      EQUIPE.slice().sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom))
+        .forEach((emp, idx) => {
           const id = empId(emp);
-          let inCount=0, outCount=0;
 
-          allDays.forEach(dayKey => {
-            const dayData = monthlyCache[dayKey]?.[id] || null;
-            if(dayData?.on) inCount++;
-            if(dayData?.off) outCount++;
-          });
+          let cIN=0, cOUT=0, cLate=0, cLateMin=0;
 
-          return `
-            <tr>
-              <td>${emp.nom} ${emp.prenom}</td>
-              <td style="text-align:center;">${emp.poste}</td>
-              <td style="text-align:center;font-weight:900;">${inCount}</td>
-              <td style="text-align:center;font-weight:900;">${outCount}</td>
-            </tr>
+          const rows = allDays.map(dayKey => {
+            const dayData = monthlyCache[dayKey] || {};
+            const d = dayData[id] || null;
+
+            const inTxt = d?.on ? "Oui" : "Non";
+            const outTxt = d?.off ? "Oui" : "Non";
+            if(d?.on) cIN++;
+            if(d?.off) cOUT++;
+
+            const lm = lateMinutes(d?.hP, d?.hA);
+            const lateTxt = (lm !== null && lm > 0) ? `+${lm}` : "";
+            if(lm !== null && lm > 0){ cLate++; cLateMin += lm; }
+
+            return `
+              <tr>
+                <td style="text-align:center;font-weight:900;background:#f9fafb;">${dayKey}</td>
+                <td style="text-align:center;font-weight:900;">${inTxt}</td>
+                <td style="text-align:center;font-weight:900;">${outTxt}</td>
+                <td style="text-align:center;">${d?.hP || ""}</td>
+                <td style="text-align:center;">${d?.hA || ""}</td>
+                <td style="text-align:center;">${lateTxt}</td>
+              </tr>
+            `;
+          }).join("");
+
+          const page = document.createElement("div");
+          page.innerHTML = `
+            <div style="border:1px solid #e5e7eb;border-radius:14px;padding:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                <div>
+                  <div style="font-weight:900;font-size:16px;color:#111827;">${emp.nom} ${emp.prenom}</div>
+                  <div style="font-weight:800;font-size:11px;color:#6b7280;letter-spacing:.12em;text-transform:uppercase;margin-top:2px;">
+                    ${emp.poste} • ${titleMonth}
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:900;font-size:10px;color:#111827;">Page ${idx+1}/${EQUIPE.length}</div>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+                ${pdfKpi("Jours IN", cIN)}
+                ${pdfKpi("Jours OUT", cOUT)}
+                ${pdfKpi("Retards", cLate)}
+                ${pdfKpi("Min. retard", cLateMin)}
+              </div>
+
+              <div style="margin-top:12px;overflow:auto;">
+                <table class="pdfTable" style="width:100%;border-collapse:collapse;">
+                  <thead>
+                    <tr>
+                      <th style="text-align:center;min-width:94px;">Date</th>
+                      <th style="text-align:center;min-width:60px;">IN</th>
+                      <th style="text-align:center;min-width:60px;">OUT</th>
+                      <th style="text-align:center;min-width:76px;">hP</th>
+                      <th style="text-align:center;min-width:76px;">hA</th>
+                      <th style="text-align:center;min-width:70px;">Retard</th>
+                    </tr>
+                  </thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
+            </div>
+            <div style="page-break-after: always;"></div>
           `;
-        }).join("");
-
-      const block = document.createElement("div");
-      block.innerHTML = `
-        <table class="pdfTable" style="width:100%;border-collapse:collapse;">
-          <thead>
-            <tr>
-              <th style="text-align:left;">Employé</th>
-              <th style="text-align:center;">Poste</th>
-              <th style="text-align:center;">Jours IN</th>
-              <th style="text-align:center;">Jours OUT</th>
-            </tr>
-          </thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      `;
-      wrap.appendChild(block);
+          wrap.appendChild(page);
+        });
     }
 
-    async function exportMonthlyPDF(sendToWhatsApp){
-      if(!isManager){ alert("Accès gérant requis."); return; }
+    async function exportMonthlyPerEmployeePDF(sendToWhatsApp){
+      if(!isManager) return;
+
       const year = document.getElementById("exportYear").value;
       const month = document.getElementById("exportMonth").value;
 
@@ -840,11 +980,10 @@
         monthlyMeta = {year, month};
 
         setExportStatus("Génération du PDF…");
-        buildMonthlyPDF();
-        await pdfReady();
+        buildMonthlyPerEmployeePDF();
 
         const element = document.getElementById('pdfArea');
-        const filename = `GC_MENSUEL_${year}-${month}.pdf`;
+        const filename = `GC_MENSUEL_${year}-${month}_INOUT.pdf`;
 
         const opt = {
           margin: 8,
@@ -855,33 +994,35 @@
           pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
-        if(!sendToWhatsApp){
-          await html2pdf().set(opt).from(element).save();
-          setExportStatus("PDF mensuel téléchargé ✅");
-          closeMonthExport();
-          return;
-        }
+        await withPdfVisible(async () => {
+          if(!sendToWhatsApp){
+            await html2pdf().set(opt).from(element).save();
+            setExportStatus("PDF mensuel téléchargé ✅");
+            closeMonthExport();
+            return;
+          }
 
-        const worker = html2pdf().set(opt).from(element);
-        const pdfBlob = await worker.outputPdf('blob');
-        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+          const worker = html2pdf().set(opt).from(element);
+          const pdfBlob = await worker.outputPdf('blob');
+          const file = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        const msg = `Rapport mensuel ${monthNameFR(month)} ${year}`;
+          const msg = `Rapport mensuel ${monthNameFR(month)} ${year} — IN/OUT`;
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ title: "Rapport Grey Corner", text: msg, files: [file] });
-          setTimeout(() => {
-            window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
-          }, 400);
-        } else {
-          alert("Partage direct non supporté. Téléchargement du PDF…");
-          await html2pdf().set(opt).from(element).save();
-          setTimeout(() => {
-            window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
-          }, 700);
-        }
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: "Rapport Grey Corner", text: msg, files: [file] });
+            setTimeout(() => {
+              window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
+            }, 400);
+          } else {
+            alert("Partage direct non supporté ici. Téléchargement du PDF…");
+            await html2pdf().set(opt).from(element).save();
+            setTimeout(() => {
+              window.location.href = "https://wa.me/212661446680?text=" + encodeURIComponent(msg);
+            }, 700);
+          }
+        });
 
-        setExportStatus("Partage prêt ✅");
+        setExportStatus("✅ OK");
         closeMonthExport();
 
       } catch(e){
@@ -894,10 +1035,10 @@
     // Init
     // =========================
     function initApp(){
+      refreshManagerUI();
       const dp = document.getElementById('datePicker');
       dp.value = getMarocDate();
       dp.addEventListener('change', load);
-      updateManagerUI();
       load();
     }
     initApp();
