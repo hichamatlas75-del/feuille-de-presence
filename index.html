@@ -323,9 +323,22 @@
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
-    function canEditHA(selectedDate){
-      return isGerant(); // ✅ équipe ne modifie PAS hA sur la plateforme présence
-    }
+    function canEditHA(id, selectedDate){
+  // gérant => toujours
+  if(isManager) return true;
+
+  // uniquement aujourd'hui
+  if(selectedDate !== getMarocDate()) return false;
+
+  // ✅ Exception hA (Souad + Hakima)
+  if(haExceptionsToday.includes(id)) return true;
+
+  // Chef hA-only (si tu veux garder)
+  if(haOnly.includes(id)) return true;
+
+  // sinon équipe/caisse ne modifie pas hA
+  return false;
+}
 
     // =========================
     // CRUD
