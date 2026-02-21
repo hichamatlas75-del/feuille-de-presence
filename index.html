@@ -97,8 +97,9 @@
 
             <div class="flex gap-2 flex-wrap">
               <button onclick="setFilter('all')" id="chip-all" class="chip chipBtn chip active px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Tous</button>
-              <button onclick="setFilter('present')" id="chip-present" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Présents</button>
-              <button onclick="setFilter('absent')" id="chip-absent" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Absents</button>
+              <button onclick="setFilter('punched')" id="chip-punched" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Pointés (hA)</button>
+              <button onclick="setFilter('off')" id="chip-off" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Repos (OUT)</button>
+              <button onclick="setFilter('pending')" id="chip-pending" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">En attente</button>
               <button onclick="setFilter('late')" id="chip-late" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Retard</button>
               <button onclick="setFilter('incomplete')" id="chip-incomplete" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Incomplet</button>
             </div>
@@ -117,18 +118,22 @@
   <main class="max-w-3xl mx-auto px-4 pt-4">
 
     <!-- Summary -->
-    <div id="kpisWrap" class="hidden grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+    <div id="kpisWrap" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-3 mb-5">
       <div class="card rounded-2xl p-3">
         <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
         <div id="kpiTotal" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
       </div>
       <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Présents</div>
-        <div id="kpiPresent" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Pointés (hA)</div>
+        <div id="kpiPunched" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
       </div>
       <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Absents</div>
-        <div id="kpiAbsent" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Repos (OUT)</div>
+        <div id="kpiOff" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      </div>
+      <div class="card rounded-2xl p-3">
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">En attente</div>
+        <div id="kpiPending" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
       </div>
       <div class="card rounded-2xl p-3">
         <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Retards</div>
@@ -178,7 +183,7 @@
 
     // ===== Équipe =====
     const EQUIPE = [
-      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'}, // Chef cuisine (optionnel)
+      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'},
       {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
       {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
       {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
@@ -193,7 +198,7 @@
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
 
-    // ✅ Exception demandée: activer hA pour ces 2 employés (sur jour J)
+    // ✅ (Garde-fou) : si tu veux permettre au caissier (role=equipe) de saisir hA pour ces 2 personnes aujourd’hui
     const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
 
     // (Optionnel) Chef hA-only si tu veux le garder
@@ -218,6 +223,8 @@
     }
 
     function lateMinutes(hP, hA){
+      // retard uniquement si hA existe
+      if(!hA) return null;
       const p = timeToMin(hP);
       const a = timeToMin(hA);
       if(p === null || a === null) return null;
@@ -241,7 +248,7 @@
       if(role === "gerant"){
         el.textContent = "Mode : GÉRANT (accès total ✅)";
       }else if(role === "equipe"){
-        el.textContent = "Mode : ÉQUIPE (IN/OUT + hP sur اليوم فقط • hA verrouillé sauf exceptions)";
+        el.textContent = "Mode : ÉQUIPE (OUT + hP sur اليوم فقط • hA uniquement exceptions)";
       }else{
         el.textContent = "Mode : — (connexion requise)";
       }
@@ -288,28 +295,26 @@
     function isGerant(){ return role === "gerant"; }
     function isEquipe(){ return role === "equipe"; }
 
-    // équipe: peut modifier IN/OUT + hP uniquement aujourd'hui
+    // équipe: peut modifier OUT + hP uniquement aujourd'hui
     function canEquipeEditToday(selectedDate){
       return isEquipe() && selectedDate === getMarocDate();
     }
 
-    function canEditInOut(selectedDate){
+    function canEditOFF(selectedDate){
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
     function canEditHP(id, selectedDate){
-      if(haOnly.includes(id)) return false; // chef hA-only (optionnel)
+      if(haOnly.includes(id)) return false;
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
-    // ✅ exception demandée: ELMCHAOURI SOUAD et SBAI HAKIMA peuvent éditer hA sur اليوم فقط
+    // hA: gérant, OU caissier (equipe) seulement pour exceptions اليوم
     function canEditHA(id, selectedDate){
       if(isGerant()) return true;
       if(selectedDate !== getMarocDate()) return false;
-
       if(haExceptionsToday.includes(id)) return true;
-      if(haOnly.includes(id)) return true; // optionnel
-
+      if(haOnly.includes(id)) return true;
       return false;
     }
 
@@ -330,9 +335,10 @@
         const matchName = (card.dataset.name || "").includes(q);
 
         let matchFilter = true;
-        if(currentFilter === "present") matchFilter = card.dataset.present === "1";
-        if(currentFilter === "absent") matchFilter = card.dataset.present === "0";
-        if(currentFilter === "late") matchFilter = card.dataset.late === "1";
+        if(currentFilter === "punched") matchFilter = card.dataset.punched === "1";
+        if(currentFilter === "off")     matchFilter = card.dataset.off === "1";
+        if(currentFilter === "pending") matchFilter = card.dataset.pending === "1";
+        if(currentFilter === "late")    matchFilter = card.dataset.late === "1";
         if(currentFilter === "incomplete") matchFilter = card.dataset.incomplete === "1";
 
         card.style.display = (matchName && matchFilter) ? "block" : "none";
@@ -342,12 +348,27 @@
     // ===== CRUD =====
     function upd(id, f, v){
       const date = document.getElementById('datePicker').value;
-      database.ref('presences/'+date+'/'+id).update({[f]:v})
-        .catch(() => {
-          // Si rules bloquent (permissions), on affiche juste un petit message discret
-          // (pas de popup agressive)
-          console.warn("Write blocked by rules or permissions:", id, f);
-        });
+      const ref = database.ref('presences/'+date+'/'+id);
+
+      // ✅ Nettoyage auto: si OUT=true => on supprime hA/retard/retardMin (évite "off + hA")
+      if(f === "off"){
+        const val = !!v;
+        const payload = { off: val };
+
+        if(val === true){
+          payload.hA = null;
+          payload.retard = null;
+          payload.retardMin = null;
+          // legacy "on" (si existait) -> on le force à false pour éviter confusion
+          payload.on = false;
+        }
+        ref.update(payload).catch(() => console.warn("Write blocked:", id, f));
+        return;
+      }
+
+      // standard
+      ref.update({[f]:v})
+        .catch(() => console.warn("Write blocked:", id, f));
     }
 
     // ===== Render =====
@@ -402,35 +423,46 @@
             const d = latestDataCache[id] || {};
 
             const isHaOnly = haOnly.includes(id);
-            const late = lateMinutes(d.hP, d.hA);
 
-            const isPresent = !!d.on;
-            const isOut = !!d.off;
+            const isOff = !!d.off;     // ✅ repos/out
             const hasHP = !!d.hP;
-            const hasHA = !!d.hA;
+            const hasHA = !!d.hA;      // ✅ pointage réel
+            const handled = isOff || hasHA; // ✅ "validation finale"
 
-            const incomplete =
-              (isPresent && (isHaOnly ? !hasHA : (!hasHP || !hasHA))) ||
-              (!isPresent && (hasHP || hasHA || isOut));
-
+            const late = lateMinutes(d.hP, d.hA);
             const isLate = (late !== null && late > 0);
 
+            // incomplet: pointé mais pas de hP (retard non calculable) OU OUT + hA incohérent
+            const incomplete =
+              (hasHA && !hasHP) ||
+              (isOff && hasHA);
+
             const statusBadges = [];
-            statusBadges.push(isPresent ? `<span class="badge ok">Présent</span>` : `<span class="badge bad">Absent</span>`);
-            if(isOut) statusBadges.push(`<span class="badge">Sorti</span>`);
+
+            if(isOff){
+              statusBadges.push(`<span class="badge bad">Repos (OUT)</span>`);
+            }else if(hasHA){
+              statusBadges.push(`<span class="badge ok">Pointé</span>`);
+            }else{
+              statusBadges.push(`<span class="badge">En attente</span>`);
+            }
+
             if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
             if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
+
             if(haExceptionsToday.includes(id)) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 hA Exception</span>`);
             if(isHaOnly) statusBadges.push(`<span class="badge" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10);color:#166534">👩‍🍳 Chef (hA)</span>`);
 
-            const canInOut = canEditInOut(selectedDate);
+            const canOFF = canEditOFF(selectedDate);
             const canHP = canEditHP(id, selectedDate);
             const canHA = canEditHA(id, selectedDate);
 
             const card = document.createElement('div');
             card.className = "card rounded-2xl p-4 empCard";
             card.dataset.name = `${emp.nom} ${emp.prenom}`.toLowerCase();
-            card.dataset.present = isPresent ? "1" : "0";
+            card.dataset.punched = hasHA ? "1" : "0";
+            card.dataset.off = isOff ? "1" : "0";
+            card.dataset.pending = (!handled) ? "1" : "0";
             card.dataset.late = isLate ? "1" : "0";
             card.dataset.incomplete = incomplete ? "1" : "0";
 
@@ -445,17 +477,12 @@
                   </div>
                 </div>
 
+                <!-- ✅ SUPPRIMÉ: IN / ✅ GARDÉ: OUT seulement -->
                 <div class="toggleWrap rounded-2xl p-2 flex gap-2">
-                  <label class="flex flex-col items-center px-1">
-                    <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">IN</span>
-                    <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                      ${isPresent ? "checked" : ""} ${canInOut ? "" : "disabled"}
-                      onchange="upd('${id}','on',this.checked)">
-                  </label>
-                  <label class="flex flex-col items-center px-1">
+                  <label class="flex flex-col items-center px-2">
                     <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
                     <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                      ${isOut ? "checked" : ""} ${canInOut ? "" : "disabled"}
+                      ${isOff ? "checked" : ""} ${canOFF ? "" : "disabled"}
                       onchange="upd('${id}','off',this.checked)">
                   </label>
                 </div>
@@ -502,13 +529,19 @@
 
     function computeKPIs(){
       const total = EQUIPE.length;
-      let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
+      let punched = 0, off = 0, pending = 0, lateCount = 0, lateMinSum = 0;
 
       EQUIPE.forEach(emp => {
         const id = empId(emp);
         const d = latestDataCache[id] || {};
-        const isPresent = !!d.on;
-        if(isPresent) present++; else absent++;
+
+        const isOff = !!d.off;
+        const hasHA = !!d.hA;
+        const handled = isOff || hasHA;
+
+        if(hasHA) punched++;
+        if(isOff) off++;
+        if(!handled) pending++;
 
         const lm = lateMinutes(d.hP, d.hA);
         if(lm !== null && lm > 0){
@@ -518,8 +551,9 @@
       });
 
       document.getElementById("kpiTotal").textContent = total;
-      document.getElementById("kpiPresent").textContent = present;
-      document.getElementById("kpiAbsent").textContent = absent;
+      document.getElementById("kpiPunched").textContent = punched;
+      document.getElementById("kpiOff").textContent = off;
+      document.getElementById("kpiPending").textContent = pending;
       document.getElementById("kpiLate").textContent = lateCount;
       document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
@@ -555,11 +589,9 @@
         return;
       }
 
-      // lire rôle depuis /users/{uid}
       role = await fetchRole(user.uid);
 
       if(role !== "gerant" && role !== "equipe"){
-        // rôle inconnu => bloque
         await auth.signOut();
         role = null;
         showLoginUI();
@@ -571,10 +603,6 @@
       showLoggedUI();
       initApp();
     });
-
-    // ⚠️ Note importante (technique):
-    // Si tu veux que l’exception hA (ELMCHAOURI/SBAI) marche aussi en écriture pour le compte "equipe",
-    // tes RULES doivent autoriser l’écriture de hA pour ces 2 employés (sinon le champ s’affichera mais ne s’enregistrera pas).
   </script>
 </body>
 </html>
