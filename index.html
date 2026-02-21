@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Grey Corner • Présences</title>
+  <title>Grey Corner • Présences (Auth + Rôles)</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -44,12 +44,93 @@
     .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
     .stickyTop{position:sticky;top:0;z-index:50}
 
-    /* Login box */
-    .loginWrap{display:none}
+    /* Auth modal */
+    .modalWrap{
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      background: rgba(2,6,23,.55); backdrop-filter: blur(6px);
+      z-index:9999;
+      padding:18px;
+    }
+    .modal{
+      width:min(520px, 100%);
+      border-radius:24px;
+      background:#fff;
+      border:1px solid rgba(2,6,23,.10);
+      box-shadow: 0 20px 60px rgba(2,6,23,.25);
+      overflow:hidden;
+    }
+    .modalHead{
+      padding:18px 18px 12px 18px;
+      background: linear-gradient(90deg, rgba(197,160,89,.10), transparent 65%);
+      border-bottom:1px solid rgba(2,6,23,.06);
+    }
+    .modalBody{ padding:18px; }
+    .field{
+      width:100%;
+      border-radius:16px;
+      border:1px solid rgba(2,6,23,.10);
+      padding:12px 14px;
+      font-weight:700;
+      background:#fff;
+    }
+    .field:focus{ outline:none; box-shadow:0 0 0 3px rgba(197,160,89,.25); border-color: rgba(197,160,89,.45); }
   </style>
 </head>
 
 <body class="pb-16">
+
+  <!-- AUTH OVERLAY -->
+  <div id="authOverlay" class="modalWrap" style="display:none;">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="text-[10px] tracking-[0.22em] font-extrabold uppercase text-[color:var(--accent)]">Fès — Maroc</div>
+        <div class="flex items-baseline gap-2 mt-1">
+          <div class="text-lg font-extrabold tracking-tight">GREY CORNER</div>
+          <div class="text-[11px] font-bold text-slate-500">• Connexion</div>
+        </div>
+        <div class="text-[11px] font-bold text-slate-600 mt-2">
+          Compte <span class="font-extrabold">équipe</span> ou <span class="font-extrabold">gérant</span>
+        </div>
+      </div>
+
+      <div class="modalBody">
+        <div class="grid gap-3">
+          <div>
+            <label class="text-[11px] font-extrabold text-slate-600">Email</label>
+            <input id="loginEmail" type="email" class="field mt-1" placeholder="equipe@greycorner.com" autocomplete="username" />
+          </div>
+
+          <div>
+            <label class="text-[11px] font-extrabold text-slate-600">Mot de passe</label>
+            <input id="loginPass" type="password" class="field mt-1" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+
+          <div class="flex items-center justify-between gap-3">
+            <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+              <input id="rememberMe" type="checkbox" class="accent-[color:var(--accent)]" checked />
+              Rester connecté
+            </label>
+
+            <button id="btnLogin" class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide">
+              🔐 Se connecter
+            </button>
+          </div>
+
+          <div id="loginError" class="hidden text-[12px] font-extrabold text-red-700 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+            —
+          </div>
+
+          <div class="text-[11px] text-slate-500 font-semibold leading-snug">
+            Règles :
+            <ul class="list-disc pl-5 mt-1">
+              <li><b>Équipe</b> : peut modifier <b>IN/OUT</b> et <b>hP</b> uniquement sur <b>aujourd’hui</b>. Ne peut <b>jamais</b> modifier <b>hA</b>.</li>
+              <li><b>Gérant</b> : accès total (toutes dates, hP/hA/IN/OUT).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Top bar -->
   <div class="stickyTop glass border-b border-black/5">
@@ -66,39 +147,17 @@
         </div>
       </div>
 
-      <div id="sessionPill" class="hidden">
-        <div class="flex items-center gap-2">
-          <span class="badge">Rôle: <span id="roleLabel">—</span></span>
-          <button id="btnLogout"
-                  class="btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide border border-slate-200 bg-white hover:brightness-95">
-            Déconnexion
-          </button>
-        </div>
+      <div class="flex items-center gap-2">
+        <div id="whoami" class="hidden sm:block text-[11px] font-extrabold text-slate-500"></div>
+        <button id="btnLogout"
+                class="btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide border border-[color:var(--accent)] text-[color:var(--accent)] bg-white hover:brightness-95">
+          ⎋ Déconnexion
+        </button>
       </div>
     </div>
 
-    <!-- LOGIN -->
-    <div id="loginWrap" class="loginWrap max-w-3xl mx-auto px-4 pb-3">
-      <div class="card rounded-3xl p-4 shadowSoft">
-        <div class="text-[10px] tracking-[0.22em] font-extrabold uppercase text-slate-500 mb-2">Connexion</div>
-        <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
-          <input id="loginEmail" type="email" placeholder="Email"
-                 class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
-          <input id="loginPass" type="password" placeholder="Mot de passe"
-                 class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
-          <button id="btnLogin"
-                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
-            Se connecter
-          </button>
-        </div>
-        <div id="loginMsg" class="mt-2 text-xs font-extrabold text-red-600"></div>
-      </div>
-    </div>
-
-    <!-- Controls -->
-    <div id="controlsWrap" class="hidden max-w-3xl mx-auto px-4 pb-3">
+    <div class="max-w-3xl mx-auto px-4 pb-3">
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
-
         <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 items-center">
           <input type="date" id="datePicker"
                  class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
@@ -117,15 +176,13 @@
                  placeholder="Rechercher un nom…"
                  class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
         </div>
-
       </div>
     </div>
   </div>
 
   <main class="max-w-3xl mx-auto px-4 pt-4">
-
     <!-- Summary -->
-    <div id="kpiWrap" class="hidden grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
       <div class="card rounded-2xl p-3">
         <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
         <div id="kpiTotal" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
@@ -156,37 +213,43 @@
     </div>
   </main>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyC5al_6xWbJC8S0FAvaEnRmx9BvYtGgnAM",
-  authDomain: "grey-corner-presence.firebaseapp.com",
-  databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "grey-corner-presence",
-  storageBucket: "grey-corner-presence.firebasestorage.app",
-  messagingSenderId: "730206093359",
-  appId: "1:730206093359:web:59e3c145120807f29e46da",
-  measurementId: "G-4HCKPGNED7"
-};
+  <script>
+    // =========================
+    // Firebase config (AUTH+DB)
+    // =========================
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5al_6xWbJC8S0FAvaEnRmx9BvYtGgnAM",
+      authDomain: "grey-corner-presence.firebaseapp.com",
+      databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "grey-corner-presence",
+      storageBucket: "grey-corner-presence.firebasestorage.app",
+      messagingSenderId: "730206093359",
+      appId: "1:730206093359:web:59e3c145120807f29e46da",
+      measurementId: "G-4HCKPGNED7"
+    };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-</script>
-    // ===== State =====
-    let role = null; // "gerant" | "equipe"
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
+
+    // =========================
+    // State
+    // =========================
+    let role = null;               // "gerant" | "equipe"
     let currentFilter = "all";
-    let presCache = {};
-    let punchCache = {};
-    let activePresRef = null;
-    let activePunchRef = null;
+    let latestDataCache = {};
+    let activeListenerRef = null;
 
-    // ===== Équipe =====
+    // =========================
+    // Équipe (mêmes IDs que pointage)
+    // =========================
     const EQUIPE = [
-      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'}, // Chef (hA-only)
+      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'}, // Chef cuisine (hA-only dans vos règles métier)
       {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
       {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
       {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
@@ -201,21 +264,27 @@ const auth = firebase.auth();
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
 
-    // hA-only (pas de hP)
-    const haOnly = ["BOUCHNAK_NAOUAL"];
+    function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
 
-    // ===== Helpers =====
+    // =========================
+    // Date Maroc
+    // =========================
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'Africa/Casablanca',
-        year: 'numeric', month: '2-digit', day: '2-digit'
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
       }).format(new Date());
 
-    function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
-
+    // =========================
+    // Time helpers
+    // =========================
     function timeToMin(t){
       if(!t || typeof t !== "string" || !t.includes(":")) return null;
-      const [h,m] = t.split(":").map(Number);
+      const parts = t.split(":").map(Number);
+      if(parts.length !== 2) return null;
+      const h = parts[0], m = parts[1];
       if(Number.isNaN(h) || Number.isNaN(m)) return null;
       return h*60+m;
     }
@@ -233,27 +302,42 @@ const auth = firebase.auth();
       return `+${min} min`;
     }
 
-    // ===== Permissions =====
+    // =========================
+    // Permissions (IMPORTANT)
+    // - equipe : peut modifier on/off + hP uniquement sur aujourd'hui
+    // - equipe : NE MODIFIE JAMAIS hA (sur presence)
+    // - gerant : accès total
+    // =========================
     function isGerant(){ return role === "gerant"; }
     function isEquipe(){ return role === "equipe"; }
 
-    // HP editable: gérant OU équipe (toujours) sauf ha-only
-    function canEditHP(id){
-      if(haOnly.includes(id)) return false;
-      return isGerant() || isEquipe();
+    function canEquipeEditToday(selectedDate){
+      return isEquipe() && selectedDate === getMarocDate();
     }
 
-    // IN/OUT editable: gérant OU équipe
-    function canEditInOut(){
-      return isGerant() || isEquipe();
+    function canEditHP(selectedDate){
+      return isGerant() || canEquipeEditToday(selectedDate);
     }
 
-    // hA editable: gérant seulement (car équipe ne doit PAS modifier hA)
-    function canEditHA(){
-      return isGerant();
+    function canEditInOut(selectedDate){
+      return isGerant() || canEquipeEditToday(selectedDate);
     }
 
-    // ===== Filters =====
+    function canEditHA(selectedDate){
+      return isGerant(); // ✅ équipe ne modifie PAS hA sur la plateforme présence
+    }
+
+    // =========================
+    // CRUD
+    // =========================
+    function upd(id, f, v){
+      const date = document.getElementById('datePicker').value;
+      return database.ref('presences/'+date+'/'+id).update({[f]:v});
+    }
+
+    // =========================
+    // Filters UI
+    // =========================
     function setFilter(f){
       currentFilter = f;
       document.querySelectorAll(".chipBtn").forEach(b => b.classList.remove("active"));
@@ -279,45 +363,13 @@ const auth = firebase.auth();
       });
     }
 
-    // ===== CRUD =====
-    function updPresence(id, f, v){
-      const date = document.getElementById('datePicker').value;
-      database.ref('presences/'+date+'/'+id).update({[f]:v});
-    }
-
-    function updPunch(id, f, v){
-      const date = document.getElementById('datePicker').value;
-      database.ref('punches/'+date+'/'+id).update({[f]:v});
-    }
-
-    // ===== KPIs =====
-    function computeKPIs(){
-      const total = EQUIPE.length;
-      let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
-
-      EQUIPE.forEach(emp => {
-        const id = empId(emp);
-        const p = presCache[id] || {};
-        const a = punchCache[id] || {};
-
-        const isPresent = !!p.on || !!a.hA;     // ✅ présent = IN ou punch
-        if(isPresent) present++; else absent++;
-
-        const lm = (a.retardMin != null) ? Number(a.retardMin || 0) : lateMinutes(p.hP, a.hA);
-        if(lm !== null && lm > 0){ lateCount++; lateMinSum += lm; }
-      });
-
-      document.getElementById("kpiTotal").textContent = total;
-      document.getElementById("kpiPresent").textContent = present;
-      document.getElementById("kpiAbsent").textContent = absent;
-      document.getElementById("kpiLate").textContent = lateCount;
-      document.getElementById("kpiLateMin").textContent = lateMinSum;
-    }
-
-    // ===== Render =====
+    // =========================
+    // Render
+    // =========================
     function render(){
-      const selectedDate = document.getElementById('datePicker').value;
+      if(!role) return;
 
+      const selectedDate = document.getElementById('datePicker').value;
       const list = document.getElementById('staffList');
       list.innerHTML = "";
 
@@ -354,43 +406,29 @@ const auth = firebase.auth();
 
         groupes[poste]
           .slice()
-          .sort((a,b)=>{
-            const A = empId(a);
-            const B = empId(b);
-            if (A === "BOUCHNAK_NAOUAL") return -1;
-            if (B === "BOUCHNAK_NAOUAL") return 1;
-            return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);
-          })
+          .sort((a,b)=> (a.nom+a.prenom).localeCompare(b.nom+b.prenom))
           .forEach(emp => {
             const id = empId(emp);
-            const p = presCache[id] || {};
-            const a = punchCache[id] || {};
+            const d = latestDataCache[id] || {};
 
-            const isHaOnly = haOnly.includes(id);
+            const isPresent = !!d.on;
+            const isOut = !!d.off;
+            const hasHP = !!d.hP;
+            const hasHA = !!d.hA;
 
-            const isPresent = !!p.on || !!a.hA;
-            const isOut = !!p.off;
-            const hasHP = !!p.hP;
-            const hasHA = !!a.hA;
+            // Incomplet: présent sans hP/hA, ou absent avec des champs remplis
+            const incomplete =
+              (isPresent && (!hasHP || !hasHA)) ||
+              (!isPresent && (hasHP || hasHA || isOut));
 
-            const lm = (a.retardMin != null) ? Number(a.retardMin || 0) : lateMinutes(p.hP, a.hA);
+            const lm = lateMinutes(d.hP, d.hA);
             const isLate = (lm !== null && lm > 0);
-
-            // Incomplet :
-            // - normal: présent => needs hP + hA
-            // - haOnly: présent => needs hA only
-            const incomplete = isPresent && (isHaOnly ? !hasHA : (!hasHP || !hasHA));
 
             const statusBadges = [];
             statusBadges.push(isPresent ? `<span class="badge ok">Présent</span>` : `<span class="badge bad">Absent</span>`);
-            if(isOut) statusBadges.push(`<span class="badge">Repos (OUT)</span>`);
+            if(isOut) statusBadges.push(`<span class="badge">Sorti</span>`);
             if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(lm)}</span>`);
             if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
-            if(isHaOnly) statusBadges.push(`<span class="badge" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10);color:#166534">👩‍🍳 Chef (hA)</span>`);
-
-            const canInOut = canEditInOut();
-            const canHP = canEditHP(id);
-            const canHA = canEditHA();
 
             const card = document.createElement('div');
             card.className = "card rounded-2xl p-4 empCard";
@@ -398,6 +436,10 @@ const auth = firebase.auth();
             card.dataset.present = isPresent ? "1" : "0";
             card.dataset.late = isLate ? "1" : "0";
             card.dataset.incomplete = incomplete ? "1" : "0";
+
+            const canInOut = canEditInOut(selectedDate);
+            const canHP = canEditHP(selectedDate);
+            const canHA = canEditHA(selectedDate);
 
             card.innerHTML = `
               <div class="flex items-start justify-between gap-3">
@@ -414,14 +456,14 @@ const auth = firebase.auth();
                   <label class="flex flex-col items-center px-1">
                     <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">IN</span>
                     <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                      ${p.on ? "checked" : ""} ${canInOut ? "" : "disabled"}
-                      onchange="updPresence('${id}','on',this.checked)">
+                      ${isPresent ? "checked" : ""} ${canInOut ? "" : "disabled"}
+                      onchange="upd('${id}','on',this.checked)">
                   </label>
                   <label class="flex flex-col items-center px-1">
                     <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
                     <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                      ${p.off ? "checked" : ""} ${canInOut ? "" : "disabled"}
-                      onchange="updPresence('${id}','off',this.checked)">
+                      ${isOut ? "checked" : ""} ${canInOut ? "" : "disabled"}
+                      onchange="upd('${id}','off',this.checked)">
                   </label>
                 </div>
               </div>
@@ -431,27 +473,28 @@ const auth = firebase.auth();
                   <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Shift prévu (hP)</label>
                   <input type="time"
                     class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
-                    value="${p.hP || ""}"
+                    value="${d.hP || ""}"
                     ${canHP ? "" : "disabled"}
-                    onchange="updPresence('${id}','hP',this.value)">
+                    onchange="upd('${id}','hP',this.value)">
                 </div>
 
                 <div>
-                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée (hA)</label>
+                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée réelle (hA)</label>
                   ${
                     canHA
                     ? `<input type="time"
                         class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
                         style="background: rgba(197,160,89,.10); border:1px solid rgba(197,160,89,.30)"
-                        value="${a.hA || ""}"
-                        onchange="updPunch('${id}','hA',this.value)">`
+                        value="${d.hA || ""}"
+                        onchange="upd('${id}','hA',this.value)">`
                     : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
-                        ${a.hA || "--:--"}
+                        ${d.hA || "--:--"}
                       </div>`
                   }
                 </div>
               </div>
             `;
+
             body.appendChild(card);
           });
 
@@ -464,93 +507,176 @@ const auth = firebase.auth();
       applyFilters();
     }
 
-    // ===== Load =====
+    function computeKPIs(){
+      const total = EQUIPE.length;
+      let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
+
+      EQUIPE.forEach(emp => {
+        const id = empId(emp);
+        const d = latestDataCache[id] || {};
+        const isPresent = !!d.on;
+        if(isPresent) present++; else absent++;
+
+        const lm = lateMinutes(d.hP, d.hA);
+        if(lm !== null && lm > 0){
+          lateCount++;
+          lateMinSum += lm;
+        }
+      });
+
+      document.getElementById("kpiTotal").textContent = total;
+      document.getElementById("kpiPresent").textContent = present;
+      document.getElementById("kpiAbsent").textContent = absent;
+      document.getElementById("kpiLate").textContent = lateCount;
+      document.getElementById("kpiLateMin").textContent = lateMinSum;
+    }
+
+    // =========================
+    // Load (listener par date)
+    // =========================
     function load(){
+      if(!role) return;
+
       const selectedDate = document.getElementById('datePicker').value;
 
-      if(activePresRef){ activePresRef.off(); }
-      if(activePunchRef){ activePunchRef.off(); }
+      if(activeListenerRef){
+        activeListenerRef.off();
+      }
 
-      activePresRef = database.ref('presences/' + selectedDate);
-      activePresRef.on('value', snap => {
-        presCache = snap.val() || {};
-        render();
-      });
-
-      activePunchRef = database.ref('punches/' + selectedDate);
-      activePunchRef.on('value', snap => {
-        punchCache = snap.val() || {};
+      activeListenerRef = database.ref('presences/' + selectedDate);
+      activeListenerRef.on('value', snap => {
+        latestDataCache = snap.val() || {};
         render();
       });
     }
 
-    // ===== Auth =====
+    // =========================
+    // UI role line
+    // =========================
+    function updateRoleLine(userEmail){
+      const line = document.getElementById("roleLine");
+      const who = document.getElementById("whoami");
+      who.classList.remove("hidden");
+      who.textContent = userEmail ? userEmail : "";
+
+      if(isGerant()){
+        line.textContent = "Mode : GÉRANT (Accès total ✅)";
+      } else if(isEquipe()){
+        line.textContent = "Mode : ÉQUIPE (Aujourd’hui : IN/OUT + hP ✅ | hA ❌)";
+      } else {
+        line.textContent = "Mode : —";
+      }
+    }
+
+    // =========================
+    // Auth flow
+    // =========================
+    function showAuth(show){
+      document.getElementById("authOverlay").style.display = show ? "flex" : "none";
+    }
+
     async function fetchRole(uid){
-      const snap = await database.ref("users/"+uid).once("value");
-      return snap.val() || null;
+      const snap = await database.ref("users/" + uid).once("value");
+      const v = snap.val();
+      // attendu: "gerant" ou "equipe"
+      return (v === "gerant" || v === "equipe") ? v : null;
     }
 
-    function showLogin(){
-      document.getElementById("loginWrap").style.display = "block";
-      document.getElementById("controlsWrap").classList.add("hidden");
-      document.getElementById("kpiWrap").classList.add("hidden");
-      document.getElementById("sessionPill").classList.add("hidden");
-      document.getElementById("staffList").innerHTML = "";
-      document.getElementById("roleLine").textContent = "Mode : — (connexion requise)";
-    }
-
-    function showApp(){
-      document.getElementById("loginWrap").style.display = "none";
-      document.getElementById("controlsWrap").classList.remove("hidden");
-      document.getElementById("kpiWrap").classList.remove("hidden");
-      document.getElementById("sessionPill").classList.remove("hidden");
-
-      document.getElementById("roleLabel").textContent = role || "—";
-      document.getElementById("roleLine").textContent =
-        (role === "gerant") ? "Mode : GÉRANT (Accès total ✅)" : "Mode : ÉQUIPE (IN/OUT + hP • hA en lecture seule)";
-    }
-
-    document.getElementById("btnLogin").onclick = async () => {
+    async function doLogin(){
       const email = (document.getElementById("loginEmail").value || "").trim();
       const pass  = (document.getElementById("loginPass").value || "").trim();
-      document.getElementById("loginMsg").textContent = "";
-      try{
-        await auth.signInWithEmailAndPassword(email, pass);
-      }catch(e){
-        document.getElementById("loginMsg").textContent = "Identifiants invalides.";
-      }
-    };
+      const remember = !!document.getElementById("rememberMe").checked;
 
-    document.getElementById("btnLogout").onclick = async () => {
-      await auth.signOut();
-      location.reload();
-    };
+      const errBox = document.getElementById("loginError");
+      errBox.classList.add("hidden");
+      errBox.textContent = "—";
 
-    auth.onAuthStateChanged(async (user) => {
-      if(!user){ role = null; showLogin(); return; }
-      role = await fetchRole(user.uid);
-
-      if(role !== "gerant" && role !== "equipe"){
-        await auth.signOut();
-        role = null;
-        showLogin();
+      if(!email || !pass){
+        errBox.textContent = "Veuillez saisir email + mot de passe.";
+        errBox.classList.remove("hidden");
         return;
       }
 
-      showApp();
-      initApp();
+      try{
+        await auth.setPersistence(
+          remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION
+        );
+        await auth.signInWithEmailAndPassword(email, pass);
+      }catch(e){
+        errBox.textContent = (e && e.message) ? e.message : "Erreur connexion.";
+        errBox.classList.remove("hidden");
+      }
+    }
+
+    document.getElementById("btnLogin").addEventListener("click", doLogin);
+    document.getElementById("loginPass").addEventListener("keydown", (e)=>{
+      if(e.key === "Enter") doLogin();
     });
 
-    // ===== Init =====
-    function initApp(){
+    document.getElementById("btnLogout").addEventListener("click", async ()=>{
+      try{ await auth.signOut(); }catch(e){}
+    });
+
+    auth.onAuthStateChanged(async (user)=>{
+      // reset state/listeners
+      latestDataCache = {};
+      if(activeListenerRef){ activeListenerRef.off(); activeListenerRef = null; }
+
+      if(!user){
+        role = null;
+        updateRoleLine("");
+        showAuth(true);
+        document.getElementById("staffList").innerHTML = "";
+        document.getElementById("kpiTotal").textContent = "—";
+        document.getElementById("kpiPresent").textContent = "—";
+        document.getElementById("kpiAbsent").textContent = "—";
+        document.getElementById("kpiLate").textContent = "—";
+        document.getElementById("kpiLateMin").textContent = "—";
+        return;
+      }
+
+      // logged in -> get role from DB
+      try{
+        role = await fetchRole(user.uid);
+        if(!role){
+          showAuth(true);
+          const errBox = document.getElementById("loginError");
+          errBox.textContent = "Votre utilisateur n'a pas de rôle dans /users/{uid}. Ajoutez 'gerant' ou 'equipe'.";
+          errBox.classList.remove("hidden");
+          await auth.signOut();
+          return;
+        }
+
+        updateRoleLine(user.email || "");
+        showAuth(false);
+
+        // init date
+        const dp = document.getElementById('datePicker');
+        if(!dp.value) dp.value = getMarocDate();
+
+        // If equipe, force date = today (optionnel). Si tu veux autoriser lecture historique, supprime ce bloc.
+        // Ici on autorise lecture historique (pas d'édition). Donc on ne force pas la date.
+
+        load();
+      }catch(e){
+        showAuth(true);
+        const errBox = document.getElementById("loginError");
+        errBox.textContent = "Erreur rôle/auth : " + ((e && e.message) ? e.message : "");
+        errBox.classList.remove("hidden");
+        try{ await auth.signOut(); }catch(_){}
+      }
+    });
+
+    // =========================
+    // Init
+    // =========================
+    (function initApp(){
       const dp = document.getElementById('datePicker');
       dp.value = getMarocDate();
       dp.addEventListener('change', load);
-      load();
-    }
-
-    // start with login
-    showLogin();
+      // overlay visible until auth resolves
+      showAuth(true);
+    })();
   </script>
 </body>
 </html>
