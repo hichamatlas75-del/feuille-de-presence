@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Grey Corner • Présences (Caisse + Manager)</title>
+  <title>Grey Corner • Présences</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -25,7 +25,7 @@
     .card{background:var(--card);border:1px solid rgba(2,6,23,.06)}
     .btn{transition:transform .08s ease, filter .2s ease}
     .btn:active{transform:scale(.985)}
-    input[type="time"], input[type="date"]{-webkit-appearance:none;min-height:42px}
+    input[type="time"], input[type="date"], input[type="email"], input[type="password"]{-webkit-appearance:none;min-height:42px}
     .chip{border:1px solid rgba(2,6,23,.10)}
     .chip.active{border-color: rgba(197,160,89,.55); background: rgba(197,160,89,.10)}
     .sectionTitle{border-left: 3px solid var(--accent);padding-left: 12px;}
@@ -43,6 +43,9 @@
     .toggleWrap{background: rgba(15,23,42,.04); border:1px solid rgba(2,6,23,.08)}
     .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
     .stickyTop{position:sticky;top:0;z-index:50}
+
+    /* Login box */
+    .loginWrap{display:none}
   </style>
 </head>
 
@@ -57,18 +60,43 @@
           <h1 class="text-lg sm:text-xl font-extrabold tracking-tight truncate">GREY CORNER</h1>
           <span class="text-[11px] font-bold text-slate-500">• Feuille de présence</span>
         </div>
+
         <div id="roleLine" class="mt-1 text-[10px] font-extrabold uppercase tracking-[0.22em] text-slate-500">
-          Mode : CAISSE (HP + IN/OUT sur اليوم فقط)
+          Mode : —
         </div>
       </div>
 
-      <button id="managerToggle" onclick="toggleManager()"
-              class="btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide border border-[color:var(--accent)] text-[color:var(--accent)] bg-white hover:brightness-95">
-        🔓 Accès gérant
-      </button>
+      <div id="sessionPill" class="hidden">
+        <div class="flex items-center gap-2">
+          <span class="badge">Rôle: <span id="roleLabel">—</span></span>
+          <button id="btnLogout"
+                  class="btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide border border-slate-200 bg-white hover:brightness-95">
+            Déconnexion
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div class="max-w-3xl mx-auto px-4 pb-3">
+    <!-- LOGIN -->
+    <div id="loginWrap" class="loginWrap max-w-3xl mx-auto px-4 pb-3">
+      <div class="card rounded-3xl p-4 shadowSoft">
+        <div class="text-[10px] tracking-[0.22em] font-extrabold uppercase text-slate-500 mb-2">Connexion</div>
+        <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+          <input id="loginEmail" type="email" placeholder="Email"
+                 class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
+          <input id="loginPass" type="password" placeholder="Mot de passe"
+                 class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
+          <button id="btnLogin"
+                  class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+            Se connecter
+          </button>
+        </div>
+        <div id="loginMsg" class="mt-2 text-xs font-extrabold text-red-600"></div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="controlsWrap" class="hidden max-w-3xl mx-auto px-4 pb-3">
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
 
         <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 items-center">
@@ -97,7 +125,7 @@
   <main class="max-w-3xl mx-auto px-4 pt-4">
 
     <!-- Summary -->
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+    <div id="kpiWrap" class="hidden grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
       <div class="card rounded-2xl p-3">
         <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
         <div id="kpiTotal" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
@@ -130,6 +158,7 @@
 
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
@@ -137,16 +166,19 @@
     const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+    const auth = firebase.auth();
 
     // ===== State =====
-    let isManager = false;                 // ✅ manager = accès total
+    let role = null; // "gerant" | "equipe"
     let currentFilter = "all";
-    let latestDataCache = {};
-    let activeListenerRef = null;
+    let presCache = {};
+    let punchCache = {};
+    let activePresRef = null;
+    let activePunchRef = null;
 
     // ===== Équipe =====
     const EQUIPE = [
-      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'}, // ✅ Chef cuisine (hA only)
+      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'}, // Chef (hA-only)
       {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
       {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
       {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
@@ -161,19 +193,14 @@
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
 
-    // ✅ Exceptions hA sur JOUR J (comme versions précédentes): Souad + Hakima
-    const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
-
-    // ✅ hA seulement (sans hP)
+    // hA-only (pas de hP)
     const haOnly = ["BOUCHNAK_NAOUAL"];
 
     // ===== Helpers =====
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'Africa/Casablanca',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
+        year: 'numeric', month: '2-digit', day: '2-digit'
       }).format(new Date());
 
     function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
@@ -199,28 +226,23 @@
     }
 
     // ===== Permissions =====
-    // ✅ CAISSE (par défaut) : peut modifier HP + IN/OUT uniquement sur le jour J
-    function canCashierEdit(selectedDate){
-      return selectedDate === getMarocDate();
-    }
+    function isGerant(){ return role === "gerant"; }
+    function isEquipe(){ return role === "equipe"; }
 
-    // ✅ HP editable si manager OU caisse sur jour J (sauf chef hA-only)
-    function canEditHP(id, selectedDate){
+    // HP editable: gérant OU équipe (toujours) sauf ha-only
+    function canEditHP(id){
       if(haOnly.includes(id)) return false;
-      return isManager || canCashierEdit(selectedDate);
+      return isGerant() || isEquipe();
     }
 
-    // ✅ IN/OUT editable si manager OU caisse sur jour J
-    function canEditInOut(selectedDate){
-      return isManager || canCashierEdit(selectedDate);
+    // IN/OUT editable: gérant OU équipe
+    function canEditInOut(){
+      return isGerant() || isEquipe();
     }
 
-    // ✅ hA editable : manager total OU (Souad/Hakima seulement sur jour J) OU Chef hA-only sur jour J
-    function canEditHA(id, selectedDate){
-      if(isManager) return true;
-      if(selectedDate !== getMarocDate()) return false;
-      if(haOnly.includes(id)) return true;                 // Chef hA-only
-      return haExceptionsToday.includes(id);               // Souad + Hakima
+    // hA editable: gérant seulement (car équipe ne doit PAS modifier hA)
+    function canEditHA(){
+      return isGerant();
     }
 
     // ===== Filters =====
@@ -249,28 +271,39 @@
       });
     }
 
-    // ===== Manager =====
-    function toggleManager(){
-      if(!isManager){
-        if(prompt("Code Manager :") === "2026"){
-          isManager = true;
-          document.getElementById('managerToggle').textContent = "🔒 Mode gérant actif";
-          document.getElementById('managerToggle').className =
-            "btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide bg-[#e67e22] text-white";
-          document.getElementById('roleLine').textContent = "Mode : GÉRANT (Accès total ✅)";
-        }
-      } else {
-        isManager = false;
-        location.reload();
-        return;
-      }
-      render();
-    }
-
     // ===== CRUD =====
-    function upd(id, f, v){
+    function updPresence(id, f, v){
       const date = document.getElementById('datePicker').value;
       database.ref('presences/'+date+'/'+id).update({[f]:v});
+    }
+
+    function updPunch(id, f, v){
+      const date = document.getElementById('datePicker').value;
+      database.ref('punches/'+date+'/'+id).update({[f]:v});
+    }
+
+    // ===== KPIs =====
+    function computeKPIs(){
+      const total = EQUIPE.length;
+      let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
+
+      EQUIPE.forEach(emp => {
+        const id = empId(emp);
+        const p = presCache[id] || {};
+        const a = punchCache[id] || {};
+
+        const isPresent = !!p.on || !!a.hA;     // ✅ présent = IN ou punch
+        if(isPresent) present++; else absent++;
+
+        const lm = (a.retardMin != null) ? Number(a.retardMin || 0) : lateMinutes(p.hP, a.hA);
+        if(lm !== null && lm > 0){ lateCount++; lateMinSum += lm; }
+      });
+
+      document.getElementById("kpiTotal").textContent = total;
+      document.getElementById("kpiPresent").textContent = present;
+      document.getElementById("kpiAbsent").textContent = absent;
+      document.getElementById("kpiLate").textContent = lateCount;
+      document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
 
     // ===== Render =====
@@ -322,36 +355,34 @@
           })
           .forEach(emp => {
             const id = empId(emp);
-            const d = latestDataCache[id] || {};
+            const p = presCache[id] || {};
+            const a = punchCache[id] || {};
 
             const isHaOnly = haOnly.includes(id);
-            const late = lateMinutes(d.hP, d.hA);
 
-            const isPresent = !!d.on;
-            const isOut = !!d.off;
-            const hasHP = !!d.hP;
-            const hasHA = !!d.hA;
+            const isPresent = !!p.on || !!a.hA;
+            const isOut = !!p.off;
+            const hasHP = !!p.hP;
+            const hasHA = !!a.hA;
 
-            // incomplete:
-            // - normal: present needs HP+HA
-            // - haOnly: present needs HA only
-            const incomplete =
-              (isPresent && (isHaOnly ? !hasHA : (!hasHP || !hasHA))) ||
-              (!isPresent && (hasHP || hasHA || isOut));
+            const lm = (a.retardMin != null) ? Number(a.retardMin || 0) : lateMinutes(p.hP, a.hA);
+            const isLate = (lm !== null && lm > 0);
 
-            const isLate = (late !== null && late > 0);
+            // Incomplet :
+            // - normal: présent => needs hP + hA
+            // - haOnly: présent => needs hA only
+            const incomplete = isPresent && (isHaOnly ? !hasHA : (!hasHP || !hasHA));
 
             const statusBadges = [];
             statusBadges.push(isPresent ? `<span class="badge ok">Présent</span>` : `<span class="badge bad">Absent</span>`);
-            if(isOut) statusBadges.push(`<span class="badge">Sorti</span>`);
-            if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
+            if(isOut) statusBadges.push(`<span class="badge">Repos (OUT)</span>`);
+            if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(lm)}</span>`);
             if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
-            if(haExceptionsToday.includes(id)) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 Exception</span>`);
             if(isHaOnly) statusBadges.push(`<span class="badge" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10);color:#166534">👩‍🍳 Chef (hA)</span>`);
 
-            const canInOut = canEditInOut(selectedDate);
-            const canHP = canEditHP(id, selectedDate);
-            const canHA = canEditHA(id, selectedDate);
+            const canInOut = canEditInOut();
+            const canHP = canEditHP(id);
+            const canHA = canEditHA();
 
             const card = document.createElement('div');
             card.className = "card rounded-2xl p-4 empCard";
@@ -375,14 +406,14 @@
                   <label class="flex flex-col items-center px-1">
                     <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">IN</span>
                     <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                      ${isPresent ? "checked" : ""} ${canInOut ? "" : "disabled"}
-                      onchange="upd('${id}','on',this.checked)">
+                      ${p.on ? "checked" : ""} ${canInOut ? "" : "disabled"}
+                      onchange="updPresence('${id}','on',this.checked)">
                   </label>
                   <label class="flex flex-col items-center px-1">
                     <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
                     <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                      ${isOut ? "checked" : ""} ${canInOut ? "" : "disabled"}
-                      onchange="upd('${id}','off',this.checked)">
+                      ${p.off ? "checked" : ""} ${canInOut ? "" : "disabled"}
+                      onchange="updPresence('${id}','off',this.checked)">
                   </label>
                 </div>
               </div>
@@ -392,28 +423,27 @@
                   <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Shift prévu (hP)</label>
                   <input type="time"
                     class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
-                    value="${d.hP || ""}"
+                    value="${p.hP || ""}"
                     ${canHP ? "" : "disabled"}
-                    onchange="upd('${id}','hP',this.value)">
+                    onchange="updPresence('${id}','hP',this.value)">
                 </div>
 
                 <div>
-                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée réelle (hA)</label>
+                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée (hA)</label>
                   ${
                     canHA
                     ? `<input type="time"
                         class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
                         style="background: rgba(197,160,89,.10); border:1px solid rgba(197,160,89,.30)"
-                        value="${d.hA || ""}"
-                        onchange="upd('${id}','hA',this.value)">`
+                        value="${a.hA || ""}"
+                        onchange="updPunch('${id}','hA',this.value)">`
                     : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
-                        ${d.hA || "--:--"}
+                        ${a.hA || "--:--"}
                       </div>`
                   }
                 </div>
               </div>
             `;
-
             body.appendChild(card);
           });
 
@@ -426,44 +456,82 @@
       applyFilters();
     }
 
-    function computeKPIs(){
-      const total = EQUIPE.length;
-      let present = 0, absent = 0, lateCount = 0, lateMinSum = 0;
-
-      EQUIPE.forEach(emp => {
-        const id = empId(emp);
-        const d = latestDataCache[id] || {};
-        const isPresent = !!d.on;
-        if(isPresent) present++; else absent++;
-
-        const lm = lateMinutes(d.hP, d.hA);
-        if(lm !== null && lm > 0){
-          lateCount++;
-          lateMinSum += lm;
-        }
-      });
-
-      document.getElementById("kpiTotal").textContent = total;
-      document.getElementById("kpiPresent").textContent = present;
-      document.getElementById("kpiAbsent").textContent = absent;
-      document.getElementById("kpiLate").textContent = lateCount;
-      document.getElementById("kpiLateMin").textContent = lateMinSum;
-    }
-
     // ===== Load =====
     function load(){
       const selectedDate = document.getElementById('datePicker').value;
 
-      if(activeListenerRef){
-        activeListenerRef.off();
-      }
+      if(activePresRef){ activePresRef.off(); }
+      if(activePunchRef){ activePunchRef.off(); }
 
-      activeListenerRef = database.ref('presences/' + selectedDate);
-      activeListenerRef.on('value', snap => {
-        latestDataCache = snap.val() || {};
+      activePresRef = database.ref('presences/' + selectedDate);
+      activePresRef.on('value', snap => {
+        presCache = snap.val() || {};
+        render();
+      });
+
+      activePunchRef = database.ref('punches/' + selectedDate);
+      activePunchRef.on('value', snap => {
+        punchCache = snap.val() || {};
         render();
       });
     }
+
+    // ===== Auth =====
+    async function fetchRole(uid){
+      const snap = await database.ref("users/"+uid).once("value");
+      return snap.val() || null;
+    }
+
+    function showLogin(){
+      document.getElementById("loginWrap").style.display = "block";
+      document.getElementById("controlsWrap").classList.add("hidden");
+      document.getElementById("kpiWrap").classList.add("hidden");
+      document.getElementById("sessionPill").classList.add("hidden");
+      document.getElementById("staffList").innerHTML = "";
+      document.getElementById("roleLine").textContent = "Mode : — (connexion requise)";
+    }
+
+    function showApp(){
+      document.getElementById("loginWrap").style.display = "none";
+      document.getElementById("controlsWrap").classList.remove("hidden");
+      document.getElementById("kpiWrap").classList.remove("hidden");
+      document.getElementById("sessionPill").classList.remove("hidden");
+
+      document.getElementById("roleLabel").textContent = role || "—";
+      document.getElementById("roleLine").textContent =
+        (role === "gerant") ? "Mode : GÉRANT (Accès total ✅)" : "Mode : ÉQUIPE (IN/OUT + hP • hA en lecture seule)";
+    }
+
+    document.getElementById("btnLogin").onclick = async () => {
+      const email = (document.getElementById("loginEmail").value || "").trim();
+      const pass  = (document.getElementById("loginPass").value || "").trim();
+      document.getElementById("loginMsg").textContent = "";
+      try{
+        await auth.signInWithEmailAndPassword(email, pass);
+      }catch(e){
+        document.getElementById("loginMsg").textContent = "Identifiants invalides.";
+      }
+    };
+
+    document.getElementById("btnLogout").onclick = async () => {
+      await auth.signOut();
+      location.reload();
+    };
+
+    auth.onAuthStateChanged(async (user) => {
+      if(!user){ role = null; showLogin(); return; }
+      role = await fetchRole(user.uid);
+
+      if(role !== "gerant" && role !== "equipe"){
+        await auth.signOut();
+        role = null;
+        showLogin();
+        return;
+      }
+
+      showApp();
+      initApp();
+    });
 
     // ===== Init =====
     function initApp(){
@@ -473,7 +541,8 @@
       load();
     }
 
-    initApp();
+    // start with login
+    showLogin();
   </script>
 </body>
 </html>
