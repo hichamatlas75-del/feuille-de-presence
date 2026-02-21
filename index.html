@@ -156,18 +156,26 @@
     </div>
   </main>
 
-  <!-- Firebase v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-  <script>
-    // ===== Firebase =====
-    const firebaseConfig = { databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app" };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const auth = firebase.auth();
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC5al_6xWbJC8S0FAvaEnRmx9BvYtGgnAM",
+  authDomain: "grey-corner-presence.firebaseapp.com",
+  databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "grey-corner-presence",
+  storageBucket: "grey-corner-presence.firebasestorage.app",
+  messagingSenderId: "730206093359",
+  appId: "1:730206093359:web:59e3c145120807f29e46da",
+  measurementId: "G-4HCKPGNED7"
+};
 
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+</script>
     // ===== State =====
     let role = null; // "gerant" | "equipe"
     let currentFilter = "all";
