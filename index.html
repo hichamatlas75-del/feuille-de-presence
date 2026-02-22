@@ -207,8 +207,10 @@
     ];
 
     // === règles spéciales ===
+    // ✅ équipe peut saisir hA seulement pour SBAI & ELMCHAOURI (aujourd'hui)
     const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
-    const haOnly = ["BOUCHNAK_NAOUAL"];
+    // ✅ BOUCHNAK retirée => équipe ne peut plus saisir hA pour elle
+    const haOnly = [];
 
     // ===== Helpers =====
     const getMarocDate = () =>
@@ -326,21 +328,16 @@
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
+    // ✅ BOUCHNAK n'est plus "haOnly" => HP éditable normalement
     function canEditHP(id, selectedDate){
-      if(haOnly.includes(id)) return false;
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
+    // ✅ équipe : hA uniquement SBAI & ELMCHAOURI (aujourd'hui)
     function canEditHA(id, selectedDate){
-      // gérant: oui
       if(isGerant()) return true;
-
-      // équipe: seulement aujourd'hui et seulement exceptions + (option) haOnly
       if(selectedDate !== getMarocDate()) return false;
-      if(haExceptionsToday.includes(id)) return true;
-      if(haOnly.includes(id)) return true;
-
-      return false;
+      return haExceptionsToday.includes(id);
     }
 
     // ===== Filters =====
@@ -475,7 +472,7 @@
           return;
         }
 
-        // équipe : seulement si autorisé (exceptions / haOnly) + aujourd’hui
+        // équipe : seulement si autorisé (exceptions) + aujourd’hui
         if(!canEditHA(id, selectedDate)){
           console.warn("Equipe cannot edit hA:", id);
           return;
