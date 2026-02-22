@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Grey Corner • Présences (Auth + Rôles)</title>
 
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
@@ -111,6 +108,10 @@
               class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
           </div>
         </div>
+
+        <div id="infoSource" class="mt-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500 hidden">
+          Source hA : —
+        </div>
       </div>
     </div>
   </div>
@@ -159,7 +160,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
-    // ✅ IMPORTANT: config complet (sinon écran vide / erreurs auth)
+    // ===== Firebase config =====
     const firebaseConfig = {
       apiKey: "AIzaSyC5al_6xWbJC8S0FAvaEnRmx9BvYtGgnAM",
       authDomain: "grey-corner-presence.firebaseapp.com",
@@ -178,8 +179,15 @@
     // ===== State =====
     let role = null; // "gerant" | "equipe"
     let currentFilter = "all";
-    let latestDataCache = {};
-    let activeListenerRef = null;
+
+    // caches séparés
+    let presencesCache = {}; // presences/date/id
+    let punchesCache = {};   // punches/date/id (gérant seulement)
+
+    // fusion affichage
+    let latestDataCache = {}; // id -> merged
+
+    let activeRefs = [];
 
     // ===== Équipe =====
     const EQUIPE = [
@@ -198,10 +206,8 @@
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
 
-    // ✅ (Garde-fou) : si tu veux permettre au caissier (role=equipe) de saisir hA pour ces 2 personnes aujourd’hui
+    // === règles spéciales ===
     const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
-
-    // (Optionnel) Chef hA-only si tu veux le garder
     const haOnly = ["BOUCHNAK_NAOUAL"];
 
     // ===== Helpers =====
@@ -223,7 +229,6 @@
     }
 
     function lateMinutes(hP, hA){
-      // retard uniquement si hA existe
       if(!hA) return null;
       const p = timeToMin(hP);
       const a = timeToMin(hA);
@@ -246,11 +251,22 @@
     function setRoleLine(){
       const el = document.getElementById("roleLine");
       if(role === "gerant"){
-        el.textContent = "Mode : GÉRANT (accès total ✅)";
+        el.textContent = "Mode : GÉRANT (presences + punches ✅)";
       }else if(role === "equipe"){
-        el.textContent = "Mode : ÉQUIPE (OUT + hP sur اليوم فقط • hA uniquement exceptions)";
+        el.textContent = "Mode : ÉQUIPE (presences seulement • punches bloqué par rules)";
       }else{
         el.textContent = "Mode : — (connexion requise)";
+      }
+
+      const info = document.getElementById("infoSource");
+      if(role === "gerant"){
+        info.textContent = "Source hA : punches (téléphones) + presences (manuel)";
+        info.classList.remove("hidden");
+      }else if(role === "equipe"){
+        info.textContent = "Source hA : presences uniquement (punches non lisible en équipe)";
+        info.classList.remove("hidden");
+      }else{
+        info.classList.add("hidden");
       }
     }
 
@@ -286,16 +302,22 @@
     document.getElementById("btnLogout").onclick = async () => {
       await auth.signOut();
       role = null;
-      if(activeListenerRef) activeListenerRef.off();
+      stopListeners();
+      presencesCache = {};
+      punchesCache = {};
       latestDataCache = {};
       showLoginUI();
     };
+
+    function stopListeners(){
+      activeRefs.forEach(({ref, cb}) => ref.off("value", cb));
+      activeRefs = [];
+    }
 
     // ===== Permissions =====
     function isGerant(){ return role === "gerant"; }
     function isEquipe(){ return role === "equipe"; }
 
-    // équipe: peut modifier OUT + hP uniquement aujourd'hui
     function canEquipeEditToday(selectedDate){
       return isEquipe() && selectedDate === getMarocDate();
     }
@@ -309,12 +331,15 @@
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
-    // hA: gérant, OU caissier (equipe) seulement pour exceptions اليوم
     function canEditHA(id, selectedDate){
+      // gérant: oui
       if(isGerant()) return true;
+
+      // équipe: seulement aujourd'hui et seulement exceptions + (option) haOnly
       if(selectedDate !== getMarocDate()) return false;
       if(haExceptionsToday.includes(id)) return true;
       if(haOnly.includes(id)) return true;
+
       return false;
     }
 
@@ -345,30 +370,149 @@
       });
     }
 
+    // ===== Merge presences + punches =====
+    function rebuildMerged(){
+      const merged = {};
+      EQUIPE.forEach(emp => {
+        const id = empId(emp);
+        const p = presencesCache[id] || {};
+        const pu = punchesCache[id] || {};
+        // priorité à punches pour hA/retard/retardMin
+        merged[id] = {
+          ...p,
+          ...pu,
+          // si punches a hA on garde, sinon fallback presences.hA (manuel)
+          hA: (pu && pu.hA) ? pu.hA : (p && p.hA ? p.hA : null),
+          retard: (pu && typeof pu.retard === "boolean") ? pu.retard : (p && typeof p.retard === "boolean" ? p.retard : false),
+          retardMin: (pu && typeof pu.retardMin === "number") ? pu.retardMin : (p && typeof p.retardMin === "number" ? p.retardMin : 0),
+        };
+      });
+      latestDataCache = merged;
+    }
+
     // ===== CRUD =====
     function upd(id, f, v){
       const date = document.getElementById('datePicker').value;
-      const ref = database.ref('presences/'+date+'/'+id);
 
-      // ✅ Nettoyage auto: si OUT=true => on supprime hA/retard/retardMin (évite "off + hA")
+      // OFF & hP restent dans presences
       if(f === "off"){
         const val = !!v;
-        const payload = { off: val };
+        const ref = database.ref('presences/'+date+'/'+id);
 
+        const payload = { off: val };
         if(val === true){
+          // éviter incohérences
           payload.hA = null;
           payload.retard = null;
           payload.retardMin = null;
-          // legacy "on" (si existait) -> on le force à false pour éviter confusion
           payload.on = false;
         }
         ref.update(payload).catch(() => console.warn("Write blocked:", id, f));
         return;
       }
 
-      // standard
-      ref.update({[f]:v})
-        .catch(() => console.warn("Write blocked:", id, f));
+      if(f === "hP"){
+        const ref = database.ref('presences/'+date+'/'+id);
+        ref.update({ hP: v || "" }).catch(() => console.warn("Write blocked:", id, f));
+        return;
+      }
+
+      // hA : gérant -> punches (et mirror presences), équipe -> presences (exceptions) avec champs requis
+      if(f === "hA"){
+        const selectedDate = document.getElementById('datePicker').value;
+
+        // normaliser
+        const hA = (v || "").trim();
+        if(hA && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hA)){
+          console.warn("hA invalide:", hA);
+          return;
+        }
+
+        const hP = (presencesCache[id]?.hP) || ""; // pour calcul retard
+        const lm = lateMinutes(hP, hA);
+        const isLate = (lm !== null && lm > 0);
+
+        const now = Date.now();
+
+        if(isGerant()){
+          // --- write punches ---
+          const refPunch = database.ref('punches/'+selectedDate+'/'+id);
+
+          const payloadPunch = {
+            empKey: id,
+            hA: hA || null,
+            retard: !!(hA && isLate),
+            retardMin: hA ? (lm || 0) : 0,
+            timestamp: now
+          };
+
+          // si hA vide => on efface proprement
+          const writePunch = hA
+            ? refPunch.set(payloadPunch)
+            : refPunch.remove();
+
+          writePunch.catch((e)=>console.warn("Punch write blocked:", e));
+
+          // --- mirror presences (compat / anciens rapports) ---
+          const refPres = database.ref('presences/'+selectedDate+'/'+id);
+          const payloadPres = hA ? {
+            hA: hA,
+            retard: !!isLate,
+            retardMin: (lm || 0),
+            timestamp: now,
+            lastEditAt: now,
+            lastEditByAdmin: true
+          } : {
+            hA: null,
+            retard: null,
+            retardMin: null,
+            timestamp: null,
+            lastEditAt: now,
+            lastEditByAdmin: true
+          };
+
+          refPres.update(payloadPres).catch((e)=>console.warn("Pres mirror blocked:", e));
+          return;
+        }
+
+        // équipe : seulement si autorisé (exceptions / haOnly) + aujourd’hui
+        if(!canEditHA(id, selectedDate)){
+          console.warn("Equipe cannot edit hA:", id);
+          return;
+        }
+
+        // IMPORTANT : tes rules exigent ces champs pour exceptions équipe
+        const refPres = database.ref('presences/'+selectedDate+'/'+id);
+
+        if(hA){
+          const payload = {
+            hA: hA,
+            retard: !!isLate,
+            retardMin: (lm || 0),
+            timestamp: now,
+            lastEditAt: now,
+            lastEditByAdmin: false
+          };
+          refPres.update(payload).catch((e)=>console.warn("Equipe hA blocked:", e));
+        }else{
+          // si on efface hA, on nettoie aussi les champs liés
+          const payload = {
+            hA: null,
+            retard: null,
+            retardMin: null,
+            timestamp: null,
+            lastEditAt: now,
+            lastEditByAdmin: false
+          };
+          refPres.update(payload).catch((e)=>console.warn("Equipe hA remove blocked:", e));
+        }
+
+        return;
+      }
+
+      // fallback
+      const ref = database.ref('presences/'+date+'/'+id);
+      ref.update({[f]:v}).catch(() => console.warn("Write blocked:", id, f));
     }
 
     // ===== Render =====
@@ -424,15 +568,15 @@
 
             const isHaOnly = haOnly.includes(id);
 
-            const isOff = !!d.off;     // ✅ repos/out
+            const isOff = !!d.off;
             const hasHP = !!d.hP;
-            const hasHA = !!d.hA;      // ✅ pointage réel
-            const handled = isOff || hasHA; // ✅ "validation finale"
+            const hasHA = !!d.hA;
+
+            const handled = isOff || hasHA;
 
             const late = lateMinutes(d.hP, d.hA);
             const isLate = (late !== null && late > 0);
 
-            // incomplet: pointé mais pas de hP (retard non calculable) OU OUT + hA incohérent
             const incomplete =
               (hasHA && !hasHP) ||
               (isOff && hasHA);
@@ -477,7 +621,6 @@
                   </div>
                 </div>
 
-                <!-- ✅ SUPPRIMÉ: IN / ✅ GARDÉ: OUT seulement -->
                 <div class="toggleWrap rounded-2xl p-2 flex gap-2">
                   <label class="flex flex-col items-center px-2">
                     <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
@@ -558,19 +701,38 @@
       document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
 
-    // ===== Load =====
+    // ===== Load (presences + punches) =====
     function load(){
       const selectedDate = document.getElementById('datePicker').value;
 
-      if(activeListenerRef){
-        activeListenerRef.off();
-      }
+      stopListeners();
+      presencesCache = {};
+      punchesCache = {};
 
-      activeListenerRef = database.ref('presences/' + selectedDate);
-      activeListenerRef.on('value', snap => {
-        latestDataCache = snap.val() || {};
+      // presences : tout le monde (auth)
+      const refPres = database.ref('presences/' + selectedDate);
+      const cbPres = (snap) => {
+        presencesCache = snap.val() || {};
+        rebuildMerged();
         render();
-      });
+      };
+      refPres.on("value", cbPres);
+      activeRefs.push({ref: refPres, cb: cbPres});
+
+      // punches : gérant seulement (rules)
+      if(isGerant()){
+        const refPunch = database.ref('punches/' + selectedDate);
+        const cbPunch = (snap) => {
+          punchesCache = snap.val() || {};
+          rebuildMerged();
+          render();
+        };
+        refPunch.on("value", cbPunch);
+        activeRefs.push({ref: refPunch, cb: cbPunch});
+      }else{
+        // équipe: pas de punches => fusion basée sur presences uniquement
+        punchesCache = {};
+      }
     }
 
     // ===== Init (after login) =====
