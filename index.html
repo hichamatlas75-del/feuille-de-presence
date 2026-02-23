@@ -678,24 +678,29 @@ if(f === "hP"){
       const total = EQUIPE.length;
       let punched = 0, off = 0, pending = 0, lateCount = 0, lateMinSum = 0;
 
-      EQUIPE.forEach(emp => {
-        const id = empId(emp);
-        const d = latestDataCache[id] || {};
+    EQUIPE.forEach(emp => {
+  const id = empId(emp);
+  const d = latestDataCache[id] || {};
 
-        const isOff = !!d.off;
-        const hasHA = !!d.hA;
-        const handled = isOff || hasHA;
+  const isOff  = d.off === true;
+  const hasHA  = typeof d.hA === "string" && d.hA.trim() !== "";
+  const hasHP  = typeof d.hP === "string" && d.hP.trim() !== "";
 
-        if(hasHA) punched++;
-        if(isOff) off++;
-        if(!handled) pending++;
+  const handled = isOff || hasHA;
 
-        const lm = lateMinutes(d.hP, d.hA);
-        if(lm !== null && lm > 0){
-          lateCount++;
-          lateMinSum += lm;
-        }
-      });
+  if(hasHA) punched++;
+  if(isOff) off++;
+  if(!handled) pending++;
+
+  // 🔒 Calcul retard uniquement si HP + HA existent
+  if(hasHP && hasHA){
+    const lm = lateMinutes(d.hP, d.hA);
+    if(lm !== null && lm > 0){
+      lateCount++;
+      lateMinSum += lm;
+    }
+  }
+});
 
       document.getElementById("kpiTotal").textContent = total;
       document.getElementById("kpiPunched").textContent = punched;
