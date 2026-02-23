@@ -407,13 +407,20 @@
         ref.update(payload).catch(() => console.warn("Write blocked:", id, f));
         return;
       }
+if(f === "hP"){
+  const ref = database.ref('presences/'+date+'/'+id);
 
-      if(f === "hP"){
-        const ref = database.ref('presences/'+date+'/'+id);
-        ref.update({ hP: v || "" }).catch(() => console.warn("Write blocked:", id, f));
-        return;
-      }
+  if(!v){ 
+    // 🔥 suppression propre
+    ref.update({ hP: null })
+      .catch(() => console.warn("Write blocked:", id, f));
+  }else{
+    ref.update({ hP: v })
+      .catch(() => console.warn("Write blocked:", id, f));
+  }
 
+  return;
+}
       // hA : gérant -> punches (et mirror presences), équipe -> presences (exceptions) avec champs requis
       if(f === "hA"){
         const selectedDate = document.getElementById('datePicker').value;
