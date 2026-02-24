@@ -3,6 +3,826 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Grey Corner • Présences (Sync Sheet)</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root{
+      --primary:#0f172a;
+      --muted:#64748b;
+      --accent:#c5a059;
+      --bg:#f7f6f2;
+      --card:#ffffff;
+      --soft:#eef2f7;
+    }
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--primary)}
+    .glass{background:rgba(255,255,255,.75);backdrop-filter: blur(10px)}
+    .card{background:var(--card);border:1px solid rgba(2,6,23,.06)}
+    .btn{transition:transform .08s ease, filter .2s ease}
+    .btn:active{transform:scale(.985)}
+    input[type="time"], input[type="date"], input[type="email"], input[type="password"]{-webkit-appearance:none;min-height:42px}
+    .chip{border:1px solid rgba(2,6,23,.10)}
+    .chip.active{border-color: rgba(197,160,89,.55); background: rgba(197,160,89,.10)}
+    .sectionTitle{border-left: 3px solid var(--accent);padding-left: 12px;}
+    .badge{
+      font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+      font-weight: 800; padding: 4px 8px; border-radius: 999px;
+      border: 1px solid rgba(2,6,23,.08);
+      background: rgba(15,23,42,.04);
+      color: var(--muted); line-height: 1; white-space: nowrap;
+    }
+    .badge.ok{background: rgba(16,185,129,.10); border-color: rgba(16,185,129,.30); color: #065f46;}
+    .badge.warn{background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.32); color: #92400e;}
+    .badge.bad{background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.30); color: #7f1d1d;}
+    .accentRing:focus{outline:none;box-shadow:0 0 0 3px rgba(197,160,89,.25)}
+    .toggleWrap{background: rgba(15,23,42,.04); border:1px solid rgba(2,6,23,.08)}
+    .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
+    .stickyTop{position:sticky;top:0;z-index:50}
+  </style>
+</head>
+
+<body class="pb-16">
+
+  <!-- Top bar -->
+  <div class="stickyTop glass border-b border-black/5">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="text-[10px] tracking-[0.22em] font-extrabold uppercase text-[color:var(--accent)]">Fès — Maroc</div>
+        <div class="flex items-baseline gap-2">
+          <h1 class="text-lg sm:text-xl font-extrabold tracking-tight truncate">GREY CORNER</h1>
+          <span class="text-[11px] font-bold text-slate-500">• Feuille de présence</span>
+        </div>
+
+        <div id="roleLine" class="mt-1 text-[10px] font-extrabold uppercase tracking-[0.22em] text-slate-500">
+          Mode : — (connexion requise)
+        </div>
+
+        <div id="exportLine" class="mt-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
+          Export Sheet : —
+        </div>
+      </div>
+
+      <div id="topActions" class="hidden items-center gap-2">
+        <button id="btnLogout"
+          class="btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide border border-black/10 bg-white hover:brightness-95">
+          🔒 Déconnexion
+        </button>
+      </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto px-4 pb-3">
+      <!-- LOGIN -->
+      <div id="loginWrap" class="card rounded-3xl p-4 shadowSoft">
+        <div class="text-[10px] font-extrabold tracking-[0.18em] uppercase text-slate-500">Connexion</div>
+        <div class="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-stretch">
+          <input id="loginEmail" type="email" placeholder="Email"
+            class="w-full px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
+          <input id="loginPass" type="password" placeholder="Mot de passe"
+            class="w-full px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
+          <button id="btnLogin"
+            class="btn px-4 py-3 rounded-2xl shadowSoft bg-[color:var(--primary)] text-white font-extrabold text-[12px] tracking-wide whitespace-nowrap">
+            Se connecter
+          </button>
+        </div>
+        <div id="loginMsg" class="mt-2 text-[11px] font-bold text-red-700"></div>
+      </div>
+
+      <!-- FILTERS (visible après login) -->
+      <div id="filtersWrap" class="hidden">
+        <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center mt-3">
+          <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 items-center">
+            <input type="date" id="datePicker"
+              class="w-full px-4 py-3 rounded-2xl card shadow-sm font-bold text-sm accentRing bg-white" />
+
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="setFilter('all')" id="chip-all" class="chip chipBtn chip active px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Tous</button>
+              <button onclick="setFilter('punched')" id="chip-punched" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Pointés (hA)</button>
+              <button onclick="setFilter('off')" id="chip-off" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Repos (OUT)</button>
+              <button onclick="setFilter('pending')" id="chip-pending" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">En attente</button>
+              <button onclick="setFilter('late')" id="chip-late" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Retard</button>
+              <button onclick="setFilter('incomplete')" id="chip-incomplete" class="chip chipBtn px-3 py-2 rounded-full text-[11px] font-extrabold text-slate-700">Incomplet</button>
+            </div>
+          </div>
+
+          <div class="flex gap-2 sm:justify-end items-stretch">
+            <input id="searchInput" oninput="applyFilters()"
+              placeholder="Rechercher un nom…"
+              class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
+          </div>
+        </div>
+
+        <div id="infoSource" class="mt-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500 hidden">
+          Source hA : —
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="max-w-3xl mx-auto px-4 pt-4">
+
+    <!-- Summary -->
+    <div id="kpisWrap" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-3 mb-5">
+      <div class="card rounded-2xl p-3">
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
+        <div id="kpiTotal" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      </div>
+      <div class="card rounded-2xl p-3">
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Pointés (hA)</div>
+        <div id="kpiPunched" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      </div>
+      <div class="card rounded-2xl p-3">
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Repos (OUT)</div>
+        <div id="kpiOff" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      </div>
+      <div class="card rounded-2xl p-3">
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">En attente</div>
+        <div id="kpiPending" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      </div>
+      <div class="card rounded-2xl p-3">
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Retards</div>
+        <div id="kpiLate" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      </div>
+      <div class="card rounded-2xl p-3 col-span-2 sm:col-span-1">
+        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Minutes retard</div>
+        <div id="kpiLateMin" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      </div>
+    </div>
+
+    <!-- Staff list -->
+    <div id="staffList" class="space-y-6"></div>
+
+    <div class="mt-10 text-center text-slate-400 text-[10px] font-extrabold uppercase tracking-[0.28em] pb-6">
+      &copy; 2026 Grey Corner • Service & Hospitalité
+    </div>
+  </main>
+
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <script>
+    // ====== Google Apps Script Export (daily_summary) ======
+    // ✅ Script confirmé (ton URL test marche)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyZFLn4Z8KHsB60caPMkdAFTXHkJcd_aP_oxP5cI_nDG7kZf5MzFm-U7vYPcNEUD4HY1Q/exec";
+    const GAS_SECRET = "greycorner2026";
+
+    function setExportLine(msg){
+      const el = document.getElementById("exportLine");
+      if(el) el.textContent = "Export Sheet : " + msg;
+    }
+
+    async function exportDailySummary({ date, empKey, empNode, hA, status, timestamp }) {
+      const params = new URLSearchParams({
+        action: "punch",                // ✅ IMPORTANT: on utilise punch (comme ton test)
+        secret: GAS_SECRET,
+        date: date || "",
+        empKey: empKey || "",
+        empNode: empNode || empKey || "",
+        hA: (hA ?? ""),
+        status: status || "punch",
+        timestamp: String(timestamp ?? Date.now())
+      });
+
+      const url = `${GAS_URL}?${params.toString()}`;
+
+      try{
+        setExportLine("Envoi…");
+        const r = await fetch(url, { method:"GET", cache:"no-store" });
+        const txt = await r.text();
+
+        // Ton GAS renvoie souvent JSON (success:true)
+        let ok = false;
+        try{
+          const j = JSON.parse(txt);
+          ok = !!j?.success;
+        }catch(e){
+          ok = false;
+        }
+
+        if(ok){
+          setExportLine("OK ✅");
+        }else{
+          setExportLine("Réponse inattendue ⚠️");
+          console.log("GAS response:", txt);
+        }
+      }catch(e){
+        setExportLine("Erreur réseau ❌");
+        console.log("GAS export error:", e);
+      }
+    }
+
+    // ===== Firebase config =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5al_6xWbJC8S0FAvaEnRmx9BvYtGgnAM",
+      authDomain: "grey-corner-presence.firebaseapp.com",
+      databaseURL: "https://grey-corner-presence-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "grey-corner-presence",
+      storageBucket: "grey-corner-presence.firebasestorage.app",
+      messagingSenderId: "730206093359",
+      appId: "1:730206093359:web:59e3c145120807f29e46da",
+      measurementId: "G-4HCKPGNED7"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
+
+    // ===== State =====
+    let role = null; // "gerant" | "equipe"
+    let currentFilter = "all";
+
+    // caches séparés
+    let presencesCache = {}; // presences/date/id
+    let punchesCache = {};   // punches/date/id (gérant seulement)
+
+    // fusion affichage
+    let latestDataCache = {}; // id -> merged
+
+    let activeRefs = [];
+
+    // ===== Équipe =====
+    const EQUIPE = [
+      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'},
+      {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
+      {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
+      {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
+      {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'}, {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'},
+      {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ENNHAILI', prenom: 'SOUMIA', poste: 'ECONOMAT'},
+      {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'}, {nom: 'GUETIBI', prenom: 'AMINE', poste: 'SERVICE'},
+      {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'},
+      {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'}, {nom: 'KAFOUNI', prenom: 'ZAKARIAE', poste: 'SERVICE'},
+      {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'}, {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'},
+      {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'},
+      {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'}, {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
+      {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
+    ];
+
+    // === règles spéciales ===
+    const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
+    const haOnly = [];
+
+    // ===== Helpers =====
+    const getMarocDate = () =>
+      new Intl.DateTimeFormat('fr-CA', {
+        timeZone: 'Africa/Casablanca',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
+
+    function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
+
+    function timeToMin(t){
+      if(!t || typeof t !== "string" || !t.includes(":")) return null;
+      const [h,m] = t.split(":").map(Number);
+      if(Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h*60+m;
+    }
+
+    function lateMinutes(hP, hA){
+      if(!hA) return null;
+      const p = timeToMin(hP);
+      const a = timeToMin(hA);
+      if(p === null || a === null) return null;
+      return Math.max(0, a - p);
+    }
+
+    function fmtLate(min){
+      if(min === null) return "—";
+      if(min <= 0) return "À l'heure";
+      return `+${min} min`;
+    }
+
+    // ===== AUTH (roles) =====
+    async function fetchRole(uid){
+      const snap = await database.ref("users/"+uid).once("value");
+      return snap.val() || null;
+    }
+
+    function setRoleLine(){
+      const el = document.getElementById("roleLine");
+      if(role === "gerant"){
+        el.textContent = "Mode : GÉRANT (presences + punches ✅)";
+      }else if(role === "equipe"){
+        el.textContent = "Mode : ÉQUIPE (presences seulement • punches bloqué par rules)";
+      }else{
+        el.textContent = "Mode : — (connexion requise)";
+      }
+
+      const info = document.getElementById("infoSource");
+      if(role === "gerant"){
+        info.textContent = "Source hA : punches (téléphones) + presences (manuel)";
+        info.classList.remove("hidden");
+      }else if(role === "equipe"){
+        info.textContent = "Source hA : presences uniquement (punches non lisible en équipe)";
+        info.classList.remove("hidden");
+      }else{
+        info.classList.add("hidden");
+      }
+    }
+
+    function showLoggedUI(){
+      document.getElementById("loginWrap").classList.add("hidden");
+      document.getElementById("filtersWrap").classList.remove("hidden");
+      document.getElementById("kpisWrap").classList.remove("hidden");
+      document.getElementById("topActions").classList.remove("hidden");
+      setRoleLine();
+      setExportLine("Prêt ✅");
+    }
+
+    function showLoginUI(){
+      document.getElementById("loginWrap").classList.remove("hidden");
+      document.getElementById("filtersWrap").classList.add("hidden");
+      document.getElementById("kpisWrap").classList.add("hidden");
+      document.getElementById("topActions").classList.add("hidden");
+      document.getElementById("staffList").innerHTML = "";
+      setRoleLine();
+      setExportLine("—");
+    }
+
+    document.getElementById("btnLogin").onclick = async () => {
+      const email = (document.getElementById("loginEmail").value || "").trim();
+      const pass  = (document.getElementById("loginPass").value || "").trim();
+      document.getElementById("loginMsg").textContent = "";
+
+      try{
+        await auth.signInWithEmailAndPassword(email, pass);
+      }catch(e){
+        document.getElementById("loginMsg").textContent = "Identifiants invalides ou accès refusé.";
+      }
+    };
+
+    document.getElementById("btnLogout").onclick = async () => {
+      await auth.signOut();
+      role = null;
+      stopListeners();
+      presencesCache = {};
+      punchesCache = {};
+      latestDataCache = {};
+      showLoginUI();
+    };
+
+    function stopListeners(){
+      activeRefs.forEach(({ref, cb}) => ref.off("value", cb));
+      activeRefs = [];
+    }
+
+    // ===== Permissions =====
+    function isGerant(){ return role === "gerant"; }
+    function isEquipe(){ return role === "equipe"; }
+
+    function canEquipeEditToday(selectedDate){
+      return isEquipe() && selectedDate === getMarocDate();
+    }
+
+    function canEditOFF(selectedDate){
+      return isGerant() || canEquipeEditToday(selectedDate);
+    }
+
+    function canEditHP(id, selectedDate){
+      return isGerant() || canEquipeEditToday(selectedDate);
+    }
+
+    function canEditHA(id, selectedDate){
+      if(isGerant()) return true;
+      if(selectedDate !== getMarocDate()) return false;
+      return haExceptionsToday.includes(id);
+    }
+
+    // ===== Filters =====
+    function setFilter(f){
+      currentFilter = f;
+      document.querySelectorAll(".chipBtn").forEach(b => b.classList.remove("active"));
+      const btn = document.getElementById(`chip-${f}`);
+      if(btn) btn.classList.add("active");
+      applyFilters();
+    }
+
+    function applyFilters(){
+      const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+      const cards = document.querySelectorAll("#staffList .empCard");
+
+      cards.forEach(card => {
+        const matchName = (card.dataset.name || "").includes(q);
+
+        let matchFilter = true;
+        if(currentFilter === "punched") matchFilter = card.dataset.punched === "1";
+        if(currentFilter === "off")     matchFilter = card.dataset.off === "1";
+        if(currentFilter === "pending") matchFilter = card.dataset.pending === "1";
+        if(currentFilter === "late")    matchFilter = card.dataset.late === "1";
+        if(currentFilter === "incomplete") matchFilter = card.dataset.incomplete === "1";
+
+        card.style.display = (matchName && matchFilter) ? "block" : "none";
+      });
+    }
+
+    // ===== Merge presences + punches =====
+    function rebuildMerged(){
+      const merged = {};
+      EQUIPE.forEach(emp => {
+        const id = empId(emp);
+        const p = presencesCache[id] || {};
+        const pu = punchesCache[id] || {};
+        merged[id] = {
+          ...p,
+          ...pu,
+          hA: (pu && pu.hA) ? pu.hA : (p && p.hA ? p.hA : null),
+          retard: (pu && typeof pu.retard === "boolean") ? pu.retard : (p && typeof p.retard === "boolean" ? p.retard : false),
+          retardMin: (pu && typeof pu.retardMin === "number") ? pu.retardMin : (p && typeof p.retardMin === "number" ? p.retardMin : 0),
+        };
+      });
+      latestDataCache = merged;
+    }
+
+    // ===== CRUD =====
+    async function upd(id, f, v){
+      const date = document.getElementById('datePicker').value;
+
+      // OFF & hP restent dans presences (PAS d'export sheet ici)
+      if(f === "off"){
+        const val = !!v;
+        const ref = database.ref('presences/'+date+'/'+id);
+
+        const payload = { off: val };
+        if(val === true){
+          payload.hA = null;
+          payload.retard = null;
+          payload.retardMin = null;
+          payload.on = false;
+        }
+        ref.update(payload).catch(() => console.warn("Write blocked:", id, f));
+        return;
+      }
+
+      if(f === "hP"){
+        const ref = database.ref('presences/'+date+'/'+id);
+        if(!v){
+          ref.update({ hP: null }).catch(() => console.warn("Write blocked:", id, f));
+        }else{
+          ref.update({ hP: v }).catch(() => console.warn("Write blocked:", id, f));
+        }
+        return;
+      }
+
+      // hA : gérant -> punches (et mirror presences), équipe -> presences (exceptions)
+      if(f === "hA"){
+        const selectedDate = document.getElementById('datePicker').value;
+
+        const hA = (v || "").trim();
+        if(hA && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hA)){
+          console.warn("hA invalide:", hA);
+          return;
+        }
+
+        const hP = (presencesCache[id]?.hP) || "";
+        const lm = lateMinutes(hP, hA);
+        const isLate = (lm !== null && lm > 0);
+        const now = Date.now();
+
+        // ✅ EXPORT SHEET (daily_summary) — à chaque modif hA
+        // empNode = id (même format que ton test URL)
+        exportDailySummary({
+          date: selectedDate,
+          empKey: id,
+          empNode: id,
+          hA: hA || "",
+          status: "punch",
+          timestamp: now
+        });
+
+        if(isGerant()){
+          const refPunch = database.ref('punches/'+selectedDate+'/'+id);
+
+          const payloadPunch = {
+            empKey: id,
+            hA: hA || null,
+            retard: !!(hA && isLate),
+            retardMin: hA ? (lm || 0) : 0,
+            timestamp: now
+          };
+
+          const writePunch = hA ? refPunch.set(payloadPunch) : refPunch.remove();
+          writePunch.catch((e)=>console.warn("Punch write blocked:", e));
+
+          const refPres = database.ref('presences/'+selectedDate+'/'+id);
+          const payloadPres = hA ? {
+            hA: hA,
+            retard: !!isLate,
+            retardMin: (lm || 0),
+            timestamp: now,
+            lastEditAt: now,
+            lastEditByAdmin: true
+          } : {
+            hA: null,
+            retard: null,
+            retardMin: null,
+            timestamp: null,
+            lastEditAt: now,
+            lastEditByAdmin: true
+          };
+
+          refPres.update(payloadPres).catch((e)=>console.warn("Pres mirror blocked:", e));
+          return;
+        }
+
+        if(!canEditHA(id, selectedDate)){
+          console.warn("Equipe cannot edit hA:", id);
+          return;
+        }
+
+        const refPres = database.ref('presences/'+selectedDate+'/'+id);
+
+        if(hA){
+          const payload = {
+            hA: hA,
+            retard: !!isLate,
+            retardMin: (lm || 0),
+            timestamp: now,
+            lastEditAt: now,
+            lastEditByAdmin: false
+          };
+          refPres.update(payload).catch((e)=>console.warn("Equipe hA blocked:", e));
+        }else{
+          const payload = {
+            hA: null,
+            retard: null,
+            retardMin: null,
+            timestamp: null,
+            lastEditAt: now,
+            lastEditByAdmin: false
+          };
+          refPres.update(payload).catch((e)=>console.warn("Equipe hA remove blocked:", e));
+        }
+
+        return;
+      }
+
+      // fallback
+      const ref = database.ref('presences/'+date+'/'+id);
+      ref.update({[f]:v}).catch(() => console.warn("Write blocked:", id, f));
+    }
+
+    // ===== Render =====
+    function render(){
+      const selectedDate = document.getElementById('datePicker').value;
+
+      const list = document.getElementById('staffList');
+      list.innerHTML = "";
+
+      const groupes = EQUIPE.reduce((acc, emp) => {
+        (acc[emp.poste] = acc[emp.poste] || []).push(emp);
+        return acc;
+      }, {});
+
+      Object.keys(groupes).sort().forEach(poste => {
+        const section = document.createElement('section');
+        section.className = "card rounded-3xl overflow-hidden";
+
+        const header = document.createElement('button');
+        header.type = "button";
+        header.className = "w-full flex items-center justify-between px-4 py-4 bg-white";
+        header.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="sectionTitle text-xs font-extrabold tracking-[0.18em] uppercase text-slate-500">${poste}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="badge">${groupes[poste].length} pers.</span>
+            <span class="text-slate-400 font-black">▾</span>
+          </div>
+        `;
+
+        const body = document.createElement('div');
+        body.className = "px-4 pb-4 space-y-3";
+
+        let open = true;
+        header.addEventListener('click', () => {
+          open = !open;
+          body.style.display = open ? "block" : "none";
+        });
+
+        groupes[poste]
+          .slice()
+          .sort((a,b)=>{
+            const A = empId(a);
+            const B = empId(b);
+            if (A === "BOUCHNAK_NAOUAL") return -1;
+            if (B === "BOUCHNAK_NAOUAL") return 1;
+            return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);
+          })
+          .forEach(emp => {
+            const id = empId(emp);
+            const d = latestDataCache[id] || {};
+
+            const isHaOnly = haOnly.includes(id);
+
+            const isOff = !!d.off;
+            const hasHP = !!d.hP;
+            const hasHA = !!d.hA;
+
+            const handled = isOff || hasHA;
+
+            const late = lateMinutes(d.hP, d.hA);
+            const isLate = (late !== null && late > 0);
+
+            const incomplete =
+              (hasHA && !hasHP) ||
+              (isOff && hasHA);
+
+            const statusBadges = [];
+
+            if(isOff){
+              statusBadges.push(`<span class="badge bad">Repos (OUT)</span>`);
+            }else if(hasHA){
+              statusBadges.push(`<span class="badge ok">Pointé</span>`);
+            }else{
+              statusBadges.push(`<span class="badge">En attente</span>`);
+            }
+
+            if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
+            if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
+
+            if(haExceptionsToday.includes(id)) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 hA Exception</span>`);
+            if(isHaOnly) statusBadges.push(`<span class="badge" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10);color:#166534">👩‍🍳 Chef (hA)</span>`);
+
+            const canOFF = canEditOFF(selectedDate);
+            const canHP = canEditHP(id, selectedDate);
+            const canHA = canEditHA(id, selectedDate);
+
+            const card = document.createElement('div');
+            card.className = "card rounded-2xl p-4 empCard";
+            card.dataset.name = `${emp.nom} ${emp.prenom}`.toLowerCase();
+            card.dataset.punched = hasHA ? "1" : "0";
+            card.dataset.off = isOff ? "1" : "0";
+            card.dataset.pending = (!handled) ? "1" : "0";
+            card.dataset.late = isLate ? "1" : "0";
+            card.dataset.incomplete = incomplete ? "1" : "0";
+
+            card.innerHTML = `
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="font-extrabold text-sm tracking-tight text-slate-900 truncate">
+                    ${emp.nom} ${emp.prenom}
+                  </div>
+                  <div class="mt-2 flex gap-2 flex-wrap">
+                    ${statusBadges.join("")}
+                  </div>
+                </div>
+
+                <div class="toggleWrap rounded-2xl p-2 flex gap-2">
+                  <label class="flex flex-col items-center px-2">
+                    <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
+                    <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
+                      ${isOff ? "checked" : ""} ${canOFF ? "" : "disabled"}
+                      onchange="upd('${id}','off',this.checked)">
+                  </label>
+                </div>
+              </div>
+
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Shift prévu (hP)</label>
+                  <input type="time"
+                    class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
+                    value="${d.hP || ""}"
+                    ${canHP ? "" : "disabled"}
+                    onchange="upd('${id}','hP',this.value)">
+                </div>
+
+                <div>
+                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée réelle (hA)</label>
+                  ${
+                    canHA
+                    ? `<input type="time"
+                        class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
+                        style="background: rgba(197,160,89,.10); border:1px solid rgba(197,160,89,.30)"
+                        value="${d.hA || ""}"
+                        onchange="upd('${id}','hA',this.value)">`
+                    : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
+                        ${d.hA || "--:--"}
+                      </div>`
+                  }
+                </div>
+              </div>
+            `;
+
+            body.appendChild(card);
+          });
+
+        section.appendChild(header);
+        section.appendChild(body);
+        list.appendChild(section);
+      });
+
+      computeKPIs();
+      applyFilters();
+    }
+
+    function computeKPIs(){
+      const total = EQUIPE.length;
+      let punched = 0, off = 0, pending = 0, lateCount = 0, lateMinSum = 0;
+
+      EQUIPE.forEach(emp => {
+        const id = empId(emp);
+        const d = latestDataCache[id] || {};
+
+        const isOff  = d.off === true;
+        const hasHA  = typeof d.hA === "string" && d.hA.trim() !== "";
+        const hasHP  = typeof d.hP === "string" && d.hP.trim() !== "";
+
+        const handled = isOff || hasHA;
+
+        if(hasHA) punched++;
+        if(isOff) off++;
+        if(!handled) pending++;
+
+        if(hasHP && hasHA){
+          const lm = lateMinutes(d.hP, d.hA);
+          if(lm !== null && lm > 0){
+            lateCount++;
+            lateMinSum += lm;
+          }
+        }
+      });
+
+      document.getElementById("kpiTotal").textContent = total;
+      document.getElementById("kpiPunched").textContent = punched;
+      document.getElementById("kpiOff").textContent = off;
+      document.getElementById("kpiPending").textContent = pending;
+      document.getElementById("kpiLate").textContent = lateCount;
+      document.getElementById("kpiLateMin").textContent = lateMinSum;
+    }
+
+    // ===== Load (presences + punches) =====
+    function load(){
+      const selectedDate = document.getElementById('datePicker').value;
+
+      stopListeners();
+      presencesCache = {};
+      punchesCache = {};
+
+      const refPres = database.ref('presences/' + selectedDate);
+      const cbPres = (snap) => {
+        presencesCache = snap.val() || {};
+        rebuildMerged();
+        render();
+      };
+      refPres.on("value", cbPres);
+      activeRefs.push({ref: refPres, cb: cbPres});
+
+      if(isGerant()){
+        const refPunch = database.ref('punches/' + selectedDate);
+        const cbPunch = (snap) => {
+          punchesCache = snap.val() || {};
+          rebuildMerged();
+          render();
+        };
+        refPunch.on("value", cbPunch);
+        activeRefs.push({ref: refPunch, cb: cbPunch});
+      }else{
+        punchesCache = {};
+      }
+    }
+
+    // ===== Init (after login) =====
+    function initApp(){
+      const dp = document.getElementById('datePicker');
+      dp.value = getMarocDate();
+      dp.addEventListener('change', load);
+      load();
+    }
+
+    // ===== Boot =====
+    auth.onAuthStateChanged(async (user) => {
+      if(!user){
+        role = null;
+        showLoginUI();
+        return;
+      }
+
+      role = await fetchRole(user.uid);
+
+      if(role !== "gerant" && role !== "equipe"){
+        await auth.signOut();
+        role = null;
+        showLoginUI();
+        document.getElementById("loginMsg").textContent =
+          "Compte non autorisé (rôle manquant dans /users).";
+        return;
+      }
+
+      showLoggedUI();
+      initApp();
+    });
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Grey Corner • Présences (Auth + Rôles)</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
