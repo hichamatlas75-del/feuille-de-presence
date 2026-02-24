@@ -112,6 +112,11 @@
         <div id="infoSource" class="mt-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500 hidden">
           Source hA : —
         </div>
+
+        <!-- export status -->
+        <div id="exportStatus" class="mt-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
+          Export Sheet: —
+        </div>
       </div>
     </div>
   </div>
@@ -176,37 +181,68 @@
     const auth = firebase.auth();
     const database = firebase.database();
 
-    // =============================
-    // ✅ EXPORT GOOGLE SHEET (Option B)
-    // =============================
-    const SHEET_EXPORT_URL = "https://script.google.com/macros/s/AKfycbyZFLn4Z8KHsB60caPMkdAFTXHkJcd_aP_oxP5cI_nDG7kZf5MzFm-U7vYPcNEUD4HY1Q/exec";
+    // ===== EXPORT (Apps Script -> daily_summary) =====
+    const EXPORT_URL = "https://script.google.com/macros/s/AKfycbyZFLn4Z8KHsB60caPMkdAFTXHkJcd_aP_oxP5cI_nDG7kZf5MzFm-U7vYPcNEUD4HY1Q/exec";
     const EXPORT_SECRET = "greycorner2026";
 
-    function exportToSheet(params){
-      try{
-        const q = new URLSearchParams(params).toString();
-        const url = `${SHEET_EXPORT_URL}?${q}`;
+    function setExportStatus(txt){
+      const el = document.getElementById("exportStatus");
+      if(!el) return;
+      el.textContent = "Export Sheet: " + txt;
+    }
 
-        // Anti-CORS : image beacon
-        const img = new Image();
-        img.referrerPolicy = "no-referrer";
-        img.src = url;
-      }catch(e){
-        console.warn("exportToSheet failed:", e);
-      }
+    // Debounce per employee to avoid spam while typing time
+    const __exportTimers = {};
+    function scheduleExport(empKey, fn, delay=450){
+      clearTimeout(__exportTimers[empKey]);
+      __exportTimers[empKey] = setTimeout(fn, delay);
+    }
+
+    async function exportToSheet(params){
+      // Always add secret
+      const q = new URLSearchParams({ secret: EXPORT_SECRET, ...params });
+      // no-cors avoids CORS blocking in browser (we can't read response, but it writes)
+      await fetch(EXPORT_URL + "?" + q.toString(), { method:"GET", mode:"no-cors", cache:"no-store" });
+    }
+
+    function exportPresenceRow(date, empKey, name, hP, off){
+      // action=presence: can update hP/off even if no hA
+      return exportToSheet({
+        action: "presence",
+        date,
+        empKey,
+        name: name || "",
+        hP: hP || "",
+        off: (typeof off === "boolean") ? String(off) : "",
+        timestamp: String(Date.now()),
+        status: "presence"
+      });
+    }
+
+    function exportPunchRow(date, empKey, name, hA, hP, off, retard, retardMin){
+      // action=punch requires hA
+      return exportToSheet({
+        action: "punch",
+        date,
+        empKey,
+        name: name || "",
+        hA: hA,
+        hP: hP || "",
+        off: (typeof off === "boolean") ? String(off) : "",
+        retard: (typeof retard === "boolean") ? String(retard) : "",
+        retardMin: (typeof retardMin === "number") ? String(retardMin) : "",
+        timestamp: String(Date.now()),
+        status: "punch"
+      });
     }
 
     // ===== State =====
     let role = null; // "gerant" | "equipe"
     let currentFilter = "all";
 
-    // caches séparés
-    let presencesCache = {}; // presences/date/id
-    let punchesCache = {};   // punches/date/id (gérant seulement)
-
-    // fusion affichage
-    let latestDataCache = {}; // id -> merged
-
+    let presencesCache = {};
+    let punchesCache = {};
+    let latestDataCache = {};
     let activeRefs = [];
 
     // ===== Équipe =====
@@ -226,7 +262,6 @@
       {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
     ];
 
-    // === règles spéciales ===
     const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
     const haOnly = [];
 
@@ -240,6 +275,7 @@
       }).format(new Date());
 
     function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
+    function empFullName(emp){ return `${emp.nom} ${emp.prenom}`; }
 
     function timeToMin(t){
       if(!t || typeof t !== "string" || !t.includes(":")) return null;
@@ -296,6 +332,7 @@
       document.getElementById("kpisWrap").classList.remove("hidden");
       document.getElementById("topActions").classList.remove("hidden");
       setRoleLine();
+      setExportStatus("ON (daily_summary)");
     }
 
     function showLoginUI(){
@@ -305,6 +342,7 @@
       document.getElementById("topActions").classList.add("hidden");
       document.getElementById("staffList").innerHTML = "";
       setRoleLine();
+      setExportStatus("—");
     }
 
     document.getElementById("btnLogin").onclick = async () => {
@@ -401,35 +439,36 @@
       latestDataCache = merged;
     }
 
-    // ===== Export helper for current row =====
-    function exportPresenceRowToSheet_(date, id){
+    // ===== Export hooks (presence / punch) =====
+    function exportPresenceFromCache(date, id){
+      const emp = EQUIPE.find(e => empId(e) === id);
+      const name = emp ? empFullName(emp) : id;
       const d = latestDataCache[id] || {};
-      const hp = (d.hP || "").trim();
-      const ha = (d.hA || "").trim();
-      const off = (d.off === true);
+      return exportPresenceRow(date, id, name, d.hP || "", typeof d.off === "boolean" ? d.off : "");
+    }
 
-      exportToSheet({
-        action: "punch",
-        secret: EXPORT_SECRET,
+    function exportPunchFromCache(date, id){
+      const emp = EQUIPE.find(e => empId(e) === id);
+      const name = emp ? empFullName(emp) : id;
+      const d = latestDataCache[id] || {};
+      if(!d.hA) return Promise.resolve(); // punch needs hA
+      return exportPunchRow(
         date,
-        empKey: id,
-        empNode: id,
-        name: id,
-        hP: hp,
-        hA: ha,
-        off: off ? "true" : "false",
-        retard: (typeof d.retard === "boolean") ? String(d.retard) : "",
-        retardMin: (typeof d.retardMin === "number") ? String(d.retardMin) : "",
-        status: "presence_edit",
-        timestamp: Date.now()
-      });
+        id,
+        name,
+        d.hA,
+        d.hP || "",
+        typeof d.off === "boolean" ? d.off : "",
+        typeof d.retard === "boolean" ? d.retard : "",
+        typeof d.retardMin === "number" ? d.retardMin : ""
+      );
     }
 
     // ===== CRUD =====
     function upd(id, f, v){
       const date = document.getElementById('datePicker').value;
 
-      // OFF (presences)
+      // OFF
       if(f === "off"){
         const val = !!v;
         const ref = database.ref('presences/'+date+'/'+id);
@@ -442,30 +481,46 @@
           payload.on = false;
         }
 
-        ref.update(payload)
-          .then(() => { exportPresenceRowToSheet_(date, id); })
-          .catch(() => console.warn("Write blocked:", id, f));
+        ref.update(payload).then(() => {
+          // export presence to sheet (hP/off)
+          scheduleExport(id, async () => {
+            try{
+              await exportPresenceFromCache(date, id);
+              setExportStatus("OK (presence)");
+            }catch(e){
+              setExportStatus("Erreur export (presence)");
+            }
+          });
+        }).catch(() => console.warn("Write blocked:", id, f));
 
         return;
       }
 
-      // hP (presences) + export
+      // hP
       if(f === "hP"){
         const ref = database.ref('presences/'+date+'/'+id);
-        const hp = (v || "").trim();
 
-        ref.update({ hP: hp || null })
-          .then(() => { exportPresenceRowToSheet_(date, id); })
-          .catch(() => console.warn("Write blocked:", id, f));
+        const updateObj = (!v) ? { hP: null } : { hP: v };
+
+        ref.update(updateObj).then(() => {
+          scheduleExport(id, async () => {
+            try{
+              await exportPresenceFromCache(date, id);
+              setExportStatus("OK (presence)");
+            }catch(e){
+              setExportStatus("Erreur export (presence)");
+            }
+          });
+        }).catch(() => console.warn("Write blocked:", id, f));
 
         return;
       }
 
-      // hA : gérant -> punches + mirror presences | équipe -> presences exceptions
+      // hA
       if(f === "hA"){
         const selectedDate = document.getElementById('datePicker').value;
-
         const hA = (v || "").trim();
+
         if(hA && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hA)){
           console.warn("hA invalide:", hA);
           return;
@@ -490,6 +545,7 @@
           const writePunch = hA ? refPunch.set(payloadPunch) : refPunch.remove();
           writePunch.catch((e)=>console.warn("Punch write blocked:", e));
 
+          // mirror presences
           const refPres = database.ref('presences/'+selectedDate+'/'+id);
           const payloadPres = hA ? {
             hA: hA,
@@ -507,13 +563,22 @@
             lastEditByAdmin: true
           };
 
-          refPres.update(payloadPres)
-            .then(() => { exportPresenceRowToSheet_(selectedDate, id); })
-            .catch((e)=>console.warn("Pres mirror blocked:", e));
+          refPres.update(payloadPres).then(() => {
+            scheduleExport(id, async () => {
+              try{
+                // for hA we export punch (includes hP/off if set)
+                await exportPunchFromCache(selectedDate, id);
+                setExportStatus("OK (punch)");
+              }catch(e){
+                setExportStatus("Erreur export (punch)");
+              }
+            });
+          }).catch((e)=>console.warn("Pres mirror blocked:", e));
 
           return;
         }
 
+        // equipe
         if(!canEditHA(id, selectedDate)){
           console.warn("Equipe cannot edit hA:", id);
           return;
@@ -521,40 +586,59 @@
 
         const refPres = database.ref('presences/'+selectedDate+'/'+id);
 
-        const payload = hA ? {
-          hA: hA,
-          retard: !!isLate,
-          retardMin: (lm || 0),
-          timestamp: now,
-          lastEditAt: now,
-          lastEditByAdmin: false
-        } : {
-          hA: null,
-          retard: null,
-          retardMin: null,
-          timestamp: null,
-          lastEditAt: now,
-          lastEditByAdmin: false
-        };
-
-        refPres.update(payload)
-          .then(() => { exportPresenceRowToSheet_(selectedDate, id); })
-          .catch((e)=>console.warn("Equipe hA blocked:", e));
+        if(hA){
+          const payload = {
+            hA: hA,
+            retard: !!isLate,
+            retardMin: (lm || 0),
+            timestamp: now,
+            lastEditAt: now,
+            lastEditByAdmin: false
+          };
+          refPres.update(payload).then(() => {
+            scheduleExport(id, async () => {
+              try{
+                // equipe: export punch row too (action=punch needs hA)
+                await exportPunchFromCache(selectedDate, id);
+                setExportStatus("OK (punch)");
+              }catch(e){
+                setExportStatus("Erreur export (punch)");
+              }
+            });
+          }).catch((e)=>console.warn("Equipe hA blocked:", e));
+        }else{
+          const payload = {
+            hA: null,
+            retard: null,
+            retardMin: null,
+            timestamp: null,
+            lastEditAt: now,
+            lastEditByAdmin: false
+          };
+          refPres.update(payload).then(() => {
+            // if hA removed, we still export presence (so row keeps hP/off)
+            scheduleExport(id, async () => {
+              try{
+                await exportPresenceFromCache(selectedDate, id);
+                setExportStatus("OK (presence)");
+              }catch(e){
+                setExportStatus("Erreur export (presence)");
+              }
+            });
+          }).catch((e)=>console.warn("Equipe hA remove blocked:", e));
+        }
 
         return;
       }
 
       // fallback
       const ref = database.ref('presences/'+date+'/'+id);
-      ref.update({[f]:v})
-        .then(() => { exportPresenceRowToSheet_(date, id); })
-        .catch(() => console.warn("Write blocked:", id, f));
+      ref.update({[f]:v}).catch(() => console.warn("Write blocked:", id, f));
     }
 
     // ===== Render =====
     function render(){
       const selectedDate = document.getElementById('datePicker').value;
-
       const list = document.getElementById('staffList');
       list.innerHTML = "";
 
