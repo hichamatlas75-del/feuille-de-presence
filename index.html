@@ -40,6 +40,17 @@
     .toggleWrap{background: rgba(15,23,42,.04); border:1px solid rgba(2,6,23,.08)}
     .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
     .stickyTop{position:sticky;top:0;z-index:50}
+
+    /* mini toast */
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom:14px; z-index:9999;
+      background:rgba(15,23,42,.92);
+      color:#fff; padding:10px 14px; border-radius:14px;
+      font-size:12px; font-weight:900;
+      display:none; max-width:min(520px, calc(100vw - 24px));
+      box-shadow:0 16px 40px rgba(2,6,23,.28);
+    }
   </style>
 </head>
 
@@ -112,6 +123,11 @@
         <div id="infoSource" class="mt-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500 hidden">
           Source hA : —
         </div>
+
+        <!-- état export -->
+        <div id="exportLine" class="mt-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500 hidden">
+          Export Sheet : —
+        </div>
       </div>
     </div>
   </div>
@@ -154,6 +170,8 @@
     </div>
   </main>
 
+  <div id="toast" class="toast"></div>
+
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -175,6 +193,61 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const database = firebase.database();
+
+    // ===== Export Google Sheet (Apps Script) =====
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyZFLn4Z8KHsB60caPMkdAFTXHkJcd_aP_oxP5cI_nDG7kZf5MzFm-U7vYPcNEUD4HY1Q/exec";
+    const GAS_SECRET = "greycorner2026";
+
+    function toast(msg){
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=>t.style.display="none", 2200);
+    }
+
+    function setExportLine(txt){
+      const el = document.getElementById("exportLine");
+      if(!el) return;
+      el.textContent = "Export Sheet : " + txt;
+      el.classList.remove("hidden");
+    }
+
+    async function exportPresenceToSheet({ date, empKey, empNode, hP, hA, off, retard, retardMin, status, timestamp }) {
+      const params = new URLSearchParams({
+        action: "presence", // si ton Apps Script n'accepte pas "presence", mets "punch"
+        secret: GAS_SECRET,
+        date: date || "",
+        empKey: empKey || "",
+        empNode: empNode || empKey || "",
+        hP: (hP ?? ""),
+        hA: (hA ?? ""),
+        off: (off ?? ""),
+        retard: (retard ?? ""),
+        retardMin: (retardMin ?? ""),
+        status: status || "presence",
+        timestamp: String(timestamp ?? Date.now())
+      });
+
+      try{
+        const url = `${GAS_URL}?${params.toString()}`;
+        const r = await fetch(url, { method:"GET", cache:"no-store" });
+        const txt = await r.text();
+
+        // Apps Script renvoie souvent du JSON en texte
+        let ok = false;
+        try{ ok = !!JSON.parse(txt)?.success; }catch(e){}
+        if(ok){
+          setExportLine("OK ✅");
+        }else{
+          setExportLine("Réponse inattendue ⚠️");
+          console.log("Export response:", txt);
+        }
+      }catch(e){
+        setExportLine("Erreur réseau ❌");
+        console.log("Export ERROR:", e);
+      }
+    }
 
     // ===== State =====
     let role = null; // "gerant" | "equipe"
@@ -278,6 +351,7 @@
       document.getElementById("kpisWrap").classList.remove("hidden");
       document.getElementById("topActions").classList.remove("hidden");
       setRoleLine();
+      setExportLine("prêt ✅");
     }
 
     function showLoginUI(){
@@ -328,12 +402,10 @@
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
-    // ✅ BOUCHNAK n'est plus "haOnly" => HP éditable normalement
     function canEditHP(id, selectedDate){
       return isGerant() || canEquipeEditToday(selectedDate);
     }
 
-    // ✅ équipe : hA uniquement SBAI & ELMCHAOURI (aujourd'hui)
     function canEditHA(id, selectedDate){
       if(isGerant()) return true;
       if(selectedDate !== getMarocDate()) return false;
@@ -374,11 +446,9 @@
         const id = empId(emp);
         const p = presencesCache[id] || {};
         const pu = punchesCache[id] || {};
-        // priorité à punches pour hA/retard/retardMin
         merged[id] = {
           ...p,
           ...pu,
-          // si punches a hA on garde, sinon fallback presences.hA (manuel)
           hA: (pu && pu.hA) ? pu.hA : (p && p.hA ? p.hA : null),
           retard: (pu && typeof pu.retard === "boolean") ? pu.retard : (p && typeof p.retard === "boolean" ? p.retard : false),
           retardMin: (pu && typeof pu.retardMin === "number") ? pu.retardMin : (p && typeof p.retardMin === "number" ? p.retardMin : 0),
@@ -387,9 +457,10 @@
       latestDataCache = merged;
     }
 
-    // ===== CRUD =====
-    function upd(id, f, v){
+    // ===== CRUD + EXPORT =====
+    async function upd(id, f, v){
       const date = document.getElementById('datePicker').value;
+      const empNode = id; // pour la sheet
 
       // OFF & hP restent dans presences
       if(f === "off"){
@@ -398,125 +469,207 @@
 
         const payload = { off: val };
         if(val === true){
-          // éviter incohérences
           payload.hA = null;
           payload.retard = null;
           payload.retardMin = null;
           payload.on = false;
         }
-        ref.update(payload).catch(() => console.warn("Write blocked:", id, f));
+
+        try{
+          await ref.update(payload);
+
+          // export (après succès)
+          await exportPresenceToSheet({
+            date,
+            empKey: id,
+            empNode,
+            off: val,
+            hP: presencesCache[id]?.hP ?? "",
+            hA: (val ? "" : (latestDataCache[id]?.hA ?? "")),
+            retard: (val ? "" : (latestDataCache[id]?.retard ?? "")),
+            retardMin: (val ? "" : (latestDataCache[id]?.retardMin ?? "")),
+            status: "off_update"
+          });
+
+          toast("OUT mis à jour ✅");
+        }catch(e){
+          console.warn("Write blocked:", id, f, e);
+          toast("Accès refusé ⛔");
+        }
         return;
       }
-if(f === "hP"){
-  const ref = database.ref('presences/'+date+'/'+id);
 
-  if(!v){ 
-    // 🔥 suppression propre
-    ref.update({ hP: null })
-      .catch(() => console.warn("Write blocked:", id, f));
-  }else{
-    ref.update({ hP: v })
-      .catch(() => console.warn("Write blocked:", id, f));
-  }
+      if(f === "hP"){
+        const ref = database.ref('presences/'+date+'/'+id);
+        const newHP = (v || "").trim();
 
-  return;
-}
-      // hA : gérant -> punches (et mirror presences), équipe -> presences (exceptions) avec champs requis
+        try{
+          await ref.update({ hP: newHP ? newHP : null });
+
+          await exportPresenceToSheet({
+            date,
+            empKey: id,
+            empNode,
+            hP: newHP,
+            hA: latestDataCache[id]?.hA ?? "",
+            off: latestDataCache[id]?.off ?? "",
+            retard: latestDataCache[id]?.retard ?? "",
+            retardMin: latestDataCache[id]?.retardMin ?? "",
+            status: "hp_update"
+          });
+
+          toast("hP mis à jour ✅");
+        }catch(e){
+          console.warn("Write blocked:", id, f, e);
+          toast("Accès refusé ⛔");
+        }
+        return;
+      }
+
+      // hA : gérant -> punches (et mirror presences), équipe -> presences (exceptions)
       if(f === "hA"){
-        const selectedDate = document.getElementById('datePicker').value;
-
-        // normaliser
+        const selectedDate = date;
         const hA = (v || "").trim();
         if(hA && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hA)){
           console.warn("hA invalide:", hA);
+          toast("Heure invalide ❌");
           return;
         }
 
-        const hP = (presencesCache[id]?.hP) || ""; // pour calcul retard
+        const hP = (presencesCache[id]?.hP) || "";
         const lm = lateMinutes(hP, hA);
         const isLate = (lm !== null && lm > 0);
-
         const now = Date.now();
 
-        if(isGerant()){
-          // --- write punches ---
-          const refPunch = database.ref('punches/'+selectedDate+'/'+id);
+        try{
+          if(isGerant()){
+            // --- write punches ---
+            const refPunch = database.ref('punches/'+selectedDate+'/'+id);
+            const payloadPunch = {
+              empKey: id,
+              hA: hA || null,
+              retard: !!(hA && isLate),
+              retardMin: hA ? (lm || 0) : 0,
+              timestamp: now
+            };
 
-          const payloadPunch = {
-            empKey: id,
-            hA: hA || null,
-            retard: !!(hA && isLate),
-            retardMin: hA ? (lm || 0) : 0,
-            timestamp: now
-          };
+            if(hA) await refPunch.set(payloadPunch);
+            else await refPunch.remove();
 
-          // si hA vide => on efface proprement
-          const writePunch = hA
-            ? refPunch.set(payloadPunch)
-            : refPunch.remove();
+            // --- mirror presences ---
+            const refPres = database.ref('presences/'+selectedDate+'/'+id);
+            const payloadPres = hA ? {
+              hA: hA,
+              retard: !!isLate,
+              retardMin: (lm || 0),
+              timestamp: now,
+              lastEditAt: now,
+              lastEditByAdmin: true
+            } : {
+              hA: null,
+              retard: null,
+              retardMin: null,
+              timestamp: null,
+              lastEditAt: now,
+              lastEditByAdmin: true
+            };
 
-          writePunch.catch((e)=>console.warn("Punch write blocked:", e));
+            await refPres.update(payloadPres);
 
-          // --- mirror presences (compat / anciens rapports) ---
+            // export
+            await exportPresenceToSheet({
+              date: selectedDate,
+              empKey: id,
+              empNode,
+              hP,
+              hA: hA || "",
+              off: latestDataCache[id]?.off ?? "",
+              retard: hA ? !!isLate : "",
+              retardMin: hA ? (lm || 0) : "",
+              status: "ha_update_gerant",
+              timestamp: now
+            });
+
+            toast("hA mis à jour ✅");
+            return;
+          }
+
+          // équipe
+          if(!canEditHA(id, selectedDate)){
+            console.warn("Equipe cannot edit hA:", id);
+            toast("Non autorisé ⛔");
+            return;
+          }
+
           const refPres = database.ref('presences/'+selectedDate+'/'+id);
-          const payloadPres = hA ? {
-            hA: hA,
-            retard: !!isLate,
-            retardMin: (lm || 0),
-            timestamp: now,
-            lastEditAt: now,
-            lastEditByAdmin: true
-          } : {
-            hA: null,
-            retard: null,
-            retardMin: null,
-            timestamp: null,
-            lastEditAt: now,
-            lastEditByAdmin: true
-          };
 
-          refPres.update(payloadPres).catch((e)=>console.warn("Pres mirror blocked:", e));
+          if(hA){
+            const payload = {
+              hA: hA,
+              retard: !!isLate,
+              retardMin: (lm || 0),
+              timestamp: now,
+              lastEditAt: now,
+              lastEditByAdmin: false
+            };
+            await refPres.update(payload);
+          }else{
+            const payload = {
+              hA: null,
+              retard: null,
+              retardMin: null,
+              timestamp: null,
+              lastEditAt: now,
+              lastEditByAdmin: false
+            };
+            await refPres.update(payload);
+          }
+
+          await exportPresenceToSheet({
+            date: selectedDate,
+            empKey: id,
+            empNode,
+            hP,
+            hA: hA || "",
+            off: latestDataCache[id]?.off ?? "",
+            retard: hA ? !!isLate : "",
+            retardMin: hA ? (lm || 0) : "",
+            status: "ha_update_equipe",
+            timestamp: now
+          });
+
+          toast("hA mis à jour ✅");
+          return;
+
+        }catch(e){
+          console.warn("hA update blocked:", e);
+          toast("Accès refusé ⛔");
           return;
         }
-
-        // équipe : seulement si autorisé (exceptions) + aujourd’hui
-        if(!canEditHA(id, selectedDate)){
-          console.warn("Equipe cannot edit hA:", id);
-          return;
-        }
-
-        // IMPORTANT : tes rules exigent ces champs pour exceptions équipe
-        const refPres = database.ref('presences/'+selectedDate+'/'+id);
-
-        if(hA){
-          const payload = {
-            hA: hA,
-            retard: !!isLate,
-            retardMin: (lm || 0),
-            timestamp: now,
-            lastEditAt: now,
-            lastEditByAdmin: false
-          };
-          refPres.update(payload).catch((e)=>console.warn("Equipe hA blocked:", e));
-        }else{
-          // si on efface hA, on nettoie aussi les champs liés
-          const payload = {
-            hA: null,
-            retard: null,
-            retardMin: null,
-            timestamp: null,
-            lastEditAt: now,
-            lastEditByAdmin: false
-          };
-          refPres.update(payload).catch((e)=>console.warn("Equipe hA remove blocked:", e));
-        }
-
-        return;
       }
 
       // fallback
       const ref = database.ref('presences/'+date+'/'+id);
-      ref.update({[f]:v}).catch(() => console.warn("Write blocked:", id, f));
+      try{
+        await ref.update({[f]:v});
+
+        await exportPresenceToSheet({
+          date,
+          empKey: id,
+          empNode,
+          hP: latestDataCache[id]?.hP ?? "",
+          hA: latestDataCache[id]?.hA ?? "",
+          off: latestDataCache[id]?.off ?? "",
+          retard: latestDataCache[id]?.retard ?? "",
+          retardMin: latestDataCache[id]?.retardMin ?? "",
+          status: "update_generic"
+        });
+
+        toast("Mis à jour ✅");
+      }catch(e){
+        console.warn("Write blocked:", id, f, e);
+        toast("Accès refusé ⛔");
+      }
     }
 
     // ===== Render =====
@@ -678,29 +831,28 @@ if(f === "hP"){
       const total = EQUIPE.length;
       let punched = 0, off = 0, pending = 0, lateCount = 0, lateMinSum = 0;
 
-    EQUIPE.forEach(emp => {
-  const id = empId(emp);
-  const d = latestDataCache[id] || {};
+      EQUIPE.forEach(emp => {
+        const id = empId(emp);
+        const d = latestDataCache[id] || {};
 
-  const isOff  = d.off === true;
-  const hasHA  = typeof d.hA === "string" && d.hA.trim() !== "";
-  const hasHP  = typeof d.hP === "string" && d.hP.trim() !== "";
+        const isOff  = d.off === true;
+        const hasHA  = typeof d.hA === "string" && d.hA.trim() !== "";
+        const hasHP  = typeof d.hP === "string" && d.hP.trim() !== "";
 
-  const handled = isOff || hasHA;
+        const handled = isOff || hasHA;
 
-  if(hasHA) punched++;
-  if(isOff) off++;
-  if(!handled) pending++;
+        if(hasHA) punched++;
+        if(isOff) off++;
+        if(!handled) pending++;
 
-  // 🔒 Calcul retard uniquement si HP + HA existent
-  if(hasHP && hasHA){
-    const lm = lateMinutes(d.hP, d.hA);
-    if(lm !== null && lm > 0){
-      lateCount++;
-      lateMinSum += lm;
-    }
-  }
-});
+        if(hasHP && hasHA){
+          const lm = lateMinutes(d.hP, d.hA);
+          if(lm !== null && lm > 0){
+            lateCount++;
+            lateMinSum += lm;
+          }
+        }
+      });
 
       document.getElementById("kpiTotal").textContent = total;
       document.getElementById("kpiPunched").textContent = punched;
@@ -718,7 +870,6 @@ if(f === "hP"){
       presencesCache = {};
       punchesCache = {};
 
-      // presences : tout le monde (auth)
       const refPres = database.ref('presences/' + selectedDate);
       const cbPres = (snap) => {
         presencesCache = snap.val() || {};
@@ -728,7 +879,6 @@ if(f === "hP"){
       refPres.on("value", cbPres);
       activeRefs.push({ref: refPres, cb: cbPres});
 
-      // punches : gérant seulement (rules)
       if(isGerant()){
         const refPunch = database.ref('punches/' + selectedDate);
         const cbPunch = (snap) => {
@@ -739,7 +889,6 @@ if(f === "hP"){
         refPunch.on("value", cbPunch);
         activeRefs.push({ref: refPunch, cb: cbPunch});
       }else{
-        // équipe: pas de punches => fusion basée sur presences uniquement
         punchesCache = {};
       }
     }
