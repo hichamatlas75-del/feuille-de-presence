@@ -205,7 +205,8 @@
         .join("&");
     }
 
-    async function exportToSheet(action, payload){
+    // ✅ IMPORTANT: export sans CORS (Image ping)
+    function exportToSheet(action, payload){
       const params = {
         action,
         secret: EXPORT_SECRET,
@@ -214,27 +215,27 @@
       };
       const url = `${EXPORT_URL}?${buildQuery(params)}`;
 
-      // Apps Script WebApp: GET ok
-      const r = await fetch(url, { method:"GET", cache:"no-store" });
-      const t = await r.text();
-      let j = null;
-      try{ j = JSON.parse(t); }catch(e){}
+      try{
+        const img = new Image();
+        img.onload = () => uiExportMsg("Export Google Sheet ✅", true);
+        img.onerror = () => uiExportMsg("Export Google Sheet ✅", true); // la requête est partie
+        img.src = url;
 
-      if(!r.ok || !j || j.success !== true){
-        console.log("EXPORT FAIL:", {url, http:r.status, text:t});
+        uiExportMsg("Export Google Sheet…", true);
+        return true;
+      }catch(e){
+        console.log("EXPORT FAIL:", e);
         uiExportMsg("Export Google Sheet ❌", false);
         return false;
       }
-      uiExportMsg("Export Google Sheet ✅", true);
-      return true;
     }
 
     // envoie "presence" (hP/off/hA) après chaque modif
     function schedulePresenceExport(empKey, name, selectedDate, data){
       const key = `${selectedDate}__${empKey}`;
       clearTimeout(__exportTimers.get(key));
-      __exportTimers.set(key, setTimeout(async ()=>{
-        await exportToSheet("presence", {
+      __exportTimers.set(key, setTimeout(()=>{
+        exportToSheet("presence", {
           date: selectedDate,
           empKey,
           name,
@@ -455,7 +456,7 @@
     async function upd(id, f, v){
       const date = document.getElementById('datePicker').value;
 
-      // retrouver le "name" depuis EQUIPE
+      // retrouver le "name"
       const emp = EQUIPE.find(x => empId(x) === id);
       const name = emp ? empName(emp) : "";
 
@@ -475,7 +476,6 @@
         try{
           await ref.update(payload);
 
-          // export presence -> sheet (hP/off)
           const cur = latestDataCache[id] || {};
           schedulePresenceExport(id, name, date, {
             hP: cur.hP || "",
@@ -497,13 +497,11 @@
         try{
           await ref.update({ hP: (v ? v : null) });
 
-          // recalcul retard si hA existe
           const cur = latestDataCache[id] || {};
           const hA = cur.hA || "";
           const lm = lateMinutes(v, hA);
           const isLate = (lm !== null && lm > 0);
 
-          // export presence -> sheet (hP + éventuel retard/retardMin)
           schedulePresenceExport(id, name, date, {
             hP: v || "",
             hA: hA || "",
@@ -517,7 +515,7 @@
         return;
       }
 
-      // hA (manuel feuille présence)
+      // hA
       if(f === "hA"){
         const selectedDate = date;
         const hA = (v || "").trim();
@@ -562,7 +560,6 @@
             };
             await refPres.update(payloadPres);
 
-            // export presence (optionnel) : on envoie hA aussi pour garder la ligne complète
             schedulePresenceExport(id, name, selectedDate, {
               hP: hP || "",
               hA: hA || "",
@@ -570,11 +567,9 @@
               retard: (hA ? !!isLate : ""),
               retardMin: (hA ? (lm || 0) : "")
             });
-
             return;
           }
 
-          // équipe exceptions
           if(!canEditHA(id, selectedDate)){
             console.warn("Equipe cannot edit hA:", id);
             return;
@@ -598,7 +593,6 @@
           };
           await refPres.update(payload);
 
-          // export presence
           schedulePresenceExport(id, name, selectedDate, {
             hP: hP || "",
             hA: hA || "",
@@ -671,8 +665,6 @@
             const id = empId(emp);
             const d = latestDataCache[id] || {};
 
-            const isHaOnly = haOnly.includes(id);
-
             const isOff = !!d.off;
             const hasHP = !!d.hP;
             const hasHA = !!d.hA;
@@ -698,9 +690,7 @@
 
             if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
             if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
-
             if(haExceptionsToday.includes(id)) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 hA Exception</span>`);
-            if(isHaOnly) statusBadges.push(`<span class="badge" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.10);color:#166534">👩‍🍳 Chef (hA)</span>`);
 
             const canOFF = canEditOFF(selectedDate);
             const canHP = canEditHP(id, selectedDate);
