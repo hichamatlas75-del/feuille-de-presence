@@ -85,7 +85,7 @@
         <div id="loginMsg" class="mt-2 text-[11px] font-bold text-red-700"></div>
       </div>
 
-      <!-- FILTERS (visible après login) -->
+      <!-- FILTERS -->
       <div id="filtersWrap" class="hidden">
         <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center mt-3">
           <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-3 items-center">
@@ -113,15 +113,12 @@
           Source hA : —
         </div>
 
-        <!-- ✅ Status export -->
         <div id="exportMsg" class="mt-2 text-[11px] font-bold text-slate-500 hidden"></div>
       </div>
     </div>
   </div>
 
   <main class="max-w-3xl mx-auto px-4 pt-4">
-
-    <!-- Summary -->
     <div id="kpisWrap" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-3 mb-5">
       <div class="card rounded-2xl p-3">
         <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
@@ -149,7 +146,6 @@
       </div>
     </div>
 
-    <!-- Staff list -->
     <div id="staffList" class="space-y-6"></div>
 
     <div class="mt-10 text-center text-slate-400 text-[10px] font-extrabold uppercase tracking-[0.28em] pb-6">
@@ -185,7 +181,6 @@
     const EXPORT_URL = "https://script.google.com/macros/s/AKfycbyZFLn4Z8KHsB60caPMkdAFTXHkJcd_aP_oxP5cI_nDG7kZf5MzFm-U7vYPcNEUD4HY1Q/exec";
     const EXPORT_SECRET = "greycorner2026";
 
-    // anti-spam: debounce par empKey
     const __exportTimers = new Map();
 
     function uiExportMsg(text, ok=true){
@@ -205,22 +200,14 @@
         .join("&");
     }
 
-    // ✅ IMPORTANT: export sans CORS (Image ping)
     function exportToSheet(action, payload){
-      const params = {
-        action,
-        secret: EXPORT_SECRET,
-        timestamp: Date.now(),
-        ...payload
-      };
+      const params = { action, secret: EXPORT_SECRET, timestamp: Date.now(), ...payload };
       const url = `${EXPORT_URL}?${buildQuery(params)}`;
-
       try{
         const img = new Image();
         img.onload = () => uiExportMsg("Export Google Sheet ✅", true);
-        img.onerror = () => uiExportMsg("Export Google Sheet ✅", true); // la requête est partie
+        img.onerror = () => uiExportMsg("Export Google Sheet ✅", true);
         img.src = url;
-
         uiExportMsg("Export Google Sheet…", true);
         return true;
       }catch(e){
@@ -230,7 +217,6 @@
       }
     }
 
-    // envoie "presence" (hP/off/hA) après chaque modif
     function schedulePresenceExport(empKey, name, selectedDate, data){
       const key = `${selectedDate}__${empKey}`;
       clearTimeout(__exportTimers.get(key));
@@ -240,7 +226,7 @@
           empKey,
           name,
           hP: (data.hP || ""),
-          hA: (data.hA || ""),              // optionnel
+          hA: (data.hA || ""),
           off: (typeof data.off === "boolean" ? data.off : ""),
           retard: (typeof data.retard === "boolean" ? data.retard : ""),
           retardMin: (typeof data.retardMin === "number" ? data.retardMin : "")
@@ -252,31 +238,21 @@
     let role = null; // "gerant" | "equipe"
     let currentFilter = "all";
 
-    // caches séparés
-    let presencesCache = {}; // presences/date/id
-    let punchesCache = {};   // punches/date/id (gérant seulement)
-    let latestDataCache = {}; // id -> merged
+    // ✅ équipe chargée depuis Firebase
+    let EQUIPE = [];
+
+    // caches
+    let presencesCache = {};
+    let punchesCache = {};
+    let latestDataCache = {};
+
+    // listeners
     let activeRefs = [];
+    let equipeRef = null;
+    let equipeCb = null;
 
-    // ===== Équipe =====
-    const EQUIPE = [
-      {nom:'BOUCHNAK', prenom:'NAOUAL', poste:'CUISINE'},
-      {nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE'}, {nom: 'BELQASSE', prenom: 'KHAOULA', poste: 'CUISINE'},
-      {nom: 'BENKHADA', prenom: 'ABDESLAM', poste: 'CAISSE'}, {nom: 'BOURAHMA', prenom: 'ANAS', poste: 'CUISINE'},
-      {nom: 'CHKAIRI', prenom: 'YOUSSEF', poste: 'BAR'}, {nom: 'ELKOBBI', prenom: 'MOSTAFA', poste: 'BAR'},
-      {nom: 'ELGORRAMY', prenom: 'ANISSA', poste: 'MENAGE'}, {nom: 'ELGORRAMY', prenom: 'SOUAD', poste: 'MENAGE'},
-      {nom: 'ELMCHAOURI', prenom: 'SOUAD', poste: 'MENAGE'}, {nom: 'ENNHAILI', prenom: 'SOUMIA', poste: 'ECONOMAT'},
-      {nom: 'FILALI', prenom: 'ABDERAFI', poste: 'BAR'}, 
-      {nom: 'HATTAF', prenom: 'MOHAMED', poste: 'SERVICE'}, {nom: 'HIDARA', prenom: 'YOUSSEF', poste: 'SERVICE'},
-      {nom: 'IDRISSI', prenom: 'SAAD', poste: 'CUISINE'}, {nom: 'KAFOUNI', prenom: 'ZAKARIAE', poste: 'SERVICE'},
-      {nom: 'KHALOUQ', prenom: 'RACHID', poste: 'BAR'}, {nom: 'LEMSSIEH', prenom: 'JAWAD', poste: 'CUISINE'},
-      {nom: 'MAJDOUB', prenom: 'JIHANE', poste: 'CUISINE'}, {nom: 'MOHSINE', prenom: 'YOUNESS', poste: 'SERVICE'},
-      {nom: 'MOUJAHID', prenom: 'IMANE', poste: 'CUISINE'}, {nom: 'SALIL', prenom: 'HOUDA', poste: 'CAISSE'},
-      {nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE'}, {nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE'}
-    ];
-
+    // ✅ Exceptions (inchangées)
     const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
-    const haOnly = [];
 
     // ===== Helpers =====
     const getMarocDate = () =>
@@ -311,6 +287,40 @@
       return `+${min} min`;
     }
 
+    function normalizeText(x){
+      return String(x || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, " ");
+    }
+
+    // ✅ Transforme settings/equipe (objet indexé) => tableau propre
+    function normalizeEquipeSnapshot(val){
+      if(!val) return [];
+      const arr = Array.isArray(val)
+        ? val.filter(Boolean)
+        : Object.keys(val).sort((a,b)=>Number(a)-Number(b)).map(k => val[k]).filter(Boolean);
+
+      const cleaned = arr
+        .map(x => ({
+          nom: normalizeText(x.nom),
+          prenom: normalizeText(x.prenom),
+          poste: normalizeText(x.poste)
+        }))
+        .filter(x => x.nom && x.prenom && x.poste);
+
+      // ✅ dédoublonnage par ID
+      const seen = new Set();
+      const out = [];
+      for(const e of cleaned){
+        const id = `${e.nom}_${e.prenom}`;
+        if(seen.has(id)) continue;
+        seen.add(id);
+        out.push(e);
+      }
+      return out;
+    }
+
     // ===== AUTH (roles) =====
     async function fetchRole(uid){
       const snap = await database.ref("users/"+uid).once("value");
@@ -320,9 +330,9 @@
     function setRoleLine(){
       const el = document.getElementById("roleLine");
       if(role === "gerant"){
-        el.textContent = "Mode : GÉRANT (presences + punches ✅)";
+        el.textContent = "Mode : GÉRANT";
       }else if(role === "equipe"){
-        el.textContent = "Mode : ÉQUIPE (presences seulement • punches bloqué par rules)";
+        el.textContent = "Mode : ÉQUIPE";
       }else{
         el.textContent = "Mode : — (connexion requise)";
       }
@@ -332,7 +342,7 @@
         info.textContent = "Source hA : punches (téléphones) + presences (manuel)";
         info.classList.remove("hidden");
       }else if(role === "equipe"){
-        info.textContent = "Source hA : presences uniquement (punches non lisible en équipe)";
+        info.textContent = "Source hA : presences uniquement";
         info.classList.remove("hidden");
       }else{
         info.classList.add("hidden");
@@ -372,15 +382,27 @@
       await auth.signOut();
       role = null;
       stopListeners();
+      stopEquipeListener();
       presencesCache = {};
       punchesCache = {};
       latestDataCache = {};
+      EQUIPE = [];
       showLoginUI();
     };
 
     function stopListeners(){
       activeRefs.forEach(({ref, cb}) => ref.off("value", cb));
       activeRefs = [];
+    }
+
+    function stopEquipeListener(){
+      try{
+        if(equipeRef && equipeCb){
+          equipeRef.off("value", equipeCb);
+        }
+      }catch(e){}
+      equipeRef = null;
+      equipeCb = null;
     }
 
     // ===== Permissions =====
@@ -451,16 +473,14 @@
     }
 
     // =========================
-    // ✅ CRUD + Export Apps Script
+    // ✅ CRUD + Export
     // =========================
     async function upd(id, f, v){
       const date = document.getElementById('datePicker').value;
 
-      // retrouver le "name"
       const emp = EQUIPE.find(x => empId(x) === id);
       const name = emp ? empName(emp) : "";
 
-      // OFF
       if(f === "off"){
         const val = !!v;
         const ref = database.ref('presences/'+date+'/'+id);
@@ -490,10 +510,8 @@
         return;
       }
 
-      // hP
       if(f === "hP"){
         const ref = database.ref('presences/'+date+'/'+id);
-
         try{
           await ref.update({ hP: (v ? v : null) });
 
@@ -515,7 +533,6 @@
         return;
       }
 
-      // hA
       if(f === "hA"){
         const selectedDate = date;
         const hA = (v || "").trim();
@@ -607,7 +624,6 @@
         return;
       }
 
-      // fallback
       try{
         await database.ref('presences/'+date+'/'+id).update({[f]:v});
       }catch(e){
@@ -620,6 +636,20 @@
       const selectedDate = document.getElementById('datePicker').value;
       const list = document.getElementById('staffList');
       list.innerHTML = "";
+
+      if(!EQUIPE.length){
+        list.innerHTML = `
+          <div class="card rounded-3xl p-6 text-center">
+            <div class="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500">Équipe</div>
+            <div class="mt-2 text-sm font-extrabold text-slate-800">Aucun collaborateur</div>
+            <div class="mt-1 text-[11px] font-semibold text-slate-500">
+              Ajoute des personnes via le Dashboard (settings/equipe).
+            </div>
+          </div>
+        `;
+        computeKPIs();
+        return;
+      }
 
       const groupes = EQUIPE.reduce((acc, emp) => {
         (acc[emp.poste] = acc[emp.poste] || []).push(emp);
@@ -800,7 +830,23 @@
       document.getElementById("kpiLateMin").textContent = lateMinSum;
     }
 
-    // ===== Load (presences + punches) =====
+    // ===== Load equipe from Firebase (realtime) =====
+    function startEquipeListener(){
+      stopEquipeListener();
+
+      equipeRef = database.ref("settings/equipe");
+      equipeCb = (snap) => {
+        const val = snap.val();
+        EQUIPE = normalizeEquipeSnapshot(val);
+
+        // ✅ quand l’équipe change, on rebuild + render sur la date courante
+        rebuildMerged();
+        render();
+      };
+      equipeRef.on("value", equipeCb);
+    }
+
+    // ===== Load (presences + punches) for selected date =====
     function load(){
       const selectedDate = document.getElementById('datePicker').value;
 
@@ -835,6 +881,11 @@
       const dp = document.getElementById('datePicker');
       dp.value = getMarocDate();
       dp.addEventListener('change', load);
+
+      // ✅ 1) écoute équipe (settings/equipe)
+      startEquipeListener();
+
+      // ✅ 2) écoute présence/punches sur la date du jour
       load();
     }
 
@@ -842,6 +893,8 @@
     auth.onAuthStateChanged(async (user) => {
       if(!user){
         role = null;
+        stopListeners();
+        stopEquipeListener();
         showLoginUI();
         return;
       }
