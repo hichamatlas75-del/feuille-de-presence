@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -13,33 +14,199 @@
       --primary:#0f172a;
       --muted:#64748b;
       --accent:#c5a059;
-      --bg:#f7f6f2;
+      --accent-strong:#b8892d;
+      --bg:#f6f6f3;
       --card:#ffffff;
       --soft:#eef2f7;
+
+      --shadow: 0 16px 38px rgba(2,6,23,.10);
+      --shadow2: 0 10px 22px rgba(2,6,23,.08);
+      --stroke: rgba(2,6,23,.08);
+      --stroke2: rgba(2,6,23,.12);
+      --ring: 0 0 0 3px rgba(197,160,89,.24);
+
+      --ok-bg: rgba(16,185,129,.14);
+      --ok-bd: rgba(16,185,129,.42);
+      --ok-tx: #065f46;
+
+      --bad-bg: rgba(239,68,68,.14);
+      --bad-bd: rgba(239,68,68,.42);
+      --bad-tx: #7f1d1d;
+
+      --warn-bg: rgba(245,158,11,.16);
+      --warn-bd: rgba(245,158,11,.44);
+      --warn-tx: #92400e;
+
+      --pending-bg: rgba(30,41,59,.06);
+      --pending-bd: rgba(30,41,59,.14);
+      --pending-tx: rgba(30,41,59,.70);
+
+      --incomplete-bg: rgba(139,92,246,.10);
+      --incomplete-bd: rgba(139,92,246,.30);
+      --incomplete-tx: #4c1d95;
     }
+
     body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--primary)}
-    .glass{background:rgba(255,255,255,.75);backdrop-filter: blur(10px)}
-    .card{background:var(--card);border:1px solid rgba(2,6,23,.06)}
-    .btn{transition:transform .08s ease, filter .2s ease}
+    .glass{background:rgba(255,255,255,.92);backdrop-filter: blur(14px)}
+    .card{background:var(--card);border:1px solid var(--stroke)}
+    .btn{transition:transform .08s ease, filter .2s ease, box-shadow .2s ease}
     .btn:active{transform:scale(.985)}
-    input[type="time"], input[type="date"], input[type="email"], input[type="password"]{-webkit-appearance:none;min-height:42px}
-    .chip{border:1px solid rgba(2,6,23,.10)}
-    .chip.active{border-color: rgba(197,160,89,.55); background: rgba(197,160,89,.10)}
+    input[type="time"], input[type="date"], input[type="email"], input[type="password"]{-webkit-appearance:none;min-height:48px}
+    .chip{border:1px solid var(--stroke2)}
+    .chip.active{border-color: rgba(197,160,89,.65); background: rgba(197,160,89,.18); color: #1f2937}
     .sectionTitle{border-left: 3px solid var(--accent);padding-left: 12px;}
     .badge{
-      font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-      font-weight: 800; padding: 4px 8px; border-radius: 999px;
-      border: 1px solid rgba(2,6,23,.08);
+      font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+      font-weight: 900; padding: 6px 10px; border-radius: 999px;
+      border: 1px solid var(--stroke2);
       background: rgba(15,23,42,.04);
-      color: var(--muted); line-height: 1; white-space: nowrap;
+      color: var(--pending-tx); line-height: 1; white-space: nowrap;
     }
-    .badge.ok{background: rgba(16,185,129,.10); border-color: rgba(16,185,129,.30); color: #065f46;}
-    .badge.warn{background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.32); color: #92400e;}
-    .badge.bad{background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.30); color: #7f1d1d;}
-    .accentRing:focus{outline:none;box-shadow:0 0 0 3px rgba(197,160,89,.25)}
-    .toggleWrap{background: rgba(15,23,42,.04); border:1px solid rgba(2,6,23,.08)}
-    .shadowSoft{box-shadow:0 12px 28px rgba(2,6,23,.08)}
+    .badge.ok{background: var(--ok-bg); border-color: var(--ok-bd); color: var(--ok-tx);}
+    .badge.warn{background: var(--warn-bg); border-color: var(--warn-bd); color: var(--warn-tx);}
+    .badge.bad{background: var(--bad-bg); border-color: var(--bad-bd); color: var(--bad-tx);}
+    .badge.warn::before{content:"⚠️ "; font-size: 11px; letter-spacing: 0; text-transform:none}
+    .accentRing:focus{outline:none;box-shadow:var(--ring)}
+    .toggleWrap{background: rgba(15,23,42,.035); border:1px solid var(--stroke2)}
+    .shadowSoft{box-shadow:var(--shadow)}
     .stickyTop{position:sticky;top:0;z-index:50}
+
+    /* Top bar polish */
+    .stickyTop.glass{box-shadow: 0 10px 26px rgba(2,6,23,.10)}
+    h1{letter-spacing:.06em}
+
+    /* Employee cards */
+    .empCard{
+      box-shadow: var(--shadow2);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      border-color: rgba(2,6,23,.06);
+    }
+    .empCard:hover{
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+      border-color: rgba(197,160,89,.22);
+    }
+    .empCard .font-extrabold.text-sm{
+      font-size: 16px;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+    }
+
+    /* Inputs inside employee cards */
+    .empCard input[type="time"]{
+      min-height: 48px;
+      border: 1px solid rgba(2,6,23,.10);
+      background: rgba(15,23,42,.03);
+    }
+    .empCard input[type="time"]:focus{
+      outline: none;
+      box-shadow: var(--ring);
+      border-color: rgba(197,160,89,.45);
+    }
+
+    /* Make hA area more premium */
+    .empCard .mt-4 .grid > div:nth-child(2) input[type="time"]{
+      background: rgba(197,160,89,.14) !important;
+      border-color: rgba(197,160,89,.36) !important;
+    }
+
+    /* Subtle divider between hP and hA */
+    .empCard .mt-4 .grid{
+      position: relative;
+    }
+    .empCard .mt-4 .grid::before{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:6px;
+      bottom:6px;
+      width:1px;
+      background: rgba(2,6,23,.08);
+      transform: translateX(-50%);
+      pointer-events:none;
+    }
+
+    /* Label icons without changing JS */
+    .empCard .mt-4 .grid > div:first-child label::before{content:"⏰ "; font-size: 12px}
+    .empCard .mt-4 .grid > div:nth-child(2) label::before{content:"📍 "; font-size: 12px}
+
+    /* OUT toggle more visible */
+    .toggleWrap{
+      padding: 10px 12px;
+      border-radius: 18px;
+    }
+    .toggleWrap label span{
+      font-size: 10px !important;
+      color: rgba(30,41,59,.60) !important;
+      letter-spacing: .14em;
+    }
+    .toggleWrap input[type="checkbox"]{
+      width: 18px !important;
+      height: 18px !important;
+      border-radius: 6px;
+    }
+
+    /* Section headers */
+    section.card > button{
+      background: linear-gradient(180deg, rgba(197,160,89,.10), rgba(255,255,255,1));
+      border-bottom: 1px solid rgba(2,6,23,.06);
+    }
+    section.card{
+      box-shadow: var(--shadow2);
+    }
+    section.card + section.card{
+      margin-top: 14px;
+    }
+
+    /* People count pill */
+    section.card .badge{
+      font-size: 10px;
+      padding: 6px 10px;
+    }
+
+    /* KPIs */
+    .kpiCard{
+      box-shadow: var(--shadow2);
+      border-color: rgba(2,6,23,.06);
+    }
+    .kpiValue{
+      font-size: 1.875rem; /* 3xl-like */
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+    .kpiLabel{
+      font-size: 11px;
+      letter-spacing: .18em;
+      color: rgba(30,41,59,.64);
+    }
+    .kpi-total{background: linear-gradient(180deg, rgba(30,41,59,.04), rgba(255,255,255,1))}
+    .kpi-punched{background: linear-gradient(180deg, rgba(16,185,129,.10), rgba(255,255,255,1))}
+    .kpi-off{background: linear-gradient(180deg, rgba(239,68,68,.10), rgba(255,255,255,1))}
+    .kpi-pending{background: linear-gradient(180deg, rgba(30,41,59,.06), rgba(255,255,255,1))}
+    .kpi-late{background: linear-gradient(180deg, rgba(245,158,11,.12), rgba(255,255,255,1))}
+    .kpi-latemin{background: linear-gradient(180deg, rgba(245,158,11,.18), rgba(255,255,255,1))}
+
+    /* Pending vs incomplete badge coloring via card datasets */
+    .empCard[data-pending="1"] .badge:not(.ok):not(.warn):not(.bad){
+      background: var(--pending-bg);
+      border-color: var(--pending-bd);
+      color: var(--pending-tx);
+    }
+    .empCard[data-incomplete="1"] .badge:not(.ok):not(.warn):not(.bad){
+      background: var(--incomplete-bg);
+      border-color: var(--incomplete-bd);
+      color: var(--incomplete-tx);
+    }
+
+    /* Chips & search */
+    .chipBtn{border-radius: 999px; padding: 10px 14px}
+    #searchInput::placeholder{content:"";}
+
+    /* Scrollbar */
+    ::-webkit-scrollbar{width: 10px}
+    ::-webkit-scrollbar-track{background: rgba(2,6,23,.05); border-radius: 999px}
+    ::-webkit-scrollbar-thumb{background: rgba(197,160,89,.55); border-radius: 999px; border: 2px solid rgba(2,6,23,.05)}
+    ::-webkit-scrollbar-thumb:hover{background: rgba(197,160,89,.70)}
   </style>
 </head>
 
@@ -62,7 +229,7 @@
 
       <div id="topActions" class="hidden items-center gap-2">
         <button id="btnLogout"
-          class="btn px-3 py-2 rounded-full text-[11px] font-extrabold tracking-wide border border-black/10 bg-white hover:brightness-95">
+          class="btn px-4 py-2.5 rounded-full text-[11px] font-extrabold tracking-wide border border-black/10 bg-white hover:brightness-95 shadowSoft">
           🔒 Déconnexion
         </button>
       </div>
@@ -104,7 +271,7 @@
 
           <div class="flex gap-2 sm:justify-end items-stretch">
             <input id="searchInput" oninput="applyFilters()"
-              placeholder="Rechercher un nom…"
+              placeholder="🔍 Rechercher un nom…"
               class="w-full sm:w-56 px-4 py-3 rounded-2xl card shadow-sm text-sm font-semibold accentRing bg-white" />
           </div>
         </div>
@@ -120,29 +287,29 @@
 
   <main class="max-w-3xl mx-auto px-4 pt-4">
     <div id="kpisWrap" class="hidden grid grid-cols-2 sm:grid-cols-6 gap-3 mb-5">
-      <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Total</div>
-        <div id="kpiTotal" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      <div class="card kpiCard kpi-total rounded-2xl p-3">
+        <div class="kpiLabel text-[10px] font-extrabold tracking-[0.16em] uppercase">Total</div>
+        <div id="kpiTotal" class="kpiValue font-extrabold tracking-tight mt-1">—</div>
       </div>
-      <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Pointés (hA)</div>
-        <div id="kpiPunched" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      <div class="card kpiCard kpi-punched rounded-2xl p-3">
+        <div class="kpiLabel text-[10px] font-extrabold tracking-[0.16em] uppercase">Pointés (hA)</div>
+        <div id="kpiPunched" class="kpiValue font-extrabold tracking-tight mt-1">—</div>
       </div>
-      <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Repos (OUT)</div>
-        <div id="kpiOff" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      <div class="card kpiCard kpi-off rounded-2xl p-3">
+        <div class="kpiLabel text-[10px] font-extrabold tracking-[0.16em] uppercase">Repos (OUT)</div>
+        <div id="kpiOff" class="kpiValue font-extrabold tracking-tight mt-1">—</div>
       </div>
-      <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">En attente</div>
-        <div id="kpiPending" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      <div class="card kpiCard kpi-pending rounded-2xl p-3">
+        <div class="kpiLabel text-[10px] font-extrabold tracking-[0.16em] uppercase">En attente</div>
+        <div id="kpiPending" class="kpiValue font-extrabold tracking-tight mt-1">—</div>
       </div>
-      <div class="card rounded-2xl p-3">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Retards</div>
-        <div id="kpiLate" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      <div class="card kpiCard kpi-late rounded-2xl p-3">
+        <div class="kpiLabel text-[10px] font-extrabold tracking-[0.16em] uppercase">Retards</div>
+        <div id="kpiLate" class="kpiValue font-extrabold tracking-tight mt-1">—</div>
       </div>
-      <div class="card rounded-2xl p-3 col-span-2 sm:col-span-1">
-        <div class="text-[10px] font-extrabold tracking-[0.16em] uppercase text-slate-500">Minutes retard</div>
-        <div id="kpiLateMin" class="text-2xl font-extrabold tracking-tight mt-1">—</div>
+      <div class="card kpiCard kpi-latemin rounded-2xl p-3 col-span-2 sm:col-span-1">
+        <div class="kpiLabel text-[10px] font-extrabold tracking-[0.16em] uppercase">Minutes retard</div>
+        <div id="kpiLateMin" class="kpiValue font-extrabold tracking-tight mt-1">—</div>
       </div>
     </div>
 
@@ -254,6 +421,9 @@
     // ✅ Exceptions (inchangées)
     const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
 
+    // ✅ EXCEPTION NO RETARD — BOUCHNAK_NAOUAL
+    const noLateCalcIds = ["BOUCHNAK_NAOUAL"];
+
     // ===== Helpers =====
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
@@ -273,7 +443,8 @@
       return h*60+m;
     }
 
-    function lateMinutes(hP, hA){
+    function lateMinutes(hP, hA, id = null){
+      if(id && noLateCalcIds.includes(id)) return null;
       if(!hA) return null;
       const p = timeToMin(hP);
       const a = timeToMin(hA);
@@ -482,6 +653,7 @@
       const name = emp ? empName(emp) : "";
 
       if(f === "off"){
+        if(!canEditOFF(date)) return;
         const val = !!v;
         const ref = database.ref('presences/'+date+'/'+id);
 
@@ -511,13 +683,14 @@
       }
 
       if(f === "hP"){
+        if(!canEditHP(id, date)) return;
         const ref = database.ref('presences/'+date+'/'+id);
         try{
           await ref.update({ hP: (v ? v : null) });
 
           const cur = latestDataCache[id] || {};
           const hA = cur.hA || "";
-          const lm = lateMinutes(v, hA);
+          const lm = lateMinutes(v, hA, id);
           const isLate = (lm !== null && lm > 0);
 
           schedulePresenceExport(id, name, date, {
@@ -542,7 +715,7 @@
         }
 
         const hP = (presencesCache[id]?.hP) || "";
-        const lm = lateMinutes(hP, hA);
+        const lm = lateMinutes(hP, hA, id);
         const isLate = (lm !== null && lm > 0);
         const now = Date.now();
 
@@ -613,7 +786,7 @@
           schedulePresenceExport(id, name, selectedDate, {
             hP: hP || "",
             hA: hA || "",
-            off: (typeof (latestDataCache[id]?.off) === "boolean" ? latestDataCache[id].off : ""),
+            off: (typeof (latestDataCache[id]?.off) === "boolean" ? latestDataCache[id]?.off : ""),
             retard: (hA ? !!isLate : ""),
             retardMin: (hA ? (lm || 0) : "")
           });
@@ -701,7 +874,7 @@
 
             const handled = isOff || hasHA;
 
-            const late = lateMinutes(d.hP, d.hA);
+            const late = lateMinutes(d.hP, d.hA, id);
             const isLate = (late !== null && late > 0);
 
             const incomplete =
@@ -814,7 +987,7 @@
         if(!handled) pending++;
 
         if(hasHP && hasHA){
-          const lm = lateMinutes(d.hP, d.hA);
+          const lm = lateMinutes(d.hP, d.hA, id);
           if(lm !== null && lm > 0){
             lateCount++;
             lateMinSum += lm;
@@ -916,3 +1089,4 @@
   </script>
 </body>
 </html>
+```
