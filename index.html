@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -670,10 +669,10 @@
           const cur = latestDataCache[id] || {};
           schedulePresenceExport(id, name, date, {
             hP: cur.hP || "",
-            hA: cur.hA || "",
+            hA: val ? "" : (cur.hA || ""),
             off: val,
-            retard: cur.retard,
-            retardMin: cur.retardMin
+            retard: val ? false : (cur.retard ?? false),
+            retardMin: val ? 0 : (cur.retardMin ?? 0)
           });
         }catch(e){
           console.warn("Write blocked:", id, f, e);
@@ -1088,4 +1087,3 @@
   </script>
 </body>
 </html>
-```
