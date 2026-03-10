@@ -403,6 +403,7 @@
 
     let presencesCache = {};
     let punchesCache = {};
+    let rootPunchesCache = {};
     let latestDataCache = {};
 
     let activeRefs = [];
@@ -421,8 +422,35 @@
         day: '2-digit'
       }).format(new Date());
 
-    function empId(emp){ return `${emp.nom}_${emp.prenom}`; }
-    function empName(emp){ return `${emp.nom} ${emp.prenom}`; }
+    function normalizeKeyPart(x){
+      return String(x || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, "_");
+    }
+
+    function normalizeLabelPart(x){
+      return String(x || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, " ");
+    }
+
+    function empId(emp){
+      return `${normalizeKeyPart(emp?.nom)}_${normalizeKeyPart(emp?.prenom)}`;
+    }
+
+    function empName(emp){
+      return `${normalizeLabelPart(emp?.nom)} ${normalizeLabelPart(emp?.prenom)}`.trim();
+    }
+
+    function mergeEmpMaps(a, b){
+      const out = JSON.parse(JSON.stringify(a || {}));
+      Object.keys(b || {}).forEach(empId=>{
+        out[empId] = { ...(out[empId] || {}), ...(b[empId] || {}) };
+      });
+      return out;
+    }
 
     function timeToMin(t){
       if(!t || typeof t !== "string" || !t.includes(":")) return null;
@@ -446,13 +474,6 @@
       return `+${min} min`;
     }
 
-    function normalizeText(x){
-      return String(x || "")
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, " ");
-    }
-
     function normalizeEquipeSnapshot(val){
       if(!val) return [];
       const arr = Array.isArray(val)
@@ -461,16 +482,17 @@
 
       const cleaned = arr
         .map(x => ({
-          nom: normalizeText(x.nom),
-          prenom: normalizeText(x.prenom),
-          poste: normalizeText(x.poste)
+          nom: normalizeLabelPart(x?.nom),
+          prenom: normalizeLabelPart(x?.prenom),
+          poste: normalizeLabelPart(x?.poste),
+          dateDebut: String(x?.dateDebut || "").trim()
         }))
         .filter(x => x.nom && x.prenom && x.poste);
 
       const seen = new Set();
       const out = [];
       for(const e of cleaned){
-        const id = `${e.nom}_${e.prenom}`;
+        const id = `${normalizeKeyPart(e.nom)}_${normalizeKeyPart(e.prenom)}`;
         if(seen.has(id)) continue;
         seen.add(id);
         out.push(e);
@@ -495,7 +517,7 @@
 
       const info = document.getElementById("infoSource");
       if(role === "gerant"){
-        info.textContent = "Source hA : punches (téléphones) + presences (manuel)";
+        info.textContent = "Source hA : punches + presences + compatibilité racine/date";
         info.classList.remove("hidden");
       }else if(role === "equipe"){
         info.textContent = "Source hA : presences uniquement";
@@ -541,6 +563,7 @@
       stopEquipeListener();
       presencesCache = {};
       punchesCache = {};
+      rootPunchesCache = {};
       latestDataCache = {};
       EQUIPE = [];
       appInitialized = false;
@@ -610,11 +633,13 @@
     }
 
     function rebuildMerged(){
+      const allPunches = mergeEmpMaps(punchesCache || {}, rootPunchesCache || {});
       const merged = {};
+
       EQUIPE.forEach(emp => {
         const id = empId(emp);
         const p = presencesCache[id] || {};
-        const pu = punchesCache[id] || {};
+        const pu = allPunches[id] || {};
 
         merged[id] = {
           ...p,
@@ -626,6 +651,7 @@
           off: p?.off === true
         };
       });
+
       latestDataCache = merged;
     }
 
@@ -1005,6 +1031,7 @@
       stopListeners();
       presencesCache = {};
       punchesCache = {};
+      rootPunchesCache = {};
 
       const refPres = database.ref('presences/' + selectedDate);
       const cbPres = (snap) => {
@@ -1024,8 +1051,18 @@
         };
         refPunch.on("value", cbPunch);
         activeRefs.push({ref: refPunch, cb: cbPunch});
+
+        const refRootPunch = database.ref(selectedDate);
+        const cbRootPunch = (snap) => {
+          rootPunchesCache = snap.val() || {};
+          rebuildMerged();
+          render();
+        };
+        refRootPunch.on("value", cbRootPunch);
+        activeRefs.push({ref: refRootPunch, cb: cbRootPunch});
       }else{
         punchesCache = {};
+        rootPunchesCache = {};
         rebuildMerged();
         render();
       }
@@ -1048,6 +1085,11 @@
         role = null;
         stopListeners();
         stopEquipeListener();
+        presencesCache = {};
+        punchesCache = {};
+        rootPunchesCache = {};
+        latestDataCache = {};
+        EQUIPE = [];
         appInitialized = false;
         showLoginUI();
         return;
