@@ -414,6 +414,60 @@
     const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
     const noLateCalcIds = ["BOUCHNAK_NAOUAL"];
 
+    let hpHistory = [];
+    const defaultHPTimes = ["07:00", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00", "20:00", "22:00"];
+
+    function initHPHistory(){
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem("gc_hp_history") || "[]"); } catch(e){}
+      const combined = new Set([...defaultHPTimes, ...saved]);
+      hpHistory = Array.from(combined).sort();
+      updateHPDatalist();
+    }
+
+    function saveHPHistory(empId, hpVal){
+      const clean = normalizeHHMM(hpVal);
+      if(!clean) return;
+
+      if(empId){
+        try { localStorage.setItem(`gc_hp_emp_${empId}`, clean); } catch(e){}
+      }
+
+      if(!hpHistory.includes(clean)){
+        hpHistory.push(clean);
+        hpHistory.sort();
+        try { localStorage.setItem("gc_hp_history", JSON.stringify(hpHistory)); } catch(e){}
+        updateHPDatalist();
+      }
+    }
+
+    function updateHPDatalist(){
+      let dl = document.getElementById("hpHistoryDatalist");
+      if(!dl){
+        dl = document.createElement("datalist");
+        dl.id = "hpHistoryDatalist";
+        document.body.appendChild(dl);
+      }
+      dl.innerHTML = hpHistory.map(t => `<option value="${t}">${t}</option>`).join("");
+    }
+
+    function collectHPFromCache(){
+      if(!presencesCache) return;
+      let changed = false;
+      Object.values(presencesCache).forEach(p => {
+        const hp = normalizeHHMM(p?.hP);
+        if(hp && !hpHistory.includes(hp)){
+          hpHistory.push(hp);
+          changed = true;
+        }
+      });
+      if(changed){
+        hpHistory.sort();
+        try { localStorage.setItem("gc_hp_history", JSON.stringify(hpHistory)); } catch(e){}
+        updateHPDatalist();
+      }
+    }
+
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'Africa/Casablanca',
@@ -694,6 +748,9 @@
         if(!canEditHP(id, date)) return;
 
         const hp = normalizeHHMM(v);
+        if(hp){
+          saveHPHistory(id, hp);
+        }
         const ref = database.ref('presences/'+date+'/'+id);
 
         try{
@@ -906,6 +963,10 @@
             const canHP = canEditHP(id, selectedDate);
             const canHA = canEditHA(id, selectedDate);
 
+            const empLastHP = (function(){
+              try { return localStorage.getItem(`gc_hp_emp_${id}`) || ""; } catch(e){ return ""; }
+            })();
+
             const card = document.createElement('div');
             card.className = "card rounded-2xl p-4 empCard";
             card.dataset.name = `${emp.nom} ${emp.prenom}`.toLowerCase();
@@ -938,12 +999,32 @@
 
               <div class="mt-4 grid grid-cols-2 gap-3">
                 <div>
-                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Shift prévu (hP)</label>
-                  <input type="time" step="60"
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 block">Shift prévu (hP)</label>
+                    ${empLastHP && empLastHP !== safeHP && canHP ? `
+                      <button type="button" onclick="upd('${id}','hP','${empLastHP}')"
+                        title="Appliquer le dernier shift utilisé (${empLastHP})"
+                        class="text-[9px] font-extrabold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-md px-1.5 py-0.5 transition-all inline-flex items-center gap-1 active:scale-95">
+                        ⚡ ${empLastHP}
+                      </button>
+                    ` : ''}
+                  </div>
+                  <input type="time" step="60" list="hpHistoryDatalist"
                     class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
                     value="${safeHP}"
                     ${canHP ? "" : "disabled"}
                     onchange="upd('${id}','hP',this.value)">
+                  ${canHP && hpHistory.length > 0 ? `
+                    <div class="mt-1 flex flex-wrap gap-1 items-center max-h-12 overflow-x-auto py-0.5">
+                      <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Récents:</span>
+                      ${hpHistory.slice(0, 5).map(h => `
+                        <button type="button" onclick="upd('${id}','hP','${h}')"
+                          class="text-[9px] font-bold px-1.5 py-0.5 rounded ${safeHP === h ? 'bg-amber-500 text-white font-extrabold shadow-sm' : 'bg-slate-200/70 text-slate-700 hover:bg-amber-100 hover:text-amber-900'} transition-colors">
+                          ${h}
+                        </button>
+                      `).join('')}
+                    </div>
+                  ` : ''}
                 </div>
 
                 <div>
@@ -1036,6 +1117,7 @@
       const refPres = database.ref('presences/' + selectedDate);
       const cbPres = (snap) => {
         presencesCache = snap.val() || {};
+        collectHPFromCache();
         rebuildMerged();
         render();
       };
@@ -1071,6 +1153,8 @@
     function initApp(){
       if(appInitialized) return;
       appInitialized = true;
+
+      initHPHistory();
 
       const dp = document.getElementById('datePicker');
       dp.value = getMarocDate();
