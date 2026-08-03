@@ -415,7 +415,7 @@
     const noLateCalcIds = ["BOUCHNAK_NAOUAL"];
 
     let hpHistory = [];
-    const defaultHPTimes = ["07:00", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00", "20:00", "22:00"];
+    const defaultHPTimes = ["07:00", "07:30", "09:00", "10:00", "12:00", "14:00", "14:30", "15:00", "17:00"];
 
     function initHPHistory(){
       let saved = [];
@@ -1015,9 +1015,9 @@
                     ${canHP ? "" : "disabled"}
                     onchange="upd('${id}','hP',this.value)">
                   ${canHP && hpHistory.length > 0 ? `
-                    <div class="mt-1 flex flex-wrap gap-1 items-center max-h-12 overflow-x-auto py-0.5">
-                      <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Récents:</span>
-                      ${hpHistory.slice(0, 5).map(h => `
+                    <div class="mt-1 flex flex-wrap gap-1 items-center py-0.5">
+                      <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Habituels:</span>
+                      ${hpHistory.map(h => `
                         <button type="button" onclick="upd('${id}','hP','${h}')"
                           class="text-[9px] font-bold px-1.5 py-0.5 rounded ${safeHP === h ? 'bg-amber-500 text-white font-extrabold shadow-sm' : 'bg-slate-200/70 text-slate-700 hover:bg-amber-100 hover:text-amber-900'} transition-colors">
                           ${h}
