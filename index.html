@@ -411,7 +411,7 @@
     let equipeCb = null;
     let appInitialized = false;
 
-    const haExceptionsToday = ["ELMCHAOURI_SOUAD", "SBAI_HAKIMA"];
+    const haExceptionsToday = ["SBAI_HAKIMA", "ABOUARSA_EDDRISSIA"];
     const noLateCalcIds = ["BOUCHNAK_NAOUAL"];
 
     let hpHistory = [];
@@ -516,7 +516,14 @@
     function lateMinutes(hP, hA, id = null){
       if(id && noLateCalcIds.includes(id)) return null;
       if(!hA) return null;
-      const p = timeToMin(hP);
+      let effectiveHP = hP;
+      if(!effectiveHP && id){
+        const emp = EQUIPE.find(x => empId(x) === id);
+        if(emp && (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ")) {
+          effectiveHP = "09:00";
+        }
+      }
+      const p = timeToMin(effectiveHP);
       const a = timeToMin(hA);
       if(p === null || a === null) return null;
       return Math.max(0, a - p);
@@ -930,10 +937,17 @@
             const id = empId(emp);
             const d = latestDataCache[id] || {};
 
-            const safeHP = normalizeHHMM(d.hP || "");
+            const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
+            const [yy, mm, ddNum] = selectedDate.split('-').map(Number);
+            const dt = new Date(yy, mm - 1, ddNum);
+            const isMonday = (dt.getDay() === 1);
+
+            const displayHP = safeHP || (isSecurite ? "09:00" : "");
+            const effectiveHP = safeHP || (isSecurite ? "09:00" : "");
+
             const safeHA = normalizeHHMM(d.hA || "");
             const isOff = !!d.off;
-            const hasHP = !!safeHP;
+            const hasHP = !!safeHP || (isSecurite && !!effectiveHP);
             const hasHA = !!safeHA;
 
             const handled = isOff || hasHA;
@@ -951,6 +965,8 @@
               statusBadges.push(`<span class="badge bad">Repos (OUT)</span>`);
             }else if(hasHA){
               statusBadges.push(`<span class="badge ok">Pointé</span>`);
+            }else if(isSecurite && isMonday){
+              statusBadges.push(`<span class="badge" style="border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.10);color:#3730a3">🛡️ Repos Lundi</span>`);
             }else{
               statusBadges.push(`<span class="badge">En attente</span>`);
             }
@@ -1001,7 +1017,7 @@
                 <div>
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 block">Shift prévu (hP)</label>
-                    ${empLastHP && empLastHP !== safeHP && canHP ? `
+                    ${empLastHP && empLastHP !== displayHP && canHP ? `
                       <button type="button" onclick="upd('${id}','hP','${empLastHP}')"
                         title="Appliquer le dernier shift utilisé (${empLastHP})"
                         class="text-[9px] font-extrabold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-md px-1.5 py-0.5 transition-all inline-flex items-center gap-1 active:scale-95">
@@ -1011,7 +1027,7 @@
                   </div>
                   <input type="time" step="60" list="hpHistoryDatalist"
                     class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
-                    value="${safeHP}"
+                    value="${displayHP}"
                     ${canHP ? "" : "disabled"}
                     onchange="upd('${id}','hP',this.value)">
                   ${canHP && hpHistory.length > 0 ? `
