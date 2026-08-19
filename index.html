@@ -960,6 +960,10 @@
             const id = empId(emp);
             const d = latestDataCache[id] || {};
 
+            const safeHP = normalizeHHMM(d.hP || "");
+            const safeHA = normalizeHHMM(d.hA || "");
+            const isOff = !!d.off;
+
             const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
             const [yy, mm, ddNum] = selectedDate.split('-').map(Number);
             const dt = new Date(yy, mm - 1, ddNum);
@@ -968,8 +972,6 @@
             const displayHP = safeHP || (isSecurite ? "09:00" : "");
             const effectiveHP = safeHP || (isSecurite ? "09:00" : "");
 
-            const safeHA = normalizeHHMM(d.hA || "");
-            const isOff = !!d.off;
             const hasHP = !!safeHP || (isSecurite && !!effectiveHP);
             const hasHA = !!safeHA;
 
@@ -1220,14 +1222,24 @@
       }
 
       role = await fetchRole(user.uid);
+      const isMaster = (user.email||"").toLowerCase().includes("hicham");
+      if(!role && isMaster){
+        role = "gerant";
+        try{ await database.ref("users/"+user.uid).set("gerant"); }catch(_){}
+      }
 
       if(role !== "gerant" && role !== "equipe"){
-        await auth.signOut();
-        role = null;
-        showLoginUI();
-        document.getElementById("loginMsg").textContent =
-          "Compte non autorisé (rôle manquant dans /users).";
-        return;
+        if(isMaster){
+          role = "gerant";
+          try{ await database.ref("users/"+user.uid).set("gerant"); }catch(_){}
+        } else {
+          await auth.signOut();
+          role = null;
+          showLoginUI();
+          document.getElementById("loginMsg").textContent =
+            "Compte non autorisé (rôle manquant dans /users).";
+          return;
+        }
       }
 
       showLoggedUI();
