@@ -414,6 +414,29 @@
     const haExceptionsToday = ["SBAI_HAKIMA", "ABOUARSA_EDDRISSIA"];
     const noLateCalcIds = ["BOUCHNAK_NAOUAL"];
 
+    const DEFAULT_EQUIPE = [
+      {nom:'BENKHADA',   prenom:'ABDESLAM',  poste:'CAISSE'},
+      {nom:'BOURAHMA',   prenom:'ANAS',      poste:'CUISINE'},
+      {nom:'CHKAIRI',    prenom:'YOUSSEF',   poste:'BAR'},
+      {nom:'ELKOBBI',    prenom:'MOSTAFA',   poste:'BAR'},
+      {nom:'ELGORRAMY',  prenom:'ANISSA',    poste:'MENAGE'},
+      {nom:'ELGORRAMY',  prenom:'SOUAD',     poste:'MENAGE'},
+      {nom:'ENNHAILI',   prenom:'SOUMIA',    poste:'ECONOMAT'},
+      {nom:'FILALI',     prenom:'ABDERAFI',  poste:'BAR'},
+      {nom:'HATTAF',     prenom:'MOHAMED',   poste:'SERVICE'},
+      {nom:'HIDARA',     prenom:'YOUSSEF',   poste:'SERVICE'},
+      {nom:'IDRISSI',    prenom:'SAAD',      poste:'CUISINE'},
+      {nom:'KAFOUNI',    prenom:'ZAKARIAE',  poste:'SERVICE'},
+      {nom:'KHALOUQ',    prenom:'RACHID',    poste:'BAR'},
+      {nom:'LEMSSIEH',   prenom:'JAWAD',     poste:'CUISINE'},
+      {nom:'MAJDOUB',    prenom:'JIHANE',    poste:'CUISINE'},
+      {nom:'MOHSINE',    prenom:'YOUNESS',   poste:'SERVICE'},
+      {nom:'MOUJAHID',   prenom:'IMANE',     poste:'CUISINE'},
+      {nom:'SALIL',      prenom:'HOUDA',     poste:'CAISSE'},
+      {nom:'SBAI',       prenom:'HAKIMA',    poste:'MENAGE'},
+      {nom:'ZAIR',       prenom:'FATIMA',    poste:'CUISINE'}
+    ];
+
     let hpHistory = [];
     const defaultHPTimes = ["07:00", "07:30", "09:00", "10:00", "12:00", "14:00", "14:30", "15:00", "17:00"];
 
@@ -1115,7 +1138,8 @@
       equipeRef = database.ref("settings/equipe");
       equipeCb = (snap) => {
         const val = snap.val();
-        EQUIPE = normalizeEquipeSnapshot(val);
+        const norm = normalizeEquipeSnapshot(val);
+        EQUIPE = norm.length ? norm : DEFAULT_EQUIPE;
         rebuildMerged();
         render();
       };
