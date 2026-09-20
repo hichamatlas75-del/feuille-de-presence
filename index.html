@@ -493,7 +493,7 @@
 
     const getMarocDate = () =>
       new Intl.DateTimeFormat('fr-CA', {
-        timeZone: 'Africa/Casablanca',
+        timeZone: 'GMT',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
@@ -966,8 +966,8 @@
 
             const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
             const [yy, mm, ddNum] = selectedDate.split('-').map(Number);
-            const dt = new Date(yy, mm - 1, ddNum);
-            const isMonday = (dt.getDay() === 1);
+            const dt = new Date(Date.UTC(yy, mm - 1, ddNum));
+            const isMonday = (dt.getUTCDay() === 1);
 
             const displayHP = safeHP || (isSecurite ? "09:00" : "");
             const effectiveHP = safeHP || (isSecurite ? "09:00" : "");
