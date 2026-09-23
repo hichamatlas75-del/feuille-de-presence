@@ -415,7 +415,9 @@
     const noLateCalcIds = ["BOUCHNAK_NAOUAL"];
 
     const DEFAULT_EQUIPE = [
+      {nom:'BELQASSE',   prenom:'KHAOULA',   poste:'CUISINE'},
       {nom:'BENKHADA',   prenom:'ABDESLAM',  poste:'CAISSE'},
+      {nom:'BOUCHNAK',   prenom:'NAOUAL',    poste:'CUISINE'},
       {nom:'BOURAHMA',   prenom:'ANAS',      poste:'CUISINE'},
       {nom:'CHKAIRI',    prenom:'YOUSSEF',   poste:'BAR'},
       {nom:'ELKOBBI',    prenom:'MOSTAFA',   poste:'BAR'},
@@ -437,8 +439,100 @@
       {nom:'ZAIR',       prenom:'FATIMA',    poste:'CUISINE'}
     ];
 
+    // ─── PLANNING FIXE CUISINE (Hebdomadaire) ───
+    // 0 = Dimanche, 1 = Lundi, 2 = Mardi, 3 = Mercredi, 4 = Jeudi, 5 = Vendredi, 6 = Samedi
+    const PLANNING_CUISINE = {
+      1: { // Lundi
+        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
+        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        JIHANE:  { hP: "12:00", off: false, shift: "12h — 21h" },
+        IMANE:   { hP: "",      off: true,  shift: "OFF" },
+        ANAS:    { hP: "14:00", off: false, shift: "14h — F.S" },
+        JAWAD:   { hP: "",      off: true,  shift: "OFF" },
+        SAAD:    { hP: "14:00", off: false, shift: "14h — F.S" }
+      },
+      2: { // Mardi
+        KHAOULA: { hP: "",      off: true,  shift: "OFF" },
+        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        JIHANE:  { hP: "15:00", off: false, shift: "15h — F.S" },
+        IMANE:   { hP: "06:00", off: false, shift: "06h — 14h" },
+        ANAS:    { hP: "12:00", off: false, shift: "12h — 21h" },
+        JAWAD:   { hP: "12:00", off: false, shift: "12h — 15h / 17h - F.S" },
+        SAAD:    { hP: "",      off: true,  shift: "OFF" }
+      },
+      3: { // Mercredi
+        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
+        FATIMA:  { hP: "",      off: true,  shift: "OFF" },
+        JIHANE:  { hP: "14:00", off: false, shift: "14h — F.S" },
+        IMANE:   { hP: "06:00", off: false, shift: "06h — 14h" },
+        ANAS:    { hP: "",      off: true,  shift: "OFF" },
+        JAWAD:   { hP: "15:00", off: false, shift: "15h — F.S" },
+        SAAD:    { hP: "12:00", off: false, shift: "12h — 15h / 17h - F.S" }
+      },
+      4: { // Jeudi
+        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
+        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        JIHANE:  { hP: "",      off: true,  shift: "OFF" },
+        IMANE:   { hP: "12:00", off: false, shift: "12h — 21h" },
+        ANAS:    { hP: "15:00", off: false, shift: "15h — F.S" },
+        JAWAD:   { hP: "12:00", off: false, shift: "12h — 21h" },
+        SAAD:    { hP: "14:00", off: false, shift: "14h — F.S" }
+      },
+      5: { // Vendredi
+        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
+        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        JIHANE:  { hP: "12:00", off: false, shift: "12h — 15h / 17h - F.S" },
+        IMANE:   { hP: "12:00", off: false, shift: "12h — 21h" },
+        ANAS:    { hP: "13:00", off: false, shift: "13h — F.S" },
+        JAWAD:   { hP: "14:00", off: false, shift: "14h — F.S" },
+        SAAD:    { hP: "15:00", off: false, shift: "15h — F.S" }
+      },
+      6: { // Samedi
+        KHAOULA: { hP: "06:00", off: false, shift: "06h — 15h" },
+        FATIMA:  { hP: "06:00", off: false, shift: "06h — 15h" },
+        JIHANE:  { hP: "14:00", off: false, shift: "14h — F.S" },
+        IMANE:   { hP: "10:00", off: false, shift: "10h — 18h" },
+        ANAS:    { hP: "14:00", off: false, shift: "14h — F.S" },
+        JAWAD:   { hP: "14:00", off: false, shift: "14h — F.S" },
+        SAAD:    { hP: "13:00", off: false, shift: "13h — F.S" }
+      },
+      0: { // Dimanche
+        KHAOULA: { hP: "06:00", off: false, shift: "06h — 15h" },
+        FATIMA:  { hP: "06:00", off: false, shift: "06h — 15h" },
+        JIHANE:  { hP: "14:00", off: false, shift: "14h — F.S" },
+        IMANE:   { hP: "10:00", off: false, shift: "10h — 18h" },
+        ANAS:    { hP: "14:00", off: false, shift: "14h — F.S" },
+        JAWAD:   { hP: "14:00", off: false, shift: "14h — F.S" },
+        SAAD:    { hP: "14:00", off: false, shift: "14h — 21h" }
+      }
+    };
+
+    function matchCuisineStaffKey(nameOrId) {
+      if(!nameOrId) return null;
+      const s = String(nameOrId).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if(s.includes("KHAOULA") || s.includes("BELQAS")) return "KHAOULA";
+      if(s.includes("FATIMA") || s.includes("ZAIR")) return "FATIMA";
+      if(s.includes("JIHANE") || s.includes("MAJDOUB")) return "JIHANE";
+      if(s.includes("IMANE") || s.includes("MOUJAHID")) return "IMANE";
+      if(s.includes("ANAS") || s.includes("BOURAHMA")) return "ANAS";
+      if(s.includes("JAWAD") || s.includes("JAOUAD") || s.includes("LEMSSIEH") || s.includes("LAMSSIAH")) return "JAWAD";
+      if(s.includes("SAAD") || s.includes("IDRISSI")) return "SAAD";
+      return null;
+    }
+
+    function getCuisinePlanningInfo(empKeyOrName, dateISO) {
+      if(!dateISO) return null;
+      const memberKey = matchCuisineStaffKey(empKeyOrName);
+      if(!memberKey) return null;
+      const [yy, mm, dd] = String(dateISO).split('-').map(Number);
+      if(!yy || !mm || !dd) return null;
+      const dt = new Date(Date.UTC(yy, mm - 1, dd));
+      const dayOfWeek = dt.getUTCDay();
+      return PLANNING_CUISINE[dayOfWeek]?.[memberKey] || null;
+    }
+
     let hpHistory = [];
-    const defaultHPTimes = ["07:00", "07:30", "09:00", "10:00", "12:00", "14:00", "14:30", "15:00", "17:00"];
+    const defaultHPTimes = ["06:00", "07:00", "07:30", "09:00", "10:00", "12:00", "13:00", "14:00", "14:30", "15:00", "17:00"];
 
     function initHPHistory(){
       let saved = [];
@@ -536,7 +630,7 @@
       return h*60+m;
     }
 
-    function lateMinutes(hP, hA, id = null){
+    function lateMinutes(hP, hA, id = null, date = null){
       if(id && noLateCalcIds.includes(id)) return null;
       if(!hA) return null;
       let effectiveHP = hP;
@@ -544,6 +638,12 @@
         const emp = EQUIPE.find(x => empId(x) === id);
         if(emp && (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ")) {
           effectiveHP = "09:00";
+        } else if(emp && emp.poste === "CUISINE") {
+          const selectedDate = date || document.getElementById('datePicker')?.value;
+          const plan = getCuisinePlanningInfo(id, selectedDate);
+          if(plan && !plan.off && plan.hP) {
+            effectiveHP = plan.hP;
+          }
         }
       }
       const p = timeToMin(effectiveHP);
@@ -897,6 +997,94 @@
       }
     }
 
+    async function applySingleCuisinePlan(id, date) {
+      const plan = getCuisinePlanningInfo(id, date);
+      if(!plan) return;
+      if(plan.off) {
+        await upd(id, 'off', true);
+      } else {
+        await upd(id, 'off', false);
+        await upd(id, 'hP', plan.hP);
+      }
+    }
+
+    async function applyCuisinePlanningForDate(dateISO) {
+      if(!canEditHP("", dateISO)) {
+        alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
+        return;
+      }
+      const cuisineMembers = EQUIPE.filter(e => e.poste === "CUISINE");
+      if(!cuisineMembers.length) {
+        alert("Aucun membre en cuisine trouvé.");
+        return;
+      }
+      
+      const updates = {};
+      cuisineMembers.forEach(emp => {
+        const id = empId(emp);
+        const plan = getCuisinePlanningInfo(id, dateISO);
+        if(!plan) return;
+        if(plan.off) {
+          updates[`presences/${dateISO}/${id}/off`] = true;
+          updates[`presences/${dateISO}/${id}/hP`] = null;
+        } else {
+          updates[`presences/${dateISO}/${id}/hP`] = plan.hP;
+          updates[`presences/${dateISO}/${id}/off`] = false;
+        }
+      });
+      
+      try {
+        await database.ref().update(updates);
+        uiExportMsg(`Planning Cuisine appliqué (${dateISO}) ✅`, true);
+      } catch(e) {
+        console.error("Erreur application planning cuisine:", e);
+        uiExportMsg("Erreur lors de l'application du planning ❌", false);
+      }
+    }
+
+    async function applyCuisinePlanningForWeek(dateISO) {
+      if(!isGerant()) {
+        alert("L'application pour toute la semaine est réservée au Gérant.");
+        return;
+      }
+      const [yy, mm, dd] = dateISO.split('-').map(Number);
+      const cur = new Date(Date.UTC(yy, mm - 1, dd));
+      const dayOfWeek = cur.getUTCDay();
+      const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+      const monday = new Date(cur);
+      monday.setUTCDate(cur.getUTCDate() + diffToMonday);
+
+      const updates = {};
+      const cuisineMembers = EQUIPE.filter(e => e.poste === "CUISINE");
+
+      for(let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setUTCDate(monday.getUTCDate() + i);
+        const iso = d.toISOString().slice(0, 10);
+        
+        cuisineMembers.forEach(emp => {
+          const id = empId(emp);
+          const plan = getCuisinePlanningInfo(id, iso);
+          if(!plan) return;
+          if(plan.off) {
+            updates[`presences/${iso}/${id}/off`] = true;
+            updates[`presences/${iso}/${id}/hP`] = null;
+          } else {
+            updates[`presences/${iso}/${id}/hP`] = plan.hP;
+            updates[`presences/${iso}/${id}/off`] = false;
+          }
+        });
+      }
+
+      try {
+        await database.ref().update(updates);
+        uiExportMsg("Planning Cuisine appliqué pour toute la semaine ✅", true);
+      } catch(e) {
+        console.error("Erreur semaine cuisine:", e);
+        uiExportMsg("Erreur application semaine ❌", false);
+      }
+    }
+
     function render(){
       const selectedDate = document.getElementById('datePicker').value;
       const list = document.getElementById('staffList');
@@ -925,12 +1113,25 @@
         const section = document.createElement('section');
         section.className = "card rounded-3xl overflow-hidden";
 
-        const header = document.createElement('button');
-        header.type = "button";
-        header.className = "w-full flex items-center justify-between px-4 py-4 bg-white";
+        const header = document.createElement('div');
+        header.className = "w-full flex items-center justify-between px-4 py-4 bg-white cursor-pointer select-none";
         header.innerHTML = `
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 flex-wrap">
             <div class="sectionTitle text-xs font-extrabold tracking-[0.18em] uppercase text-slate-500">${poste}</div>
+            ${poste === "CUISINE" ? `
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" onclick="event.stopPropagation(); applyCuisinePlanningForDate(document.getElementById('datePicker').value)"
+                  title="Remplir les HP et OFF de la cuisine pour la date sélectionnée selon le planning fixe"
+                  class="text-[10px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+                  ⚡ Remplir Cuisine (Jour)
+                </button>
+                <button type="button" onclick="event.stopPropagation(); applyCuisinePlanningForWeek(document.getElementById('datePicker').value)"
+                  title="Remplir les HP et OFF de la cuisine pour les 7 jours de la semaine"
+                  class="text-[10px] font-extrabold bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+                  📅 Semaine Cuisine
+                </button>
+              </div>
+            ` : ''}
           </div>
           <div class="flex items-center gap-2">
             <span class="badge">${groupes[poste].length} pers.</span>
@@ -965,19 +1166,21 @@
             const isOff = !!d.off;
 
             const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
+            const isCuisine = (emp.poste === "CUISINE");
+            const cuisinePlan = isCuisine ? getCuisinePlanningInfo(id, selectedDate) : null;
             const [yy, mm, ddNum] = selectedDate.split('-').map(Number);
             const dt = new Date(Date.UTC(yy, mm - 1, ddNum));
             const isMonday = (dt.getUTCDay() === 1);
 
-            const displayHP = safeHP || (isSecurite ? "09:00" : "");
-            const effectiveHP = safeHP || (isSecurite ? "09:00" : "");
+            const displayHP = safeHP || (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : ""));
+            const effectiveHP = safeHP || (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : ""));
 
-            const hasHP = !!safeHP || (isSecurite && !!effectiveHP);
+            const hasHP = !!safeHP || (isSecurite && !!effectiveHP) || (isCuisine && !!cuisinePlan && !cuisinePlan.off);
             const hasHA = !!safeHA;
 
             const handled = isOff || hasHA;
 
-            const late = lateMinutes(safeHP, safeHA, id);
+            const late = lateMinutes(safeHP, safeHA, id, selectedDate);
             const isLate = (late !== null && late > 0);
 
             const incomplete =
@@ -992,6 +1195,8 @@
               statusBadges.push(`<span class="badge ok">Pointé</span>`);
             }else if(isSecurite && isMonday){
               statusBadges.push(`<span class="badge" style="border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.10);color:#3730a3">🛡️ Repos Lundi</span>`);
+            }else if(isCuisine && cuisinePlan?.off){
+              statusBadges.push(`<span class="badge" style="border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.10);color:#92400e">📋 Repos Planning</span>`);
             }else{
               statusBadges.push(`<span class="badge">En attente</span>`);
             }
@@ -1055,6 +1260,20 @@
                     value="${displayHP}"
                     ${canHP ? "" : "disabled"}
                     onchange="upd('${id}','hP',this.value)">
+                  ${cuisinePlan ? `
+                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span class="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5">
+                        📋 Plan: <strong>${cuisinePlan.shift}</strong>
+                      </span>
+                      ${canHP && (safeHP !== cuisinePlan.hP || isOff !== cuisinePlan.off) ? `
+                        <button type="button" onclick="applySingleCuisinePlan('${id}', '${selectedDate}')"
+                          title="Appliquer le shift du planning fixe"
+                          class="text-[9px] font-extrabold text-amber-800 hover:bg-amber-100 bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
+                          ⚡ Appliquer
+                        </button>
+                      ` : ''}
+                    </div>
+                  ` : ''}
                   ${canHP && hpHistory.length > 0 ? `
                     <div class="mt-1 flex flex-wrap gap-1 items-center py-0.5">
                       <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Habituels:</span>
@@ -1100,6 +1319,7 @@
     function computeKPIs(){
       const total = EQUIPE.length;
       let punched = 0, off = 0, pending = 0, lateCount = 0, lateMinSum = 0;
+      const selectedDate = document.getElementById('datePicker')?.value;
 
       EQUIPE.forEach(emp => {
         const id = empId(emp);
@@ -1109,7 +1329,12 @@
         const safeHA = normalizeHHMM(d.hA || "");
         const isOff  = d.off === true;
         const hasHA  = !!safeHA;
-        const hasHP  = !!safeHP;
+
+        const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
+        const isCuisine = (emp.poste === "CUISINE");
+        const cuisinePlan = isCuisine ? getCuisinePlanningInfo(id, selectedDate) : null;
+        const effectiveHP = safeHP || (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : ""));
+        const effectiveHasHP = !!effectiveHP;
 
         const handled = isOff || hasHA;
 
@@ -1117,8 +1342,8 @@
         if(isOff) off++;
         if(!handled) pending++;
 
-        if(hasHP && hasHA){
-          const lm = lateMinutes(safeHP, safeHA, id);
+        if(effectiveHasHP && hasHA){
+          const lm = lateMinutes(effectiveHP, safeHA, id, selectedDate);
           if(lm !== null && lm > 0){
             lateCount++;
             lateMinSum += lm;
