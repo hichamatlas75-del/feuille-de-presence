@@ -407,7 +407,7 @@ function render() {
                 <img src="${photoUrl}" alt="${emp.nom} ${emp.prenom}"
                   class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover object-center bg-slate-100 ${photoBorderClass} transition-all"
                   loading="lazy"
-                  onerror="this.onerror=null; this.src='${fallbackAvatar}';" />
+                  onerror="handleImgError(this, '${id}')" />
               </div>
 
               <div class="min-w-0 flex-1">

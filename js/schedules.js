@@ -461,9 +461,24 @@ function getInitialsAvatar(emp) {
   const nom = (emp?.nom || "").trim();
   const prenom = (emp?.prenom || "").trim();
   const initials = `${prenom[0] || ""}${nom[0] || ""}`.toUpperCase() || "GC";
-  const bg = "#0f172a";
-  const fg = "#c5a059";
-  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="${encodeURIComponent(bg)}"/><text x="50" y="57" font-family="Plus Jakarta Sans, sans-serif" font-size="36" font-weight="800" fill="${encodeURIComponent(fg)}" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">`
+    + `<rect width="100" height="100" rx="24" fill="#0f172a"/>`
+    + `<text x="50" y="58" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="800" fill="#c5a059" text-anchor="middle" dominant-baseline="middle">${initials}</text>`
+    + `</svg>`;
+  try {
+    if (typeof btoa === "function") {
+      return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+    }
+  } catch (e) {}
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+function handleImgError(img, empIdStr) {
+  if (!img) return;
+  img.onerror = null;
+  const empList = (typeof EQUIPE !== "undefined" && EQUIPE.length) ? EQUIPE : (typeof DEFAULT_EQUIPE !== "undefined" ? DEFAULT_EQUIPE : []);
+  const emp = empList.find(e => empId(e) === empIdStr);
+  img.src = getInitialsAvatar(emp);
 }
 
 function getCollaboratorPhoto(emp) {
