@@ -1,0 +1,357 @@
+:root {
+  --primary: #0f172a;
+  --muted: #64748b;
+  --accent: #c5a059;
+  --accent-strong: #b8892d;
+  --bg: #f6f6f3;
+  --card: #ffffff;
+  --soft: #eef2f7;
+
+  --shadow: 0 16px 38px rgba(2, 6, 23, 0.10);
+  --shadow2: 0 10px 22px rgba(2, 6, 23, 0.08);
+  --stroke: rgba(2, 6, 23, 0.08);
+  --stroke2: rgba(2, 6, 23, 0.12);
+  --ring: 0 0 0 3px rgba(197, 160, 89, 0.24);
+
+  --ok-bg: rgba(16, 185, 129, 0.14);
+  --ok-bd: rgba(16, 185, 129, 0.42);
+  --ok-tx: #065f46;
+
+  --bad-bg: rgba(239, 68, 68, 0.14);
+  --bad-bd: rgba(239, 68, 68, 0.42);
+  --bad-tx: #7f1d1d;
+
+  --warn-bg: rgba(245, 158, 11, 0.16);
+  --warn-bd: rgba(245, 158, 11, 0.44);
+  --warn-tx: #92400e;
+
+  --pending-bg: rgba(30, 41, 59, 0.06);
+  --pending-bd: rgba(30, 41, 59, 0.14);
+  --pending-tx: rgba(30, 41, 59, 0.70);
+
+  --incomplete-bg: rgba(139, 92, 246, 0.10);
+  --incomplete-bd: rgba(139, 92, 246, 0.30);
+  --incomplete-tx: #4c1d95;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--primary);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+}
+
+.btn {
+  transition: transform 0.08s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn:active {
+  transform: scale(0.985);
+}
+
+input[type="time"],
+input[type="date"],
+input[type="email"],
+input[type="password"] {
+  -webkit-appearance: none;
+  min-height: 48px;
+}
+
+.chip {
+  border: 1px solid var(--stroke2);
+}
+
+.chip.active {
+  border-color: rgba(197, 160, 89, 0.65);
+  background: rgba(197, 160, 89, 0.18);
+  color: #1f2937;
+}
+
+.sectionTitle {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+}
+
+.badge {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke2);
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--pending-tx);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.badge.ok {
+  background: var(--ok-bg);
+  border-color: var(--ok-bd);
+  color: var(--ok-tx);
+}
+
+.badge.warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-bd);
+  color: var(--warn-tx);
+}
+
+.badge.bad {
+  background: var(--bad-bg);
+  border-color: var(--bad-bd);
+  color: var(--bad-tx);
+}
+
+.badge.warn::before {
+  content: "⚠️ ";
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.accentRing:focus {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.toggleWrap {
+  background: rgba(15, 23, 42, 0.035);
+  border: 1px solid var(--stroke2);
+  padding: 10px 12px;
+  border-radius: 18px;
+}
+
+.toggleWrap label span {
+  font-size: 10px !important;
+  color: rgba(30, 41, 59, 0.60) !important;
+  letter-spacing: 0.14em;
+}
+
+.toggleWrap input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 6px;
+}
+
+.shadowSoft {
+  box-shadow: var(--shadow);
+}
+
+.stickyTop {
+  position: static;
+  top: auto;
+  z-index: auto;
+}
+
+.stickyTop.glass {
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.10);
+}
+
+h1 {
+  letter-spacing: 0.06em;
+}
+
+/* ─── Cartes Employés & États ─── */
+.empCard {
+  box-shadow: var(--shadow2);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.25s ease;
+  border: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+.empCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: rgba(197, 160, 89, 0.22);
+}
+
+.empCard .font-extrabold.text-sm {
+  font-size: 16px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.empCard input[type="time"] {
+  min-height: 48px;
+  border: 1px solid rgba(2, 6, 23, 0.10);
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.empCard input[type="time"]:focus {
+  outline: none;
+  box-shadow: var(--ring);
+  border-color: rgba(197, 160, 89, 0.45);
+}
+
+.empCard .mt-4 .grid > div:nth-child(2) input[type="time"] {
+  background: rgba(197, 160, 89, 0.14) !important;
+  border-color: rgba(197, 160, 89, 0.36) !important;
+}
+
+.empCard .mt-4 .grid {
+  position: relative;
+}
+
+.empCard .mt-4 .grid::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: rgba(2, 6, 23, 0.08);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.empCard .mt-4 .grid > div:first-child label::before {
+  content: "⏰ ";
+  font-size: 12px;
+}
+
+.empCard .mt-4 .grid > div:nth-child(2) label::before {
+  content: "📍 ";
+  font-size: 12px;
+}
+
+/* ─── RETARDS : Vignette Orange (Léger ≤ 30 min) & Rouge Saignant (> 30 min) ─── */
+.empCard.late-light {
+  background: linear-gradient(145deg, #fffdf5 0%, #fef3c7 100%) !important;
+  border: 2px solid #f59e0b !important;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.22) !important;
+}
+
+.empCard.late-light:hover {
+  box-shadow: 0 12px 28px rgba(245, 158, 11, 0.32) !important;
+  border-color: #d97706 !important;
+}
+
+.empCard.late-heavy {
+  background: linear-gradient(145deg, #fff1f2 0%, #fee2e2 100%) !important;
+  border: 2.5px solid #dc2626 !important;
+  box-shadow: 0 10px 28px rgba(220, 38, 38, 0.28) !important;
+  animation: alertPulse 3s infinite ease-in-out;
+}
+
+.empCard.late-heavy:hover {
+  box-shadow: 0 14px 32px rgba(220, 38, 38, 0.38) !important;
+}
+
+@keyframes alertPulse {
+  0%, 100% {
+    border-color: #dc2626;
+    box-shadow: 0 10px 28px rgba(220, 38, 38, 0.28);
+  }
+  50% {
+    border-color: #b91c1c;
+    box-shadow: 0 12px 34px rgba(220, 38, 38, 0.44);
+  }
+}
+
+.empCard[data-pending="1"] .badge:not(.ok):not(.warn):not(.bad) {
+  background: var(--pending-bg);
+  border-color: var(--pending-bd);
+  color: var(--pending-tx);
+}
+
+.empCard[data-incomplete="1"] .badge:not(.ok):not(.warn):not(.bad) {
+  background: var(--incomplete-bg);
+  border-color: var(--incomplete-bd);
+  color: var(--incomplete-tx);
+}
+
+section.card > button,
+section.card > div:first-child {
+  background: linear-gradient(180deg, rgba(197, 160, 89, 0.10), rgba(255, 255, 255, 1));
+  border-bottom: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+section.card {
+  box-shadow: var(--shadow2);
+}
+
+section.card + section.card {
+  margin-top: 14px;
+}
+
+section.card .badge {
+  font-size: 10px;
+  padding: 6px 10px;
+}
+
+/* ─── KPIs ─── */
+.kpiCard {
+  box-shadow: var(--shadow2);
+  border-color: rgba(2, 6, 23, 0.06);
+}
+
+.kpiValue {
+  font-size: 1.875rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(30, 41, 59, 0.64);
+}
+
+.kpi-total {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.04), rgba(255, 255, 255, 1));
+}
+
+.kpi-punched {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.10), rgba(255, 255, 255, 1));
+}
+
+.kpi-off {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.10), rgba(255, 255, 255, 1));
+}
+
+.kpi-pending {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.06), rgba(255, 255, 255, 1));
+}
+
+.kpi-late {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.12), rgba(255, 255, 255, 1));
+}
+
+.kpi-latemin {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.18), rgba(255, 255, 255, 1));
+}
+
+.chipBtn {
+  border-radius: 999px;
+  padding: 10px 14px;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(2, 6, 23, 0.05);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(197, 160, 89, 0.55);
+  border-radius: 999px;
+  border: 2px solid rgba(2, 6, 23, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 160, 89, 0.70);
+}
