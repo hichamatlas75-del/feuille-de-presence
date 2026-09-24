@@ -1118,6 +1118,7 @@
             const refPres = database.ref('presences/'+selectedDate+'/'+id);
             const payloadPres = hA ? {
               hA: hA,
+              off: false,
               retard: !!isLate,
               retardMin: (lm || 0),
               timestamp: now,
@@ -1136,7 +1137,7 @@
             schedulePresenceExport(id, name, selectedDate, {
               hP: hP || "",
               hA: hA || "",
-              off: (typeof (latestDataCache[id]?.off) === "boolean" ? latestDataCache[id].off : ""),
+              off: (hA ? false : (typeof (latestDataCache[id]?.off) === "boolean" ? latestDataCache[id].off : "")),
               retard: (hA ? !!isLate : ""),
               retardMin: (hA ? (lm || 0) : "")
             });
@@ -1151,6 +1152,7 @@
           const refPres = database.ref('presences/'+selectedDate+'/'+id);
           const payload = hA ? {
             hA: hA,
+            off: false,
             retard: !!isLate,
             retardMin: (lm || 0),
             timestamp: now,
@@ -1543,7 +1545,7 @@
             ` : (poste === "MENAGE" || poste === "MÉNAGE") ? `
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="text-[10px] font-bold text-sky-800 bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 rounded-full">
-                  🧹 Pas de pointage · Saisie hA manuelle
+                  🧹 Pas de pointage · Créneaux : 07:00 · 12:00 · 14:00 · 15:00
                 </span>
               </div>
             ` : ''}
@@ -1675,41 +1677,68 @@
               </div>
 
               ${isMenage ? `
-                <div class="mt-4 p-3 rounded-2xl bg-sky-50/70 border border-sky-200/80">
-                  <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="mt-4 p-3.5 rounded-2xl bg-sky-50/80 border border-sky-200/90 shadow-sm">
+                  <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
                     <div>
-                      <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-sky-950 block">
-                        🧹 Arrivée réelle (hA) — Saisie Manuelle
-                      </label>
+                      <div class="flex items-center gap-1.5">
+                        <label class="text-[10px] font-black tracking-[0.14em] uppercase text-sky-950 block">
+                          🧹 Pointage Réel (hA) — Créneaux Rapides
+                        </label>
+                      </div>
                       <p class="text-[10px] text-sky-700 font-semibold mt-0.5">
-                        Pas de badgeuse. Saisir l'arrivée ici si présente (repos et congés calculés automatiquement sans hA).
+                        Choisir un créneau au choix ou entrer une heure libre.
                       </p>
                     </div>
-                    ${canHA && safeHA ? `
-                      <button type="button" onclick="upd('${id}','hA','')"
-                        title="Effacer le pointage"
-                        class="text-[10px] font-extrabold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-2 py-1 transition-all active:scale-95 flex items-center gap-1">
-                        ✕ Effacer
-                      </button>
-                    ` : ''}
+                    <div class="flex items-center gap-2">
+                      <span class="text-[11px] font-black ${safeHA ? 'text-sky-900 bg-sky-100 border border-sky-300' : 'text-slate-500 bg-slate-100'} px-2.5 py-0.5 rounded-lg whitespace-nowrap">
+                        ${safeHA ? `✅ Pointé ${safeHA}` : '💤 Repos / Congé auto'}
+                      </span>
+                      ${canHA && safeHA ? `
+                        <button type="button" onclick="upd('${id}','hA','')"
+                          title="Effacer le pointage"
+                          class="text-[10px] font-extrabold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-2 py-1 transition-all active:scale-95 flex items-center gap-1">
+                          ✕ Effacer
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
-                  <div class="flex items-center gap-3">
+
+                  <!-- Boutons créneaux au choix (07:00, 12:00, 14:00, 15:00) -->
+                  <div class="grid grid-cols-4 gap-2 my-2.5">
+                    ${["07:00", "12:00", "14:00", "15:00"].map(creneau => {
+                      const isActive = (safeHA === creneau);
+                      return `
+                        <button type="button"
+                          ${canHA ? `onclick="upd('${id}','hA','${isActive ? '' : creneau}')"` : 'disabled'}
+                          title="${isActive ? 'Désélectionner ce créneau' : `Valider ${creneau}`}"
+                          class="py-2.5 px-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
+                            isActive
+                              ? 'bg-sky-600 text-white ring-2 ring-sky-400 shadow-md font-black'
+                              : 'bg-white hover:bg-sky-100/80 text-sky-950 border border-sky-300 font-extrabold'
+                          }">
+                          <span>${creneau}</span>
+                          ${isActive ? '<span class="text-[10px]">✓</span>' : ''}
+                        </button>
+                      `;
+                    }).join("")}
+                  </div>
+
+                  <!-- Saisie libre personnalisée -->
+                  <div class="flex items-center gap-2 pt-2 border-t border-sky-200/70">
+                    <span class="text-[9px] font-extrabold uppercase tracking-wider text-sky-800 whitespace-nowrap">Autre heure :</span>
                     <div class="flex-1">
                       ${
                         canHA
                         ? `<input type="time" step="60"
-                            class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
-                            style="background: #ffffff; border:1.5px solid rgba(14,165,233,.45); color:#0c4a6e"
+                            class="w-full rounded-xl text-xs font-extrabold px-2.5 py-1.5 accentRing"
+                            style="background: #ffffff; border:1px solid rgba(14,165,233,.45); color:#0c4a6e"
                             value="${safeHA}"
                             placeholder="--:--"
                             onchange="upd('${id}','hA',this.value)">`
-                        : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
+                        : `<div class="w-full bg-slate-100 rounded-xl text-xs font-extrabold px-2.5 py-1.5 text-slate-500 text-center">
                             ${safeHA || "Non renseigné"}
                           </div>`
                       }
-                    </div>
-                    <div class="text-[11px] font-extrabold text-slate-600 whitespace-nowrap">
-                      ${safeHA ? '✅ Présent' : '💤 Repos / Congé auto'}
                     </div>
                   </div>
                 </div>
