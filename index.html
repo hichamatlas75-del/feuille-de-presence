@@ -411,8 +411,23 @@
     let equipeCb = null;
     let appInitialized = false;
 
-    const haExceptionsToday = ["SBAI_HAKIMA", "ABOUARSA_EDDRISSIA"];
+    const haExceptionsToday = ["SBAI_HAKIMA", "ELGORRAMY_ANISSA", "ELGORRAMY_SOUAD", "ABOUARSA_EDDRISSIA"];
     const noLateCalcIds = [];
+
+    function isMenageStaff(empOrId) {
+      if(!empOrId) return false;
+      if(typeof empOrId === "object") {
+        const p = String(empOrId.poste || "").toUpperCase();
+        return p === "MENAGE" || p === "MÉNAGE";
+      }
+      const emp = EQUIPE.find(e => empId(e) === empOrId);
+      if(emp) {
+        const p = String(emp.poste || "").toUpperCase();
+        return p === "MENAGE" || p === "MÉNAGE";
+      }
+      const s = String(empOrId).toUpperCase();
+      return s.includes("SBAI") || s.includes("ELGORRAMY") || s.includes("ABOUARSA");
+    }
 
     const DEFAULT_EQUIPE = [
       {nom:'ALAOUI',     prenom:'LAZIZ',     poste:'SERVICE'},
@@ -797,7 +812,7 @@
     }
 
     function lateMinutes(hP, hA, id = null, date = null){
-      if(id && noLateCalcIds.includes(id)) return null;
+      if(id && (noLateCalcIds.includes(id) || isMenageStaff(id))) return null;
       if(!hA) return null;
       let effectiveHP = hP;
       if(!effectiveHP && id){
@@ -960,6 +975,7 @@
 
     function canEditHA(id, selectedDate){
       if(isGerant()) return true;
+      if(isMenageStaff(id)) return true;
       if(selectedDate !== getMarocDate()) return false;
       return haExceptionsToday.includes(id);
     }
@@ -1524,6 +1540,12 @@
                   📅 Semaine Caisse
                 </button>
               </div>
+            ` : (poste === "MENAGE" || poste === "MÉNAGE") ? `
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] font-bold text-sky-800 bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 rounded-full">
+                  🧹 Pas de pointage · Saisie hA manuelle
+                </span>
+              </div>
             ` : ''}
           </div>
           <div class="flex items-center gap-2">
@@ -1561,6 +1583,7 @@
             const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
             const isCuisine = (emp.poste === "CUISINE");
             const isSoumia = isSoumiaStaff(id);
+            const isMenage = isMenageStaff(emp) || isMenageStaff(id);
             const isCaisseAlt = (isSalilStaff(id) || isBenkhadaStaff(id));
             const cuisinePlan = isCuisine ? getCuisinePlanningInfo(id, selectedDate) : null;
             const soumiaPlan = isSoumia ? getSoumiaPlanning(selectedDate) : null;
@@ -1580,14 +1603,21 @@
             const late = lateMinutes(safeHP, safeHA, id, selectedDate);
             const isLate = (late !== null && late > 0);
 
-            const incomplete =
+            const incomplete = !isMenage && (
               (hasHA && !hasHP) ||
-              (isOff && hasHA);
+              (isOff && hasHA)
+            );
 
             const statusBadges = [];
 
             if(isOff){
               statusBadges.push(`<span class="badge bad">Repos (OUT)</span>`);
+            }else if(isMenage){
+              if(hasHA){
+                statusBadges.push(`<span class="badge ok">🧹 Pointé (${safeHA})</span>`);
+              }else{
+                statusBadges.push(`<span class="badge" style="border-color:rgba(14,165,233,.35);background:rgba(14,165,233,.10);color:#0369a1">🧹 Saisie manuelle</span>`);
+              }
             }else if(hasHA){
               statusBadges.push(`<span class="badge ok">Pointé</span>`);
             }else if(isSoumia && soumiaPlan?.off){
@@ -1604,7 +1634,7 @@
 
             if(isLate) statusBadges.push(`<span class="badge warn">Retard ${fmtLate(late)}</span>`);
             if(incomplete) statusBadges.push(`<span class="badge">Incomplet</span>`);
-            if(haExceptionsToday.includes(id)) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 hA Exception</span>`);
+            if(haExceptionsToday.includes(id) && !isMenage) statusBadges.push(`<span class="badge" style="border-color:rgba(197,160,89,.35);background:rgba(197,160,89,.10);color:#7a5b1d">🌿 hA Exception</span>`);
 
             const canOFF = canEditOFF(selectedDate);
             const canHP = canEditHP(id, selectedDate);
@@ -1644,93 +1674,134 @@
                 </div>
               </div>
 
-              <div class="mt-4 grid grid-cols-2 gap-3">
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 block">Shift prévu (hP)</label>
-                    ${empLastHP && empLastHP !== displayHP && canHP ? `
-                      <button type="button" onclick="upd('${id}','hP','${empLastHP}')"
-                        title="Appliquer le dernier shift utilisé (${empLastHP})"
-                        class="text-[9px] font-extrabold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-md px-1.5 py-0.5 transition-all inline-flex items-center gap-1 active:scale-95">
-                        ⚡ ${empLastHP}
+              ${isMenage ? `
+                <div class="mt-4 p-3 rounded-2xl bg-sky-50/70 border border-sky-200/80">
+                  <div class="flex items-center justify-between gap-3 mb-2">
+                    <div>
+                      <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-sky-950 block">
+                        🧹 Arrivée réelle (hA) — Saisie Manuelle
+                      </label>
+                      <p class="text-[10px] text-sky-700 font-semibold mt-0.5">
+                        Pas de badgeuse. Saisir l'arrivée ici si présente (repos et congés calculés automatiquement sans hA).
+                      </p>
+                    </div>
+                    ${canHA && safeHA ? `
+                      <button type="button" onclick="upd('${id}','hA','')"
+                        title="Effacer le pointage"
+                        class="text-[10px] font-extrabold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-2 py-1 transition-all active:scale-95 flex items-center gap-1">
+                        ✕ Effacer
                       </button>
                     ` : ''}
                   </div>
-                  <input type="time" step="60" list="hpHistoryDatalist"
-                    class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
-                    value="${displayHP}"
-                    ${canHP ? "" : "disabled"}
-                    onchange="upd('${id}','hP',this.value)">
-                  ${soumiaPlan ? `
-                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
-                      <span class="text-[9px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 rounded px-1.5 py-0.5">
-                        💜 ${soumiaPlan.off ? 'Repos Fixe (Mardi)' : 'Shift Unique : 09:00'}
-                      </span>
-                      ${canHP && !soumiaPlan.off && safeHP !== "09:00" ? `
-                        <button type="button" onclick="upd('${id}','hP','09:00')"
-                          title="Appliquer 09:00"
-                          class="text-[9px] font-extrabold text-purple-800 hover:bg-purple-100 bg-purple-50 border border-purple-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
-                          ⚡ 09:00
-                        </button>
-                      ` : ''}
+                  <div class="flex items-center gap-3">
+                    <div class="flex-1">
+                      ${
+                        canHA
+                        ? `<input type="time" step="60"
+                            class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
+                            style="background: #ffffff; border:1.5px solid rgba(14,165,233,.45); color:#0c4a6e"
+                            value="${safeHA}"
+                            placeholder="--:--"
+                            onchange="upd('${id}','hA',this.value)">`
+                        : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
+                            ${safeHA || "Non renseigné"}
+                          </div>`
+                      }
                     </div>
-                  ` : ''}
-                  ${caissePlan ? `
-                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
-                      <span class="text-[9px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200/80 rounded px-1.5 py-0.5">
-                        🔄 Rotation 24h : <strong>${caissePlan.shift}</strong>
-                      </span>
-                      ${canHP && (safeHP !== caissePlan.hP || isOff) ? `
-                        <button type="button" onclick="applySingleCaissePlan('${id}', '${selectedDate}')"
-                          title="Appliquer le shift de rotation (${caissePlan.shift})"
-                          class="text-[9px] font-extrabold text-indigo-800 hover:bg-indigo-100 bg-indigo-50 border border-indigo-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
-                          ⚡ Appliquer
-                        </button>
-                      ` : ''}
+                    <div class="text-[11px] font-extrabold text-slate-600 whitespace-nowrap">
+                      ${safeHA ? '✅ Présent' : '💤 Repos / Congé auto'}
                     </div>
-                  ` : ''}
-                  ${cuisinePlan ? `
-                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
-                      <span class="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5">
-                        📋 Plan: <strong>${cuisinePlan.shift}</strong>
-                      </span>
-                      ${canHP && (safeHP !== cuisinePlan.hP || isOff !== cuisinePlan.off) ? `
-                        <button type="button" onclick="applySingleCuisinePlan('${id}', '${selectedDate}')"
-                          title="Appliquer le shift du planning fixe"
-                          class="text-[9px] font-extrabold text-amber-800 hover:bg-amber-100 bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
-                          ⚡ Appliquer
-                        </button>
-                      ` : ''}
-                    </div>
-                  ` : ''}
-                  ${canHP && hpHistory.length > 0 ? `
-                    <div class="mt-1 flex flex-wrap gap-1 items-center py-0.5">
-                      <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Habituels:</span>
-                      ${hpHistory.map(h => `
-                        <button type="button" onclick="upd('${id}','hP','${h}')"
-                          class="text-[9px] font-bold px-1.5 py-0.5 rounded ${safeHP === h ? 'bg-amber-500 text-white font-extrabold shadow-sm' : 'bg-slate-200/70 text-slate-700 hover:bg-amber-100 hover:text-amber-900'} transition-colors">
-                          ${h}
-                        </button>
-                      `).join('')}
-                    </div>
-                  ` : ''}
+                  </div>
                 </div>
+              ` : `
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 block">Shift prévu (hP)</label>
+                      ${empLastHP && empLastHP !== displayHP && canHP ? `
+                        <button type="button" onclick="upd('${id}','hP','${empLastHP}')"
+                          title="Appliquer le dernier shift utilisé (${empLastHP})"
+                          class="text-[9px] font-extrabold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-md px-1.5 py-0.5 transition-all inline-flex items-center gap-1 active:scale-95">
+                          ⚡ ${empLastHP}
+                        </button>
+                      ` : ''}
+                    </div>
+                    <input type="time" step="60" list="hpHistoryDatalist"
+                      class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
+                      value="${displayHP}"
+                      ${canHP ? "" : "disabled"}
+                      onchange="upd('${id}','hP',this.value)">
+                    ${soumiaPlan ? `
+                      <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[9px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 rounded px-1.5 py-0.5">
+                          💜 ${soumiaPlan.off ? 'Repos Fixe (Mardi)' : 'Shift Unique : 09:00'}
+                        </span>
+                        ${canHP && !soumiaPlan.off && safeHP !== "09:00" ? `
+                          <button type="button" onclick="upd('${id}','hP','09:00')"
+                            title="Appliquer 09:00"
+                            class="text-[9px] font-extrabold text-purple-800 hover:bg-purple-100 bg-purple-50 border border-purple-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
+                            ⚡ 09:00
+                          </button>
+                        ` : ''}
+                      </div>
+                    ` : ''}
+                    ${caissePlan ? `
+                      <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[9px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200/80 rounded px-1.5 py-0.5">
+                          🔄 Rotation 24h : <strong>${caissePlan.shift}</strong>
+                        </span>
+                        ${canHP && (safeHP !== caissePlan.hP || isOff) ? `
+                          <button type="button" onclick="applySingleCaissePlan('${id}', '${selectedDate}')"
+                            title="Appliquer le shift de rotation (${caissePlan.shift})"
+                            class="text-[9px] font-extrabold text-indigo-800 hover:bg-indigo-100 bg-indigo-50 border border-indigo-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
+                            ⚡ Appliquer
+                          </button>
+                        ` : ''}
+                      </div>
+                    ` : ''}
+                    ${cuisinePlan ? `
+                      <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5">
+                          📋 Plan: <strong>${cuisinePlan.shift}</strong>
+                        </span>
+                        ${canHP && (safeHP !== cuisinePlan.hP || isOff !== cuisinePlan.off) ? `
+                          <button type="button" onclick="applySingleCuisinePlan('${id}', '${selectedDate}')"
+                            title="Appliquer le shift du planning fixe"
+                            class="text-[9px] font-extrabold text-amber-800 hover:bg-amber-100 bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
+                            ⚡ Appliquer
+                          </button>
+                        ` : ''}
+                      </div>
+                    ` : ''}
+                    ${canHP && hpHistory.length > 0 ? `
+                      <div class="mt-1 flex flex-wrap gap-1 items-center py-0.5">
+                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Habituels:</span>
+                        ${hpHistory.map(h => `
+                          <button type="button" onclick="upd('${id}','hP','${h}')"
+                            class="text-[9px] font-bold px-1.5 py-0.5 rounded ${safeHP === h ? 'bg-amber-500 text-white font-extrabold shadow-sm' : 'bg-slate-200/70 text-slate-700 hover:bg-amber-100 hover:text-amber-900'} transition-colors">
+                            ${h}
+                          </button>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
 
-                <div>
-                  <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée réelle (hA)</label>
-                  ${
-                    canHA
-                    ? `<input type="time" step="60"
-                        class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
-                        style="background: rgba(197,160,89,.10); border:1px solid rgba(197,160,89,.30)"
-                        value="${safeHA}"
-                        onchange="upd('${id}','hA',this.value)">`
-                    : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
-                        ${safeHA || "--:--"}
-                      </div>`
-                  }
+                  <div>
+                    <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 mb-1 block">Arrivée réelle (hA)</label>
+                    ${
+                      canHA
+                      ? `<input type="time" step="60"
+                          class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing"
+                          style="background: rgba(197,160,89,.10); border:1px solid rgba(197,160,89,.30)"
+                          value="${safeHA}"
+                          onchange="upd('${id}','hA',this.value)">`
+                      : `<div class="w-full bg-slate-100 rounded-xl text-sm font-extrabold px-3 py-2 text-slate-500 text-center">
+                          ${safeHA || "--:--"}
+                        </div>`
+                    }
+                  </div>
                 </div>
-              </div>
+              `}
             `;
 
             body.appendChild(card);
