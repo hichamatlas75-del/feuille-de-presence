@@ -423,7 +423,7 @@
       {nom:'ELKOBBI',    prenom:'MOSTAFA',   poste:'BAR'},
       {nom:'ELGORRAMY',  prenom:'ANISSA',    poste:'MENAGE'},
       {nom:'ELGORRAMY',  prenom:'SOUAD',     poste:'MENAGE'},
-      {nom:'ENNHAILI',   prenom:'SOUMIA',    poste:'ECONOMAT'},
+      {nom:'ENNHAILI',   prenom:'SOUMIA',    poste:'CAISSE'},
       {nom:'FILALI',     prenom:'ABDERAFI',  poste:'BAR'},
       {nom:'HATTAF',     prenom:'MOHAMED',   poste:'SERVICE'},
       {nom:'HIDARA',     prenom:'YOUSSEF',   poste:'SERVICE'},
@@ -443,8 +443,8 @@
     // 0 = Dimanche, 1 = Lundi, 2 = Mardi, 3 = Mercredi, 4 = Jeudi, 5 = Vendredi, 6 = Samedi
     const PLANNING_CUISINE = {
       1: { // Lundi
-        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
-        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        KHAOULA: { hP: "07:00", off: false, shift: "07h — 14h" },
+        FATIMA:  { hP: "07:00", off: false, shift: "07h — 14h" },
         JIHANE:  { hP: "12:00", off: false, shift: "12h — 21h" },
         IMANE:   { hP: "",      off: true,  shift: "OFF" },
         ANAS:    { hP: "14:00", off: false, shift: "14h — F.S" },
@@ -453,25 +453,25 @@
       },
       2: { // Mardi
         KHAOULA: { hP: "",      off: true,  shift: "OFF" },
-        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        FATIMA:  { hP: "07:00", off: false, shift: "07h — 14h" },
         JIHANE:  { hP: "15:00", off: false, shift: "15h — F.S" },
-        IMANE:   { hP: "06:00", off: false, shift: "06h — 14h" },
+        IMANE:   { hP: "07:00", off: false, shift: "07h — 14h" },
         ANAS:    { hP: "12:00", off: false, shift: "12h — 21h" },
         JAWAD:   { hP: "12:00", off: false, shift: "12h — 15h / 17h - F.S" },
         SAAD:    { hP: "",      off: true,  shift: "OFF" }
       },
       3: { // Mercredi
-        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
+        KHAOULA: { hP: "07:00", off: false, shift: "07h — 14h" },
         FATIMA:  { hP: "",      off: true,  shift: "OFF" },
         JIHANE:  { hP: "14:00", off: false, shift: "14h — F.S" },
-        IMANE:   { hP: "06:00", off: false, shift: "06h — 14h" },
+        IMANE:   { hP: "07:00", off: false, shift: "07h — 14h" },
         ANAS:    { hP: "",      off: true,  shift: "OFF" },
         JAWAD:   { hP: "15:00", off: false, shift: "15h — F.S" },
         SAAD:    { hP: "12:00", off: false, shift: "12h — 15h / 17h - F.S" }
       },
       4: { // Jeudi
-        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
-        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        KHAOULA: { hP: "07:00", off: false, shift: "07h — 14h" },
+        FATIMA:  { hP: "07:00", off: false, shift: "07h — 14h" },
         JIHANE:  { hP: "",      off: true,  shift: "OFF" },
         IMANE:   { hP: "12:00", off: false, shift: "12h — 21h" },
         ANAS:    { hP: "15:00", off: false, shift: "15h — F.S" },
@@ -479,8 +479,8 @@
         SAAD:    { hP: "14:00", off: false, shift: "14h — F.S" }
       },
       5: { // Vendredi
-        KHAOULA: { hP: "06:00", off: false, shift: "06h — 14h" },
-        FATIMA:  { hP: "06:00", off: false, shift: "06h — 14h" },
+        KHAOULA: { hP: "07:00", off: false, shift: "07h — 14h" },
+        FATIMA:  { hP: "07:00", off: false, shift: "07h — 14h" },
         JIHANE:  { hP: "12:00", off: false, shift: "12h — 15h / 17h - F.S" },
         IMANE:   { hP: "12:00", off: false, shift: "12h — 21h" },
         ANAS:    { hP: "13:00", off: false, shift: "13h — F.S" },
@@ -488,8 +488,8 @@
         SAAD:    { hP: "15:00", off: false, shift: "15h — F.S" }
       },
       6: { // Samedi
-        KHAOULA: { hP: "06:00", off: false, shift: "06h — 15h" },
-        FATIMA:  { hP: "06:00", off: false, shift: "06h — 15h" },
+        KHAOULA: { hP: "07:00", off: false, shift: "07h — 15h" },
+        FATIMA:  { hP: "07:00", off: false, shift: "07h — 15h" },
         JIHANE:  { hP: "14:00", off: false, shift: "14h — F.S" },
         IMANE:   { hP: "10:00", off: false, shift: "10h — 18h" },
         ANAS:    { hP: "14:00", off: false, shift: "14h — F.S" },
@@ -497,8 +497,8 @@
         SAAD:    { hP: "13:00", off: false, shift: "13h — F.S" }
       },
       0: { // Dimanche
-        KHAOULA: { hP: "06:00", off: false, shift: "06h — 15h" },
-        FATIMA:  { hP: "06:00", off: false, shift: "06h — 15h" },
+        KHAOULA: { hP: "07:00", off: false, shift: "07h — 15h" },
+        FATIMA:  { hP: "07:00", off: false, shift: "07h — 15h" },
         JIHANE:  { hP: "14:00", off: false, shift: "14h — F.S" },
         IMANE:   { hP: "10:00", off: false, shift: "10h — 18h" },
         ANAS:    { hP: "14:00", off: false, shift: "14h — F.S" },
@@ -529,6 +529,92 @@
       const dt = new Date(Date.UTC(yy, mm - 1, dd));
       const dayOfWeek = dt.getUTCDay();
       return PLANNING_CUISINE[dayOfWeek]?.[memberKey] || null;
+    }
+
+    // ─── PLANNING FIXE SOUMIA (CAISSE) ───
+    // HP unique de 09:00 chaque jour sauf Mardi jour OFF
+    function isSoumiaStaff(idOrName) {
+      if(!idOrName) return false;
+      const s = String(idOrName).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return s.includes("SOUMIA") || s.includes("NHAILI") || s.includes("NHAJLI") || s.includes("ENNHAILI");
+    }
+
+    function getSoumiaPlanning(dateISO) {
+      if(!dateISO) return null;
+      const [yy, mm, dd] = String(dateISO).split('-').map(Number);
+      if(!yy || !mm || !dd) return null;
+      const dt = new Date(Date.UTC(yy, mm - 1, dd));
+      const dayOfWeek = dt.getUTCDay(); // 0: Dim, 1: Lun, 2: Mar, 3: Mer, 4: Jeu, 5: Ven, 6: Sam
+      if(dayOfWeek === 2) {
+        return { off: true, hP: null, shift: "OFF" };
+      }
+      return { off: false, hP: "09:00", shift: "09:00" };
+    }
+
+    // ─── PLANNING GOOGLE SHEETS (BAR & SERVICE) ───
+    const BAR_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mfwB4zNHS79YsNH4vTMUGOdWeQwC3htMgPtDWsrMbWg/gviz/tq?tqx=out:csv&gid=294813093";
+    const SERVICE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1aKrmu7Hdf1tb4_0QFCGC6VYjUVlRKeDJYLYs9qIM6Aw/gviz/tq?tqx=out:csv&gid=0";
+
+    // Shifts configurés : Matin 07:00 / Soir 14:30
+    const SHIFT_H_MATIN = "07:00";
+    const SHIFT_H_SOIR  = "14:30";
+
+    function parseSheetCsvLine(line) {
+      const out = []; let cur = ""; let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { if (inQ && line[i+1]==='"') { cur+='"'; i++; } else inQ=!inQ; continue; }
+        if (ch === ',' && !inQ) { out.push(cur.trim()); cur=""; continue; }
+        cur += ch;
+      }
+      out.push(cur.trim());
+      return out;
+    }
+
+    function parseSheetDateLabel(label) {
+      if (!label) return null;
+      let s = String(label).toLowerCase().trim();
+      s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      s = s.replace(/\./g, "");
+
+      let m = s.match(/\b(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})\b/);
+      if (m) { const d = new Date(+m[1], +m[2]-1, +m[3]); d.setHours(0,0,0,0); return d; }
+      m = s.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b/);
+      if (m) { const d = new Date(+m[3], +m[2]-1, +m[1]); d.setHours(0,0,0,0); return d; }
+
+      const months = {
+        "janvier":0,"janv":0, "fevrier":1,"fev":1, "mars":2, "mar":2, "avril":3,"avr":3,
+        "mai":4, "juin":5, "juillet":6,"juil":6, "aout":7, "septembre":8,"sept":8,
+        "octobre":9,"oct":9, "novembre":10,"nov":10, "decembre":11,"dec":11
+      };
+
+      m = s.match(/\b(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?/);
+      if (m) {
+        const day = +m[1];
+        const monthName = m[2];
+        const year = m[3] ? +m[3] : new Date().getFullYear();
+        if (months.hasOwnProperty(monthName)) {
+          const d = new Date(year, months[monthName], day);
+          d.setHours(0,0,0,0);
+          return d;
+        }
+      }
+      return null;
+    }
+
+    function isStaffInSheetShift(shiftStr, emp) {
+      if(!shiftStr || !shiftStr.trim() || shiftStr === "-" || shiftStr.includes("— Repos —")) return false;
+      const s = shiftStr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const nom = String(emp.nom || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const prenom = String(emp.prenom || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      if(prenom && prenom.length >= 3 && s.includes(prenom)) return true;
+      if(nom && nom.length >= 3 && s.includes(nom)) return true;
+
+      if((prenom === "mostafa" || nom === "elkobbi") && (s.includes("mostafa") || s.includes("mustapha") || s.includes("mosatafe"))) return true;
+      if((prenom === "zakariae" || nom === "kafouni") && (s.includes("zakaria") || s.includes("zakariae"))) return true;
+      if((prenom === "anas" || nom === "bourahma") && (s.includes("anass") || s.includes("anas"))) return true;
+      return false;
     }
 
     let hpHistory = [];
@@ -636,7 +722,11 @@
       let effectiveHP = hP;
       if(!effectiveHP && id){
         const emp = EQUIPE.find(x => empId(x) === id);
-        if(emp && (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ")) {
+        if(isSoumiaStaff(id)) {
+          const selectedDate = date || document.getElementById('datePicker')?.value;
+          const plan = getSoumiaPlanning(selectedDate);
+          if(plan && !plan.off && plan.hP) effectiveHP = plan.hP;
+        } else if(emp && (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ")) {
           effectiveHP = "09:00";
         } else if(emp && emp.poste === "CUISINE") {
           const selectedDate = date || document.getElementById('datePicker')?.value;
@@ -1085,6 +1175,88 @@
       }
     }
 
+    async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
+      if(!canEditHP("", dateISO)) {
+        alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
+        return;
+      }
+      const members = EQUIPE.filter(e => e.poste === poste);
+      if(!members.length) {
+        alert(`Aucun membre trouvé pour le poste ${poste}.`);
+        return;
+      }
+
+      uiExportMsg(`Lecture Sheet ${poste}…`, true);
+
+      try {
+        const resp = await fetch(sheetUrl, { cache: "no-store" });
+        const text = await resp.text();
+        const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+
+        const [yy, mm, dd] = dateISO.split('-').map(Number);
+        const targetDate = new Date(yy, mm - 1, dd);
+        targetDate.setHours(0,0,0,0);
+
+        let matchingRow = null;
+        for(let i = 1; i < rows.length; i++) {
+          const c = parseSheetCsvLine(rows[i]);
+          if(!c[0] || c[0].toUpperCase().includes("DATE")) continue;
+          const rowDate = parseSheetDateLabel(c[0]);
+          if(rowDate && rowDate.getFullYear() === targetDate.getFullYear() &&
+             rowDate.getMonth() === targetDate.getMonth() &&
+             rowDate.getDate() === targetDate.getDate()) {
+            matchingRow = c;
+            break;
+          }
+        }
+
+        if(!matchingRow) {
+          alert(`Date ${dateISO} introuvable dans le Google Sheet ${poste}.`);
+          uiExportMsg(`Date absente du Sheet ⚠️`, false);
+          return;
+        }
+
+        const matinStr = matchingRow[1] || "";
+        const soirStr  = matchingRow[2] || "";
+
+        const updates = {};
+        members.forEach(emp => {
+          const id = empId(emp);
+          const inMatin = isStaffInSheetShift(matinStr, emp);
+          const inSoir  = isStaffInSheetShift(soirStr, emp);
+
+          if(inMatin && inSoir) {
+            updates[`presences/${dateISO}/${id}/hP`] = SHIFT_H_MATIN; // 07:00
+            updates[`presences/${dateISO}/${id}/off`] = false;
+          } else if(inMatin) {
+            updates[`presences/${dateISO}/${id}/hP`] = SHIFT_H_MATIN; // 07:00
+            updates[`presences/${dateISO}/${id}/off`] = false;
+          } else if(inSoir) {
+            updates[`presences/${dateISO}/${id}/hP`] = SHIFT_H_SOIR;  // 14:30
+            updates[`presences/${dateISO}/${id}/off`] = false;
+          } else {
+            updates[`presences/${dateISO}/${id}/off`] = true;
+            updates[`presences/${dateISO}/${id}/hP`] = null;
+          }
+        });
+
+        await database.ref().update(updates);
+        uiExportMsg(`Planning ${poste} appliqué (${dateISO}) ✅`, true);
+      } catch(e) {
+        console.error(`Erreur application planning ${poste}:`, e);
+        alert(`Erreur réseau lors de la lecture du Google Sheet ${poste}.`);
+        uiExportMsg(`Erreur Sheet ${poste} ❌`, false);
+      }
+    }
+
+    async function applyBarPlanningForDate(dateISO) {
+      return applySheetPlanningForPoste("BAR", BAR_SHEET_URL, dateISO);
+    }
+
+    async function applyServicePlanningForDate(dateISO) {
+      return applySheetPlanningForPoste("SERVICE", SERVICE_SHEET_URL, dateISO);
+    }
+
     function render(){
       const selectedDate = document.getElementById('datePicker').value;
       const list = document.getElementById('staffList');
@@ -1131,6 +1303,22 @@
                   📅 Semaine Cuisine
                 </button>
               </div>
+            ` : poste === "BAR" ? `
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" onclick="event.stopPropagation(); applyBarPlanningForDate(document.getElementById('datePicker').value)"
+                  title="Remplir les HP (07:00 / 14:30) et OFF du Bar depuis Google Sheets"
+                  class="text-[10px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+                  ⚡ Remplir Bar (Sheet)
+                </button>
+              </div>
+            ` : poste === "SERVICE" ? `
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" onclick="event.stopPropagation(); applyServicePlanningForDate(document.getElementById('datePicker').value)"
+                  title="Remplir les HP (07:00 / 14:30) et OFF du Service depuis Google Sheets"
+                  class="text-[10px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+                  ⚡ Remplir Service (Sheet)
+                </button>
+              </div>
             ` : ''}
           </div>
           <div class="flex items-center gap-2">
@@ -1167,15 +1355,17 @@
 
             const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
             const isCuisine = (emp.poste === "CUISINE");
+            const isSoumia = isSoumiaStaff(id);
             const cuisinePlan = isCuisine ? getCuisinePlanningInfo(id, selectedDate) : null;
+            const soumiaPlan = isSoumia ? getSoumiaPlanning(selectedDate) : null;
             const [yy, mm, ddNum] = selectedDate.split('-').map(Number);
             const dt = new Date(Date.UTC(yy, mm - 1, ddNum));
             const isMonday = (dt.getUTCDay() === 1);
 
-            const displayHP = safeHP || (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : ""));
-            const effectiveHP = safeHP || (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : ""));
+            const displayHP = safeHP || (soumiaPlan && !soumiaPlan.off ? soumiaPlan.hP : (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : "")));
+            const effectiveHP = safeHP || (soumiaPlan && !soumiaPlan.off ? soumiaPlan.hP : (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : "")));
 
-            const hasHP = !!safeHP || (isSecurite && !!effectiveHP) || (isCuisine && !!cuisinePlan && !cuisinePlan.off);
+            const hasHP = !!safeHP || (isSoumia && !!soumiaPlan && !soumiaPlan.off) || (isSecurite && !!effectiveHP) || (isCuisine && !!cuisinePlan && !cuisinePlan.off);
             const hasHA = !!safeHA;
 
             const handled = isOff || hasHA;
@@ -1193,6 +1383,8 @@
               statusBadges.push(`<span class="badge bad">Repos (OUT)</span>`);
             }else if(hasHA){
               statusBadges.push(`<span class="badge ok">Pointé</span>`);
+            }else if(isSoumia && soumiaPlan?.off){
+              statusBadges.push(`<span class="badge" style="border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.10);color:#6b21a8">💜 Repos Mardi</span>`);
             }else if(isSecurite && isMonday){
               statusBadges.push(`<span class="badge" style="border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.10);color:#3730a3">🛡️ Repos Lundi</span>`);
             }else if(isCuisine && cuisinePlan?.off){
@@ -1260,6 +1452,20 @@
                     value="${displayHP}"
                     ${canHP ? "" : "disabled"}
                     onchange="upd('${id}','hP',this.value)">
+                  ${soumiaPlan ? `
+                    <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span class="text-[9px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 rounded px-1.5 py-0.5">
+                        💜 ${soumiaPlan.off ? 'Repos Fixe (Mardi)' : 'Shift Unique : 09:00'}
+                      </span>
+                      ${canHP && !soumiaPlan.off && safeHP !== "09:00" ? `
+                        <button type="button" onclick="upd('${id}','hP','09:00')"
+                          title="Appliquer 09:00"
+                          class="text-[9px] font-extrabold text-purple-800 hover:bg-purple-100 bg-purple-50 border border-purple-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
+                          ⚡ 09:00
+                        </button>
+                      ` : ''}
+                    </div>
+                  ` : ''}
                   ${cuisinePlan ? `
                     <div class="mt-1 flex items-center gap-1.5 flex-wrap">
                       <span class="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5">
@@ -1332,8 +1538,10 @@
 
         const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
         const isCuisine = (emp.poste === "CUISINE");
+        const isSoumia = isSoumiaStaff(id);
         const cuisinePlan = isCuisine ? getCuisinePlanningInfo(id, selectedDate) : null;
-        const effectiveHP = safeHP || (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : ""));
+        const soumiaPlan = isSoumia ? getSoumiaPlanning(selectedDate) : null;
+        const effectiveHP = safeHP || (soumiaPlan && !soumiaPlan.off ? soumiaPlan.hP : (isSecurite ? "09:00" : (cuisinePlan && !cuisinePlan.off ? cuisinePlan.hP : "")));
         const effectiveHasHP = !!effectiveHP;
 
         const handled = isOff || hasHA;
