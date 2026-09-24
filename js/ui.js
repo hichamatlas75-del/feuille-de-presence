@@ -350,12 +350,22 @@ function render() {
         const card = document.createElement('div');
 
         // Application de la couleur de vignette demandée :
-        // Orange pour retard léger (<=30min), Rouge saignant pour retard >30min
+        // - Pointé à l'heure : Fond vert clair (.on-time)
+        // - Non pointé (en attente) : Fond blanc (.not-punched)
+        // - Retard léger (<= 30 min) : Fond orange (.late-light)
+        // - Retard saignant (> 30 min) : Fond rouge alerte (.late-heavy)
+        // - Repos : (.emp-off)
         let cardClasses = "card rounded-2xl p-4 empCard";
-        if (sched.isLateHeavy) {
+        if (sched.isOff) {
+          cardClasses += " emp-off";
+        } else if (sched.isLateHeavy) {
           cardClasses += " late-heavy";
         } else if (sched.isLateLight) {
           cardClasses += " late-light";
+        } else if (sched.hasHA) {
+          cardClasses += " on-time";
+        } else {
+          cardClasses += " not-punched";
         }
         card.className = cardClasses;
 
@@ -377,7 +387,7 @@ function render() {
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="font-extrabold text-sm tracking-tight ${sched.isLateHeavy ? 'text-red-950 font-black' : 'text-slate-900'} truncate">
+              <div class="font-extrabold text-sm tracking-tight ${sched.isLateHeavy ? 'text-red-950 font-black' : sched.hasHA && !sched.isLate ? 'text-emerald-950' : 'text-slate-900'} truncate">
                 ${emp.nom} ${emp.prenom}
               </div>
               <div class="mt-2 flex gap-2 flex-wrap">
@@ -385,7 +395,11 @@ function render() {
               </div>
             </div>
 
-            <div class="toggleWrap rounded-2xl p-2 flex gap-2 ${sched.isLateHeavy ? 'border-red-300 bg-red-100/50' : sched.isLateLight ? 'border-amber-300 bg-amber-100/50' : ''}">
+            <div class="toggleWrap rounded-2xl p-2 flex gap-2 ${
+              sched.isLateHeavy ? 'border-red-300 bg-red-100/50' :
+              sched.isLateLight ? 'border-amber-300 bg-amber-100/50' :
+              sched.hasHA && !sched.isOff ? 'border-emerald-200 bg-emerald-100/50' : ''
+            }">
               <label class="flex flex-col items-center px-2">
                 <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
                 <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
