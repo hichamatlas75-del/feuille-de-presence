@@ -415,6 +415,7 @@
     const noLateCalcIds = ["BOUCHNAK_NAOUAL"];
 
     const DEFAULT_EQUIPE = [
+      {nom:'ALAOUI',     prenom:'LAZIZ',     poste:'SERVICE'},
       {nom:'BELQASSE',   prenom:'KHAOULA',   poste:'CUISINE'},
       {nom:'BENKHADA',   prenom:'ABDESLAM',  poste:'CAISSE'},
       {nom:'BOUCHNAK',   prenom:'NAOUAL',    poste:'CUISINE'},
@@ -430,6 +431,7 @@
       {nom:'IDRISSI',    prenom:'SAAD',      poste:'CUISINE'},
       {nom:'KAFOUNI',    prenom:'ZAKARIAE',  poste:'SERVICE'},
       {nom:'KHALOUQ',    prenom:'RACHID',    poste:'BAR'},
+      {nom:'KTAMI',      prenom:'EL MOKHTAR',poste:'SERVICE'},
       {nom:'LEMSSIEH',   prenom:'JAWAD',     poste:'CUISINE'},
       {nom:'MAJDOUB',    prenom:'JIHANE',    poste:'CUISINE'},
       {nom:'MOHSINE',    prenom:'YOUNESS',   poste:'SERVICE'},
@@ -607,13 +609,41 @@
       const s = shiftStr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const nom = String(emp.nom || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const prenom = String(emp.prenom || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const fullName = `${nom} ${prenom}`;
 
-      if(prenom && prenom.length >= 3 && s.includes(prenom)) return true;
-      if(nom && nom.length >= 3 && s.includes(nom)) return true;
+      // 1. Découpage en mots (ex: "EL MOKHTAR" -> mot "mokhtar" correspond à "mokhtar (ter1)")
+      const words = fullName.split(/[\s_-]+/).filter(w => w.length >= 3 && w !== "el" && w !== "al");
+      for (const w of words) {
+        if (s.includes(w)) return true;
+      }
 
-      if((prenom === "mostafa" || nom === "elkobbi") && (s.includes("mostafa") || s.includes("mustapha") || s.includes("mosatafe"))) return true;
-      if((prenom === "zakariae" || nom === "kafouni") && (s.includes("zakaria") || s.includes("zakariae"))) return true;
-      if((prenom === "anas" || nom === "bourahma") && (s.includes("anass") || s.includes("anas"))) return true;
+      // 2. Correspondances spécifiques pour le personnel Grey Corner
+      // ALAOUI LAZIZ <-> "aziz" / "laziz"
+      if ((fullName.includes("laziz") || fullName.includes("alaoui") || fullName.includes("aziz")) && (s.includes("aziz") || s.includes("laziz"))) {
+        return true;
+      }
+
+      // KTAMI EL MOKHTAR <-> "mokhtar"
+      if ((fullName.includes("mokhtar") || fullName.includes("ktami")) && s.includes("mokhtar")) {
+        return true;
+      }
+
+      // KAFOUNI ZAKARIAE <-> "zakaria" / "zakariae"
+      if ((fullName.includes("zakaria") || fullName.includes("kafouni")) && (s.includes("zakaria") || s.includes("zakariae"))) {
+        return true;
+      }
+
+      // ELKOBBI MOSTAFA <-> "mostafa" / "mustapha" / "mosatafe"
+      if ((fullName.includes("mostafa") || fullName.includes("mustapha") || fullName.includes("elkobbi")) &&
+          (s.includes("mostafa") || s.includes("mustapha") || s.includes("mosatafe"))) {
+        return true;
+      }
+
+      // BOURAHMA ANAS <-> "anas" / "anass"
+      if ((fullName.includes("anas") || fullName.includes("bourahma")) && (s.includes("anas") || s.includes("anass"))) {
+        return true;
+      }
+
       return false;
     }
 
