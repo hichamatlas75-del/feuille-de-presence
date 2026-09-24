@@ -389,3 +389,119 @@ function fmtLate(min){
   if(min <= 0) return "À l'heure";
   return `+${min} min`;
 }
+
+// ─── GESTION DES PHOTOS DES COLLABORATEURS ───
+const PHOTO_MAP = {
+  "ALAOUI_LAZIZ": "images/HAMID_ALAOUI_ABDELAZIZ.jpg",
+  "BELQASSE_KHAOULA": "images/BELQASIM_KHAOULA.jpg",
+  "BENKHADA_ABDESLAM": "images/BENKHADA_ABDESSLAM.jpg",
+  "BOUCHNAK_NAOUAL": "images/BOUCHNAK_NAOUAL.jpg",
+  "BOURAHMA_ANAS": "images/BOURAHMA_ANAS.jpg",
+  "CHKAIRI_YOUSSEF": "images/CHKAIRI_YOUSSEF.jpg",
+  "ELKOBBI_MOSTAFA": "images/EL_KOBBI_MOSTAFA.jpg",
+  "EL_KOBBI_MOSTAFA": "images/EL_KOBBI_MOSTAFA.jpg",
+  "ELGORRAMY_ANISSA": "images/ELGORRAMY_SOUAD.jpg",
+  "ELGORRAMY_SOUAD": "images/ELGORRAMY_SOUAD.jpg",
+  "ENNHAILI_SOUMIA": "images/EN-NHAILI_SOUMIA.jpg",
+  "EN_NHAILI_SOUMIA": "images/EN-NHAILI_SOUMIA.jpg",
+  "HATTAF_MOHAMED": "images/HATTAF_MOHAMMED.jpg",
+  "HIDARA_YOUSSEF": "images/HIDARA-LACHKAR_YOUSSEF.jpg",
+  "IDRISSI_SAAD": "images/IDRISSI_OUDGHRI_SAAD.jpg",
+  "KAFOUNI_ZAKARIAE": "images/KAFOUNI_ZAKARIAE.jpg",
+  "KHALOUQ_RACHID": "images/KHALOUQ_RACHID.jpg",
+  "KTAMI_EL_MOKHTAR": "images/Mokhtar.jpg",
+  "LEMSSIEH_JAWAD": "images/LAMSSIAH_JAOUAD.jpg",
+  "MAJDOUB_JIHANE": "images/MAJDOUB_JIHANE.jpg",
+  "MOHSINE_YOUNESS": "images/MOHSSINE_YOUNESS.jpg",
+  "MOUJAHID_IMANE": "images/MOUJAHID_IMANE.jpg",
+  "SALIL_HOUDA": "images/SALIL_HOUDA.jpg",
+  "SBAI_HAKIMA": "images/SBAI_HAKIMA.jpg",
+  "ZAIR_FATIMA": "images/ZAIR_FATIMA.jpg",
+  "QUASSIR_HICHAM": "images/QUASSIR_HICHAM.jpg",
+  "EL_MOBARAKI_MOHAMED": "images/EL_MOBARAKI_MOHAMED.jpg",
+  "JIRA_MOHAMED": "images/JIRA_MOHAMED.jpg",
+  "BAJJOU": "images/BAJJOU.jpeg",
+  "WALID": "images/WALID.jpg",
+  "FOUZIA": "images/FOUZIA.jpg"
+};
+
+const KNOWN_IMAGE_FILES = [
+  "BAJJOU.jpeg",
+  "BELQASIM_KHAOULA.jpg",
+  "BENKHADA_ABDESSLAM.jpg",
+  "BOUCHNAK_NAOUAL.jpg",
+  "BOURAHMA_ANAS.jpg",
+  "CHKAIRI_YOUSSEF.jpg",
+  "EL_KOBBI_MOSTAFA.jpg",
+  "EL_MOBARAKI_MOHAMED.jpg",
+  "ELGORRAMY_SOUAD.jpg",
+  "EN-NHAILI_SOUMIA.jpg",
+  "FOUZIA.jpg",
+  "FOUZIA6ZHAR.jpg",
+  "HAMID_ALAOUI_ABDELAZIZ.jpg",
+  "HATTAF_MOHAMMED.jpg",
+  "HIDARA-LACHKAR_YOUSSEF.jpg",
+  "IDRISSI_OUDGHRI_SAAD.jpg",
+  "JIRA_MOHAMED.jpg",
+  "KAFOUNI_ZAKARIAE.jpg",
+  "KHALOUQ_RACHID.jpg",
+  "LAMSSIAH_JAOUAD.jpg",
+  "MAJDOUB_JIHANE.jpg",
+  "MOHSSINE_YOUNESS.jpg",
+  "Mokhtar.jpg",
+  "MOUJAHID_IMANE.jpg",
+  "QUASSIR_HICHAM.jpg",
+  "SALIL_HOUDA.jpg",
+  "SBAI_HAKIMA.jpg",
+  "WALID.jpg",
+  "ZAIR_FATIMA.jpg"
+];
+
+function getInitialsAvatar(emp) {
+  const nom = (emp?.nom || "").trim();
+  const prenom = (emp?.prenom || "").trim();
+  const initials = `${prenom[0] || ""}${nom[0] || ""}`.toUpperCase() || "GC";
+  const bg = "#0f172a";
+  const fg = "#c5a059";
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="${encodeURIComponent(bg)}"/><text x="50" y="57" font-family="Plus Jakarta Sans, sans-serif" font-size="36" font-weight="800" fill="${encodeURIComponent(fg)}" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+}
+
+function getCollaboratorPhoto(emp) {
+  if (!emp) return getInitialsAvatar(null);
+  const id = empId(emp);
+
+  // 1. Recherche dans le dictionnaire direct
+  if (PHOTO_MAP[id]) return PHOTO_MAP[id];
+
+  // 2. Recherche par variantes de clés
+  const cleanNom = String(emp.nom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const cleanPrenom = String(emp.prenom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+  for (const [k, url] of Object.entries(PHOTO_MAP)) {
+    if (cleanNom && cleanPrenom && k.includes(cleanNom) && k.includes(cleanPrenom)) return url;
+  }
+
+  // 3. Recherche floue dans les fichiers connus
+  const words = `${cleanNom} ${cleanPrenom}`.split(/[\s_-]+/).filter(w => w.length >= 3 && w !== "EL" && w !== "AL");
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const file of KNOWN_IMAGE_FILES) {
+    const fileNorm = file.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    let score = 0;
+    for (const w of words) {
+      if (fileNorm.includes(w)) score += 2;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = file;
+    }
+  }
+
+  if (bestMatch && bestScore >= 2) {
+    return `images/${bestMatch}`;
+  }
+
+  // 4. Fallback vers avatar avec initiales
+  return getInitialsAvatar(emp);
+}

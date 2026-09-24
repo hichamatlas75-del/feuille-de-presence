@@ -384,14 +384,39 @@ function render() {
           ...(empLastHP ? [empLastHP] : [])
         ])).filter(Boolean).sort();
 
+        // Photo du collaborateur et fallback
+        const photoUrl = getCollaboratorPhoto(emp);
+        const fallbackAvatar = getInitialsAvatar(emp);
+
+        let photoBorderClass = "border border-slate-200 shadow-sm";
+        if (sched.isOff) {
+          photoBorderClass = "border border-slate-300 opacity-60 grayscale";
+        } else if (sched.isLateHeavy) {
+          photoBorderClass = "border-2 border-red-500 shadow-md ring-2 ring-red-300/80";
+        } else if (sched.isLateLight) {
+          photoBorderClass = "border-2 border-amber-500 shadow-md ring-2 ring-amber-300/80";
+        } else if (sched.hasHA) {
+          photoBorderClass = "border-2 border-emerald-500 shadow-md ring-2 ring-emerald-300/80";
+        }
+
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <div class="font-extrabold text-sm tracking-tight ${sched.isLateHeavy ? 'text-red-950 font-black' : sched.hasHA && !sched.isLate ? 'text-emerald-950' : 'text-slate-900'} truncate">
-                ${emp.nom} ${emp.prenom}
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <!-- Photo du Collaborateur -->
+              <div class="relative flex-shrink-0">
+                <img src="${photoUrl}" alt="${emp.nom} ${emp.prenom}"
+                  class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover object-center bg-slate-100 ${photoBorderClass} transition-all"
+                  loading="lazy"
+                  onerror="this.onerror=null; this.src='${fallbackAvatar}';" />
               </div>
-              <div class="mt-2 flex gap-2 flex-wrap">
-                ${statusBadges.join("")}
+
+              <div class="min-w-0 flex-1">
+                <div class="font-extrabold text-sm sm:text-base tracking-tight ${sched.isLateHeavy ? 'text-red-950 font-black' : sched.hasHA && !sched.isLate ? 'text-emerald-950' : 'text-slate-900'} truncate">
+                  ${emp.nom} ${emp.prenom}
+                </div>
+                <div class="mt-1 flex gap-1.5 flex-wrap">
+                  ${statusBadges.join("")}
+                </div>
               </div>
             </div>
 
