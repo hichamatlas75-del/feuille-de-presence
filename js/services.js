@@ -539,13 +539,14 @@ async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
     const soirStr  = matchingRow[2] || "";
 
     const updates = {};
+    const morningHour = (typeof getShiftHMatin === "function") ? getShiftHMatin(dateISO) : (dateISO >= "2026-09-28" ? "06:45" : SHIFT_H_MATIN);
     members.forEach(emp => {
       const id = empId(emp);
       const inMatin = isStaffInSheetShift(matinStr, emp);
       const inSoir  = isStaffInSheetShift(soirStr, emp);
 
       if (inMatin || inSoir) {
-        updates[`presences/${dateISO}/${id}/hP`] = (inMatin ? SHIFT_H_MATIN : SHIFT_H_SOIR);
+        updates[`presences/${dateISO}/${id}/hP`] = (inMatin ? morningHour : SHIFT_H_SOIR);
         updates[`presences/${dateISO}/${id}/off`] = false;
       } else {
         updates[`presences/${dateISO}/${id}/off`] = true;

@@ -238,7 +238,7 @@ function render() {
         ` : poste === "BAR" ? `
           <div class="flex items-center gap-1.5 flex-wrap">
             <button type="button" onclick="event.stopPropagation(); applyBarPlanningForDate(document.getElementById('datePicker').value)"
-              title="Remplir les HP (07:00 / 14:30) et OFF du Bar depuis Google Sheets"
+              title="Remplir les HP (06:45 ou 07:00 / 14:30) et OFF du Bar depuis Google Sheets"
               class="text-[10px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
               ⚡ Remplir Bar (Sheet)
             </button>
@@ -246,7 +246,7 @@ function render() {
         ` : poste === "SERVICE" ? `
           <div class="flex items-center gap-1.5 flex-wrap">
             <button type="button" onclick="event.stopPropagation(); applyServicePlanningForDate(document.getElementById('datePicker').value)"
-              title="Remplir les HP (07:00 / 14:30) et OFF du Service depuis Google Sheets"
+              title="Remplir les HP (06:45 ou 07:00 / 14:30) et OFF du Service depuis Google Sheets"
               class="text-[10px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
               ⚡ Remplir Service (Sheet)
             </button>
@@ -380,7 +380,7 @@ function render() {
 
         // Sélection ciblée des heures habituelles (évite l'explosion de 30 boutons)
         const curatedQuickHours = Array.from(new Set([
-          "07:00", "07:30", "09:00", "12:00", "14:00", "14:30", "15:00",
+          "06:45", "07:00", "07:30", "09:00", "12:00", "14:00", "14:30", "15:00",
           ...(empLastHP ? [empLastHP] : [])
         ])).filter(Boolean).sort();
 

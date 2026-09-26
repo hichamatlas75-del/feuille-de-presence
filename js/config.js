@@ -21,14 +21,23 @@ const BAR_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mfwB4zNHS79YsNH4v
 const SERVICE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1aKrmu7Hdf1tb4_0QFCGC6VYjUVlRKeDJYLYs9qIM6Aw/gviz/tq?tqx=out:csv&gid=0";
 
 const SHIFT_H_MATIN = "07:00";
+const SHIFT_H_MATIN_NEW = "06:45";
+const SHIFT_H_NEW_START_DATE = "2026-09-28";
 const SHIFT_H_SOIR  = "14:30";
+
+function getShiftHMatin(dateISO) {
+  if (dateISO && dateISO >= SHIFT_H_NEW_START_DATE) {
+    return SHIFT_H_MATIN_NEW;
+  }
+  return SHIFT_H_MATIN;
+}
 
 // Collaborateurs autorisés à saisir hA aujourd'hui si équipe
 const haExceptionsToday = ["SBAI_HAKIMA", "ELGORRAMY_ANISSA", "ELGORRAMY_SOUAD", "ABOUARSA_EDDRISSIA"];
 const noLateCalcIds = [];
 
 // Heures habituelles standards de référence
-const defaultHPTimes = ["06:00", "07:00", "07:30", "09:00", "10:00", "12:00", "13:00", "14:00", "14:30", "15:00", "17:00"];
+const defaultHPTimes = ["06:00", "06:45", "07:00", "07:30", "09:00", "10:00", "12:00", "13:00", "14:00", "14:30", "15:00", "17:00"];
 
 const DEFAULT_EQUIPE = [
   { nom: 'ALAOUI',     prenom: 'LAZIZ',     poste: 'SERVICE' },
