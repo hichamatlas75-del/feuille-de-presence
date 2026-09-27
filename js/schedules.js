@@ -326,8 +326,8 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   const hasHA = !!safeHA;
   const hasHP = !!effectiveHP;
   const isLate = (lateMin !== null && lateMin > 0);
-  const isLateLight = (isLate && lateMin <= 30);  // <= 30 min : Orange
-  const isLateHeavy = (isLate && lateMin > 30);   // > 30 min : Rouge saignant
+  const isLateLight = (isLate && lateMin <= 15);  // <= 15 min : Orange (tolérance retard léger)
+  const isLateHeavy = (isLate && lateMin > 15);   // > 15 min : Rouge saignant (retard avéré)
 
   const handled = isOff || hasHA;
   const incomplete = !isMenage && (

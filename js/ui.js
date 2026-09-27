@@ -199,7 +199,9 @@ function showLoginUI() {
 function render() {
   const selectedDate = document.getElementById('datePicker').value || getMarocDate();
   const list = document.getElementById('staffList');
-  list.innerHTML = "";
+  if (!list) return;
+
+  const fragment = document.createDocumentFragment();
 
   if (!EQUIPE.length) {
     list.innerHTML = `
@@ -427,7 +429,6 @@ function render() {
                 <div class="font-extrabold text-sm sm:text-base tracking-tight ${sched.isLateHeavy ? 'text-red-950 font-black' : sched.hasHA && !sched.isLate ? 'text-emerald-950' : 'text-slate-900'} truncate">
                   ${safeName} ${safePrenom}
                 </div>
-                </div>
                 <div class="mt-1 flex gap-1.5 flex-wrap">
                   ${statusBadges.join("")}
                 </div>
@@ -614,9 +615,10 @@ function render() {
 
     section.appendChild(header);
     section.appendChild(body);
-    list.appendChild(section);
+    fragment.appendChild(section);
   });
 
+  list.replaceChildren(fragment);
   computeKPIs();
   applyFilters();
 }

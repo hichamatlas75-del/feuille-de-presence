@@ -26,19 +26,32 @@ function buildQuery(params) {
 }
 
 async function exportToSheet(action, payload) {
-  // SÉCURITÉ : Authentification par token Firebase au lieu d'un secret statique
-  const idToken = await getAuthToken();
-  const params = { action, idToken, timestamp: Date.now(), ...payload };
+  const idToken = (typeof getAuthToken === "function") ? await getAuthToken() : "";
+  const params = {
+    action,
+    secret: (typeof EXPORT_SECRET !== "undefined" ? EXPORT_SECRET : "greycorner2026"),
+    timestamp: Date.now(),
+    ...payload
+  };
+  if (idToken) params.idToken = idToken;
+
   const url = `${EXPORT_URL}?${buildQuery(params)}`;
+  uiExportMsg("Export Google Sheet…", true);
+
   try {
-    const img = new Image();
-    img.onload = () => uiExportMsg("Export Google Sheet ✅", true);
-    img.onerror = () => uiExportMsg("Export Google Sheet ✅", true);
-    img.src = url;
-    uiExportMsg("Export Google Sheet…", true);
-    return true;
+    if (typeof fetch === "function") {
+      await fetch(url, { method: "GET", mode: "no-cors", cache: "no-cache" });
+      uiExportMsg("Export Google Sheet ✅", true);
+      return true;
+    } else {
+      const img = new Image();
+      img.onload = () => uiExportMsg("Export Google Sheet ✅", true);
+      img.onerror = () => uiExportMsg("Export Google Sheet ✅", true);
+      img.src = url;
+      return true;
+    }
   } catch (e) {
-    console.log("EXPORT FAIL:", e);
+    console.error("EXPORT FAIL:", e);
     uiExportMsg("Export Google Sheet ❌", false);
     return false;
   }
@@ -47,7 +60,7 @@ async function exportToSheet(action, payload) {
 function schedulePresenceExport(empKey, name, selectedDate, data) {
   const key = `${selectedDate}__${empKey}`;
   clearTimeout(__exportTimers.get(key));
-  __exportTimers.set(key, setTimeout(() => {
+  __exportTimers.set(key, setTimeout(async () => {
     const safeHP = normalizeHHMM(data.hP);
     const safeHA = normalizeHHMM(data.hA);
 
@@ -170,6 +183,7 @@ async function upd(id, f, v) {
       });
     } catch (e) {
       console.warn("Write blocked:", id, f, e);
+      uiExportMsg("⚠️ Écriture refusée par Firebase", false);
     }
     return;
   }
@@ -200,6 +214,7 @@ async function upd(id, f, v) {
       });
     } catch (e) {
       console.warn("Write blocked:", id, f, e);
+      uiExportMsg("⚠️ Écriture refusée par Firebase", false);
     }
     return;
   }
@@ -288,6 +303,7 @@ async function upd(id, f, v) {
 
     } catch (e) {
       console.warn("hA write blocked:", id, e);
+      uiExportMsg("⚠️ Écriture hA refusée par Firebase", false);
     }
     return;
   }
@@ -296,6 +312,7 @@ async function upd(id, f, v) {
     await database.ref('presences/' + date + '/' + id).update({ [f]: v });
   } catch (e) {
     console.warn("Write blocked:", id, f, e);
+    uiExportMsg("⚠️ Écriture refusée par Firebase", false);
   }
 }
 

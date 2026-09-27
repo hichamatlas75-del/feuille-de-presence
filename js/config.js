@@ -14,8 +14,9 @@ const firebaseConfig = {
 };
 
 const EXPORT_URL = "https://script.google.com/macros/s/AKfycbyZFLn4Z8KHsB60caPMkdAFTXHkJcd_aP_oxP5cI_nDG7kZf5MzFm-U7vYPcNEUD4HY1Q/exec";
-// SÉCURITÉ : Le secret statique "greycorner2026" a été supprimé.
-// L'authentification vers Google Apps Script se fait via le token Firebase ID.
+const EXPORT_SECRET = "greycorner2026";
+
+// Récupération sécurisée du token Firebase ID (pour authentification hybride)
 async function getAuthToken() {
   try {
     const user = firebase.auth().currentUser;
