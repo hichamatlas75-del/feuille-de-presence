@@ -137,25 +137,18 @@ auth.onAuthStateChanged(async (user) => {
     return;
   }
 
+  // Récupération du rôle depuis Firebase /users/{uid}
+  // SÉCURITÉ : Le rôle est exclusivement attribué côté serveur (Firebase RTDB / Custom Claims).
+  // Ne JAMAIS promouvoir automatiquement un utilisateur côté client.
   role = await fetchRole(user.uid);
-  const isMaster = (user.email || "").toLowerCase().includes("hicham");
-  if (!role && isMaster) {
-    role = "gerant";
-    try { await database.ref("users/" + user.uid).set("gerant"); } catch (_) {}
-  }
 
   if (role !== "gerant" && role !== "equipe") {
-    if (isMaster) {
-      role = "gerant";
-      try { await database.ref("users/" + user.uid).set("gerant"); } catch (_) {}
-    } else {
-      await auth.signOut();
-      role = null;
-      showLoginUI();
-      document.getElementById("loginMsg").textContent =
-        "Compte non autorisé (rôle manquant dans /users).";
-      return;
-    }
+    await auth.signOut();
+    role = null;
+    showLoginUI();
+    document.getElementById("loginMsg").textContent =
+      "Compte non autorisé (rôle manquant dans /users).";
+    return;
   }
 
   showLoggedUI();

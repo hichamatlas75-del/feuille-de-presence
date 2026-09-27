@@ -2,6 +2,13 @@
  * Grey Corner • Interface Utilisateur (Rendu, KPIs, Filtrage & Habituels)
  */
 
+// SÉCURITÉ : Fonction d'échappement HTML anti-XSS
+function escapeHtml(str) {
+  if (typeof str !== "string") return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 let role = null;
 let currentFilter = "all";
 let EQUIPE = [];
@@ -221,7 +228,7 @@ function render() {
     header.className = "w-full flex items-center justify-between px-4 py-4 bg-white cursor-pointer select-none";
     header.innerHTML = `
       <div class="flex items-center gap-3 flex-wrap">
-        <div class="sectionTitle text-xs font-extrabold tracking-[0.18em] uppercase text-slate-500">${poste}</div>
+        <div class="sectionTitle text-xs font-extrabold tracking-[0.18em] uppercase text-slate-500">${escapeHtml(poste)}</div>
         ${poste === "CUISINE" ? `
           <div class="flex items-center gap-1.5 flex-wrap">
             <button type="button" onclick="event.stopPropagation(); applyCuisinePlanningForDate(document.getElementById('datePicker').value)"
@@ -399,20 +406,27 @@ function render() {
           photoBorderClass = "border-2 border-emerald-500 shadow-md ring-2 ring-emerald-300/80";
         }
 
+        // SÉCURITÉ : Échapper toutes les valeurs utilisateur avant injection HTML
+        const safeId = escapeHtml(id);
+        const safeName = escapeHtml(emp.nom);
+        const safePrenom = escapeHtml(emp.prenom);
+        const safePhotoUrl = escapeHtml(photoUrl);
+
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0 flex-1">
               <!-- Photo du Collaborateur -->
               <div class="relative flex-shrink-0">
-                <img src="${photoUrl}" alt="${emp.nom} ${emp.prenom}"
+                <img src="${safePhotoUrl}" alt="${safeName} ${safePrenom}"
                   class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover object-center bg-slate-100 ${photoBorderClass} transition-all"
                   loading="lazy"
-                  onerror="handleImgError(this, '${id}')" />
+                  onerror="handleImgError(this, '${safeId}')" />
               </div>
 
               <div class="min-w-0 flex-1">
                 <div class="font-extrabold text-sm sm:text-base tracking-tight ${sched.isLateHeavy ? 'text-red-950 font-black' : sched.hasHA && !sched.isLate ? 'text-emerald-950' : 'text-slate-900'} truncate">
-                  ${emp.nom} ${emp.prenom}
+                  ${safeName} ${safePrenom}
+                </div>
                 </div>
                 <div class="mt-1 flex gap-1.5 flex-wrap">
                   ${statusBadges.join("")}
@@ -429,7 +443,7 @@ function render() {
                 <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
                 <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
                   ${sched.isOff ? "checked" : ""} ${canOFF ? "" : "disabled"}
-                  onchange="upd('${id}','off',this.checked)">
+                  onchange="upd('${safeId}','off',this.checked)">
               </label>
             </div>
           </div>
@@ -452,7 +466,7 @@ function render() {
                     ${sched.safeHA ? `✅ Pointé ${sched.safeHA}` : '💤 Repos / Congé auto'}
                   </span>
                   ${canHA && sched.safeHA ? `
-                    <button type="button" onclick="upd('${id}','hA','')"
+                    <button type="button" onclick="upd('${safeId}','hA','')"
                       title="Effacer le pointage"
                       class="text-[10px] font-extrabold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-2 py-1 transition-all active:scale-95 flex items-center gap-1">
                       ✕ Effacer
@@ -467,7 +481,7 @@ function render() {
                   const isActive = (sched.safeHA === creneau);
                   return `
                     <button type="button"
-                      ${canHA ? `onclick="upd('${id}','hA','${isActive ? '' : creneau}')"` : 'disabled'}
+                      ${canHA ? `onclick="upd('${safeId}','hA','${isActive ? '' : creneau}')"` : 'disabled'}
                       title="${isActive ? 'Désélectionner ce créneau' : `Valider ${creneau}`}"
                       class="py-2.5 px-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
                         isActive
@@ -492,7 +506,7 @@ function render() {
                         style="background: #ffffff; border:1px solid rgba(14,165,233,.45); color:#0c4a6e"
                         value="${sched.safeHA}"
                         placeholder="--:--"
-                        onchange="upd('${id}','hA',this.value)">`
+                        onchange="upd('${safeId}','hA',this.value)">`
                     : `<div class="w-full bg-slate-100 rounded-xl text-xs font-extrabold px-2.5 py-1.5 text-slate-500 text-center">
                         ${sched.safeHA || "Non renseigné"}
                       </div>`
@@ -506,7 +520,7 @@ function render() {
                 <div class="flex items-center justify-between mb-1">
                   <label class="text-[10px] font-extrabold tracking-[0.14em] uppercase text-slate-500 block">Shift prévu (hP)</label>
                   ${empLastHP && empLastHP !== sched.displayHP && canHP ? `
-                    <button type="button" onclick="upd('${id}','hP','${empLastHP}')"
+                    <button type="button" onclick="upd('${safeId}','hP','${empLastHP}')"
                       title="Appliquer le dernier shift utilisé (${empLastHP})"
                       class="text-[9px] font-extrabold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-md px-1.5 py-0.5 transition-all inline-flex items-center gap-1 active:scale-95">
                       ⚡ ${empLastHP}
@@ -517,7 +531,7 @@ function render() {
                   class="w-full bg-[color:var(--soft)] rounded-xl text-sm font-bold px-3 py-2 accentRing"
                   value="${sched.displayHP}"
                   ${canHP ? "" : "disabled"}
-                  onchange="upd('${id}','hP',this.value)">
+                  onchange="upd('${safeId}','hP',this.value)">
                 
                 ${sched.soumiaPlan ? `
                   <div class="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -525,7 +539,7 @@ function render() {
                       💜 ${sched.soumiaPlan.off ? 'Repos Fixe (Mardi)' : 'Shift Unique : 09:00'}
                     </span>
                     ${canHP && !sched.soumiaPlan.off && sched.safeHP !== "09:00" ? `
-                      <button type="button" onclick="upd('${id}','hP','09:00')"
+                      <button type="button" onclick="upd('${safeId}','hP','09:00')"
                         title="Appliquer 09:00"
                         class="text-[9px] font-extrabold text-purple-800 hover:bg-purple-100 bg-purple-50 border border-purple-300 rounded px-1.5 py-0.5 transition-all active:scale-95">
                         ⚡ 09:00
@@ -568,7 +582,7 @@ function render() {
                   <div class="mt-1 flex flex-wrap gap-1 items-center py-0.5">
                     <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Habituels:</span>
                     ${curatedQuickHours.map(h => `
-                      <button type="button" onclick="upd('${id}','hP','${h}')"
+                      <button type="button" onclick="upd('${safeId}','hP','${h}')"
                         class="text-[9px] font-bold px-1.5 py-0.5 rounded ${sched.safeHP === h ? 'bg-amber-500 text-white font-extrabold shadow-sm' : 'bg-slate-200/70 text-slate-700 hover:bg-amber-100 hover:text-amber-900'} transition-colors">
                         ${h}
                       </button>
@@ -585,7 +599,7 @@ function render() {
                       class="w-full rounded-xl text-sm font-extrabold px-3 py-2 accentRing ${sched.isLateHeavy ? 'text-red-900 font-black' : ''}"
                       style="background: ${sched.isLateHeavy ? 'rgba(239,68,68,.15)' : 'rgba(197,160,89,.10)'}; border:1px solid ${sched.isLateHeavy ? 'rgba(239,68,68,.40)' : 'rgba(197,160,89,.30)'}"
                       value="${sched.safeHA}"
-                      onchange="upd('${id}','hA',this.value)">`
+                      onchange="upd('${safeId}','hA',this.value)">`
                   : `<div class="w-full ${sched.isLateHeavy ? 'bg-red-100/70 text-red-900 font-black' : 'bg-slate-100 text-slate-500'} rounded-xl text-sm font-extrabold px-3 py-2 text-center">
                       ${sched.safeHA || "--:--"}
                     </div>`

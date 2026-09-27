@@ -14,7 +14,15 @@ const firebaseConfig = {
 };
 
 const EXPORT_URL = "https://script.google.com/macros/s/AKfycbyZFLn4Z8KHsB60caPMkdAFTXHkJcd_aP_oxP5cI_nDG7kZf5MzFm-U7vYPcNEUD4HY1Q/exec";
-const EXPORT_SECRET = "greycorner2026";
+// SÉCURITÉ : Le secret statique "greycorner2026" a été supprimé.
+// L'authentification vers Google Apps Script se fait via le token Firebase ID.
+async function getAuthToken() {
+  try {
+    const user = firebase.auth().currentUser;
+    if (user) return await user.getIdToken(false);
+  } catch (e) {}
+  return "";
+}
 
 // ─── GOOGLE SHEETS PLANNING (BAR & SERVICE) ───
 const BAR_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mfwB4zNHS79YsNH4vTMUGOdWeQwC3htMgPtDWsrMbWg/gviz/tq?tqx=out:csv&gid=294813093";

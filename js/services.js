@@ -25,8 +25,10 @@ function buildQuery(params) {
     .join("&");
 }
 
-function exportToSheet(action, payload) {
-  const params = { action, secret: EXPORT_SECRET, timestamp: Date.now(), ...payload };
+async function exportToSheet(action, payload) {
+  // SÉCURITÉ : Authentification par token Firebase au lieu d'un secret statique
+  const idToken = await getAuthToken();
+  const params = { action, idToken, timestamp: Date.now(), ...payload };
   const url = `${EXPORT_URL}?${buildQuery(params)}`;
   try {
     const img = new Image();
