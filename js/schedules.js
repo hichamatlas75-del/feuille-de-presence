@@ -141,7 +141,7 @@ function matchCuisineStaffKey(nameOrId) {
   if(s.includes("IMANE") || s.includes("MOUJAHID")) return "IMANE";
   if(s.includes("ANAS") || s.includes("BOURAHMA")) return "ANAS";
   if(s.includes("JAWAD") || s.includes("JAOUAD") || s.includes("LEMSSIEH") || s.includes("LAMSSIAH")) return "JAWAD";
-  if(s.includes("SAAD") || s.includes("IDRISSI")) return "SAAD";
+  if(s.includes("SAAD") || (s.includes("IDRISSI") && !s.includes("KARIMA") && !s.includes("SERGINI") && (s.includes("OUDGHRI") || s.includes("OUDGHIRI") || s.includes("SAAD")))) return "SAAD";
   return null;
 }
 
@@ -407,6 +407,14 @@ const PHOTO_MAP = {
   "HATTAF_MOHAMED": "images/HATTAF_MOHAMMED.jpg",
   "HIDARA_YOUSSEF": "images/HIDARA-LACHKAR_YOUSSEF.jpg",
   "IDRISSI_SAAD": "images/IDRISSI_OUDGHRI_SAAD.jpg",
+  "IDRISSI_OUDGHRI_SAAD": "images/IDRISSI_OUDGHRI_SAAD.jpg",
+  "OUDGHRI_SAAD": "images/IDRISSI_OUDGHRI_SAAD.jpg",
+  "SAAD_IDRISSI": "images/IDRISSI_OUDGHRI_SAAD.jpg",
+  "SERGINI_IDRISSI_KARIMA": "images/SERGINI_IDRISSI_KARIMA.jpg",
+  "SERGINI_KARIMA": "images/SERGINI_IDRISSI_KARIMA.jpg",
+  "SERGINI": "images/SERGINI_IDRISSI_KARIMA.jpg",
+  "KARIMA_SERGINI": "images/SERGINI_IDRISSI_KARIMA.jpg",
+  "IDRISSI_KARIMA": "images/SERGINI_IDRISSI_KARIMA.jpg",
   "KAFOUNI_ZAKARIAE": "images/KAFOUNI_ZAKARIAE.jpg",
   "KHALOUQ_RACHID": "images/KHALOUQ_RACHID.jpg",
   "KTAMI_EL_MOKHTAR": "images/Mokhtar.jpg",
@@ -453,6 +461,7 @@ const KNOWN_IMAGE_FILES = [
   "QUASSIR_HICHAM.jpg",
   "SALIL_HOUDA.jpg",
   "SBAI_HAKIMA.jpg",
+  "SERGINI_IDRISSI_KARIMA.jpg",
   "WALID.jpg",
   "ZAIR_FATIMA.jpg"
 ];
@@ -484,14 +493,22 @@ function handleImgError(img, empIdStr) {
 function getCollaboratorPhoto(emp) {
   if (!emp) return getInitialsAvatar(null);
   const id = empId(emp);
+  const cleanNom = String(emp.nom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const cleanPrenom = String(emp.prenom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const fullStr = `${cleanNom}_${cleanPrenom}`;
+
+  // Détection explicite prioritaire pour Karima Sergini Idrissi et Saad Idrissi
+  if (fullStr.includes("KARIMA") || fullStr.includes("SERGINI")) {
+    return "images/SERGINI_IDRISSI_KARIMA.jpg";
+  }
+  if (fullStr.includes("SAAD") || fullStr.includes("OUDGHRI")) {
+    return "images/IDRISSI_OUDGHRI_SAAD.jpg";
+  }
 
   // 1. Recherche dans le dictionnaire direct
   if (PHOTO_MAP[id]) return PHOTO_MAP[id];
 
   // 2. Recherche par variantes de clés
-  const cleanNom = String(emp.nom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const cleanPrenom = String(emp.prenom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-
   for (const [k, url] of Object.entries(PHOTO_MAP)) {
     if (cleanNom && cleanPrenom && k.includes(cleanNom) && k.includes(cleanPrenom)) return url;
   }
@@ -503,6 +520,11 @@ function getCollaboratorPhoto(emp) {
 
   for (const file of KNOWN_IMAGE_FILES) {
     const fileNorm = file.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // Protection anti-collision entre homonymes / noms partagés
+    if ((words.includes("KARIMA") || words.includes("SERGINI")) && fileNorm.includes("SAAD")) continue;
+    if (words.includes("SAAD") && (fileNorm.includes("KARIMA") || fileNorm.includes("SERGINI"))) continue;
+
     let score = 0;
     for (const w of words) {
       if (fileNorm.includes(w)) score += 2;
