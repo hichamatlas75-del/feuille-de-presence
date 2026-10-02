@@ -43,6 +43,7 @@ function load() {
   presencesCache = {};
   punchesCache = {};
   rootPunchesCache = {};
+  motifsCache = {};
 
   const refPres = database.ref('presences/' + selectedDate);
   const cbPres = (snap) => {
@@ -53,6 +54,16 @@ function load() {
   };
   refPres.on("value", cbPres);
   activeRefs.push({ ref: refPres, cb: cbPres });
+
+  // Écoute temps réel des motifs explicatifs de retard
+  const refMotifs = database.ref('broadcast/motifs/' + selectedDate);
+  const cbMotifs = (snap) => {
+    motifsCache = snap.val() || {};
+    rebuildMerged();
+    render();
+  };
+  refMotifs.on("value", cbMotifs);
+  activeRefs.push({ ref: refMotifs, cb: cbMotifs });
 
   if (isGerant()) {
     const refPunch = database.ref('punches/' + selectedDate);

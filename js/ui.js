@@ -16,6 +16,7 @@ let EQUIPE = [];
 let presencesCache = {};
 let punchesCache = {};
 let rootPunchesCache = {};
+let motifsCache = {};
 let latestDataCache = {};
 
 let hpHistory = [];
@@ -84,10 +85,13 @@ function rebuildMerged() {
     const id = empId(emp);
     const p = presencesCache[id] || {};
     const pu = allPunches[id] || {};
+    const mo = (motifsCache && motifsCache[id]) || {};
+    const motif = String(pu?.motif || p?.motif || mo?.motif || "").trim();
 
     merged[id] = {
       ...p,
       ...pu,
+      motif,
       hP: normalizeHHMM(p?.hP || pu?.hP || ""),
       hA: normalizeHHMM((pu && pu.hA) ? pu.hA : (p && p.hA ? p.hA : "")),
       retard: (pu && typeof pu.retard === "boolean") ? pu.retard : (p && typeof p.retard === "boolean" ? p.retard : false),
@@ -608,6 +612,23 @@ function render() {
               </div>
             </div>
           `}
+
+          ${sched.motif ? `
+            <div class="mt-3 p-3 rounded-2xl bg-amber-50/90 border border-amber-300 text-amber-950 text-xs shadow-sm">
+              <div class="flex items-center gap-1.5 font-black text-[10.5px] uppercase tracking-wider text-amber-900">
+                <span>💬</span>
+                <span>Explication retard (+${sched.lateMin || '>15'} min) :</span>
+              </div>
+              <p class="font-bold text-xs mt-1 text-amber-950 italic bg-white/75 p-2 rounded-xl border border-amber-200/80 shadow-inner">
+                « ${escapeHtml(sched.motif)} »
+              </p>
+            </div>
+          ` : (sched.isLateHeavy && sched.hasHA ? `
+            <div class="mt-2.5 p-2 rounded-xl bg-red-50/70 border border-red-200/80 text-red-800 text-[10.5px] font-bold flex items-center gap-1.5">
+              <span>⚠️</span>
+              <span>Retard supérieur à 15 min — Aucun motif renseigné</span>
+            </div>
+          ` : '')}
         `;
 
         body.appendChild(card);
