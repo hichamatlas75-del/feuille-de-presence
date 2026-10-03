@@ -351,7 +351,7 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
     lateMin,
     handled,
     incomplete,
-    motif: String(currentData.motif || "").trim(),
+    motif: (isLate && lateMin > 0) ? String(currentData.motif || "").trim() : "",
     isMenage,
     isSecurite,
     isCuisine,

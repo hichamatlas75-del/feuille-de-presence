@@ -83,10 +83,10 @@ function rebuildMerged() {
 
   EQUIPE.forEach(emp => {
     const id = empId(emp);
-    const p = presencesCache[id] || {};
-    const pu = allPunches[id] || {};
-    const mo = (motifsCache && motifsCache[id]) || {};
-    const motif = String(pu?.motif || p?.motif || mo?.motif || "").trim();
+    const p = presencesCache[id] || findEmpRecord(presencesCache, emp) || {};
+    const pu = allPunches[id] || findEmpRecord(allPunches, emp) || {};
+    const mo = (motifsCache && (motifsCache[id] || findEmpRecord(motifsCache, emp))) || {};
+    const motif = extractMotif(pu?.motif) || extractMotif(p?.motif) || extractMotif(mo);
 
     merged[id] = {
       ...p,
@@ -613,7 +613,7 @@ function render() {
             </div>
           `}
 
-          ${sched.motif ? `
+          ${(sched.motif && sched.isLate && sched.lateMin > 0) ? `
             <div class="mt-3 p-3 rounded-2xl bg-amber-50/90 border border-amber-300 text-amber-950 text-xs shadow-sm">
               <div class="flex items-center gap-1.5 font-black text-[10.5px] uppercase tracking-wider text-amber-900">
                 <span>💬</span>

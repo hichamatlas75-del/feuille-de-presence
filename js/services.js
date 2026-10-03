@@ -146,9 +146,105 @@ function mergeEmpMaps(a, b) {
   return out;
 }
 
+function extractMotif(val) {
+  if (!val) return "";
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "object") {
+    return String(val.motif || val.reason || val.texte || val.explication || val.msg || "").trim();
+  }
+  return "";
+}
+
+function findEmpRecord(map, emp) {
+  if (!map || typeof map !== "object") return null;
+  const id = (typeof empId === "function") ? empId(emp) : "";
+  if (id && map[id] !== undefined) return map[id];
+
+  const nom = String(emp?.nom || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const prenom = String(emp?.prenom || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const k1 = `${nom}_${prenom}`.replace(/\s+/g, "_");
+  if (map[k1] !== undefined) return map[k1];
+  const k2 = `${prenom}_${nom}`.replace(/\s+/g, "_");
+  if (map[k2] !== undefined) return map[k2];
+  const k3 = `${nom} ${prenom}`.replace(/\s+/g, "_");
+  if (map[k3] !== undefined) return map[k3];
+
+  const keys = Object.keys(map);
+  for (const k of keys) {
+    const normK = String(k).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "");
+    const normNom = nom.replace(/[^A-Z0-9]/g, "");
+    const normPrenom = prenom.replace(/[^A-Z0-9]/g, "");
+    if (normNom && normPrenom && normK.includes(normNom) && normK.includes(normPrenom)) {
+      return map[k];
+    }
+  }
+  return null;
+}
+
 async function fetchRole(uid) {
   const snap = await database.ref("users/" + uid).once("value");
   return snap.val() || null;
+}
+
+// ─── SUPPRESSION DU MOTIF DE RETARD DANS FIREBASE & CACHES ───
+async function removeEmployeeMotif(id, date) {
+  if (!id || !date) return;
+  const emp = (typeof EQUIPE !== "undefined" ? EQUIPE : []).find(x => empId(x) === id);
+
+  const matchingKeys = new Set([id]);
+  if (emp) {
+    const nom = String(emp.nom || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const prenom = String(emp.prenom || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (nom && prenom) {
+      matchingKeys.add(`${nom}_${prenom}`.replace(/\s+/g, "_"));
+      matchingKeys.add(`${prenom}_${nom}`.replace(/\s+/g, "_"));
+      matchingKeys.add(`${nom} ${prenom}`.replace(/\s+/g, "_"));
+    }
+  }
+
+  // Clés présentes dans motifsCache ou punchesCache correspondant à l'employé
+  if (typeof motifsCache === "object" && motifsCache) {
+    Object.keys(motifsCache).forEach(k => {
+      if (emp && findEmpRecord({ [k]: true }, emp)) matchingKeys.add(k);
+    });
+  }
+  if (typeof punchesCache === "object" && punchesCache) {
+    Object.keys(punchesCache).forEach(k => {
+      if (emp && findEmpRecord({ [k]: true }, emp)) matchingKeys.add(k);
+    });
+  }
+  if (typeof rootPunchesCache === "object" && rootPunchesCache) {
+    Object.keys(rootPunchesCache).forEach(k => {
+      if (emp && findEmpRecord({ [k]: true }, emp)) matchingKeys.add(k);
+    });
+  }
+
+  const delPromises = [];
+  matchingKeys.forEach(k => {
+    // 1. broadcast/motifs/${date}/${k}
+    delPromises.push(database.ref('broadcast/motifs/' + date + '/' + k).remove().catch(() => {}));
+    // 2. punches/${date}/${k}/motif
+    delPromises.push(database.ref('punches/' + date + '/' + k + '/motif').remove().catch(() => {}));
+    // 3. presences/${date}/${k}/motif (au cas où)
+    delPromises.push(database.ref('presences/' + date + '/' + k + '/motif').remove().catch(() => {}));
+
+    // Caches locaux
+    if (typeof motifsCache === "object" && motifsCache) delete motifsCache[k];
+    if (typeof punchesCache === "object" && punchesCache && punchesCache[k]) punchesCache[k].motif = "";
+    if (typeof rootPunchesCache === "object" && rootPunchesCache && rootPunchesCache[k]) rootPunchesCache[k].motif = "";
+    if (typeof presencesCache === "object" && presencesCache && presencesCache[k]) delete presencesCache[k].motif;
+    if (typeof latestDataCache === "object" && latestDataCache && latestDataCache[k]) latestDataCache[k].motif = "";
+  });
+
+  if (typeof latestDataCache === "object" && latestDataCache && latestDataCache[id]) {
+    latestDataCache[id].motif = "";
+  }
+
+  try {
+    await Promise.allSettled(delPromises);
+  } catch (e) {
+    console.warn("Erreur suppression motif:", e);
+  }
 }
 
 // ─── MUTATIONS DE PRÉSENCE & POINTAGES (UPD) ───
@@ -168,6 +264,7 @@ async function upd(id, f, v) {
       payload.retard = null;
       payload.retardMin = null;
       payload.on = false;
+      await removeEmployeeMotif(id, date);
     }
 
     try {
@@ -181,6 +278,8 @@ async function upd(id, f, v) {
         retard: val ? false : (cur.retard ?? false),
         retardMin: val ? 0 : (cur.retardMin ?? 0)
       });
+      if (typeof rebuildMerged === "function") rebuildMerged();
+      if (typeof render === "function") render();
     } catch (e) {
       console.warn("Write blocked:", id, f, e);
       uiExportMsg("⚠️ Écriture refusée par Firebase", false);
@@ -205,6 +304,11 @@ async function upd(id, f, v) {
       const lm = lateMinutes(hp, hA, id, date);
       const isLate = (lm !== null && lm > 0);
 
+      // Si l'employé n'est plus en retard après modification de hP (hA <= hP), suppression du motif
+      if (!isLate || !hA) {
+        await removeEmployeeMotif(id, date);
+      }
+
       schedulePresenceExport(id, name, date, {
         hP: hp || "",
         hA: hA || "",
@@ -212,6 +316,8 @@ async function upd(id, f, v) {
         retard: (hA ? !!isLate : ""),
         retardMin: (hA ? (lm || 0) : "")
       });
+      if (typeof rebuildMerged === "function") rebuildMerged();
+      if (typeof render === "function") render();
     } catch (e) {
       console.warn("Write blocked:", id, f, e);
       uiExportMsg("⚠️ Écriture refusée par Firebase", false);
@@ -230,6 +336,7 @@ async function upd(id, f, v) {
     try {
       if (isGerant()) {
         const refPunch = database.ref('punches/' + selectedDate + '/' + id);
+        const existingMotif = extractMotif(latestDataCache[id]?.motif) || extractMotif(punchesCache[id]?.motif);
         const payloadPunch = {
           empKey: id,
           hA: hA || null,
@@ -237,6 +344,9 @@ async function upd(id, f, v) {
           retardMin: hA ? (lm || 0) : 0,
           timestamp: now
         };
+        if (isLate && existingMotif) {
+          payloadPunch.motif = existingMotif;
+        }
         if (hA) await refPunch.set(payloadPunch);
         else await refPunch.remove();
 
@@ -259,6 +369,12 @@ async function upd(id, f, v) {
         };
         await refPres.update(payloadPres);
 
+        // Si l'employé n'est pas en retard (ex: hA modifié à l'heure hP ou plus tôt, ou hA effacé),
+        // suppression immédiate du motif de retard dans Firebase et les caches locaux
+        if (!isLate || !hA) {
+          await removeEmployeeMotif(id, selectedDate);
+        }
+
         schedulePresenceExport(id, name, selectedDate, {
           hP: hP || "",
           hA: hA || "",
@@ -266,6 +382,8 @@ async function upd(id, f, v) {
           retard: (hA ? !!isLate : ""),
           retardMin: (hA ? (lm || 0) : "")
         });
+        if (typeof rebuildMerged === "function") rebuildMerged();
+        if (typeof render === "function") render();
         return;
       }
 
@@ -293,6 +411,10 @@ async function upd(id, f, v) {
       };
       await refPres.update(payload);
 
+      if (!isLate || !hA) {
+        await removeEmployeeMotif(id, selectedDate);
+      }
+
       schedulePresenceExport(id, name, selectedDate, {
         hP: hP || "",
         hA: hA || "",
@@ -300,6 +422,8 @@ async function upd(id, f, v) {
         retard: (hA ? !!isLate : ""),
         retardMin: (hA ? (lm || 0) : "")
       });
+      if (typeof rebuildMerged === "function") rebuildMerged();
+      if (typeof render === "function") render();
 
     } catch (e) {
       console.warn("hA write blocked:", id, e);
@@ -310,6 +434,8 @@ async function upd(id, f, v) {
 
   try {
     await database.ref('presences/' + date + '/' + id).update({ [f]: v });
+    if (typeof rebuildMerged === "function") rebuildMerged();
+    if (typeof render === "function") render();
   } catch (e) {
     console.warn("Write blocked:", id, f, e);
     uiExportMsg("⚠️ Écriture refusée par Firebase", false);
