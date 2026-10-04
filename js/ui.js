@@ -251,17 +251,27 @@ function render() {
         ` : poste === "BAR" ? `
           <div class="flex items-center gap-1.5 flex-wrap">
             <button type="button" onclick="event.stopPropagation(); applyBarPlanningForDate(document.getElementById('datePicker').value)"
-              title="Remplir les HP (06:45 ou 07:00 / 14:30) et OFF du Bar depuis Google Sheets"
+              title="Remplir les HP (06:45 ou 07:00 / 14:30) et OFF du Bar pour la date sélectionnée depuis Google Sheets"
               class="text-[10px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
               ⚡ Remplir Bar (Sheet)
+            </button>
+            <button type="button" onclick="event.stopPropagation(); applyBarPlanningForWeek(document.getElementById('datePicker').value)"
+              title="Remplir les HP et OFF du Bar pour toute la semaine (7 jours) depuis Google Sheets"
+              class="text-[10px] font-extrabold bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+              📅 Semaine Bar (Sheet)
             </button>
           </div>
         ` : poste === "SERVICE" ? `
           <div class="flex items-center gap-1.5 flex-wrap">
             <button type="button" onclick="event.stopPropagation(); applyServicePlanningForDate(document.getElementById('datePicker').value)"
-              title="Remplir les HP (06:45 ou 07:00 / 14:30) et OFF du Service depuis Google Sheets"
+              title="Remplir les HP (06:45 ou 07:00 / 14:30) et OFF du Service pour la date sélectionnée depuis Google Sheets"
               class="text-[10px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
               ⚡ Remplir Service (Sheet)
+            </button>
+            <button type="button" onclick="event.stopPropagation(); applyServicePlanningForWeek(document.getElementById('datePicker').value)"
+              title="Remplir les HP et OFF du Service pour toute la semaine (7 jours) depuis Google Sheets"
+              class="text-[10px] font-extrabold bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+              📅 Semaine Service (Sheet)
             </button>
           </div>
         ` : poste === "CAISSE" ? `

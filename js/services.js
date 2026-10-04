@@ -701,8 +701,107 @@ async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
 
     await database.ref().update(updates);
     uiExportMsg(`Planning ${poste} appliqué (${dateISO}) ✅`, true);
+    if (typeof rebuildMerged === "function") rebuildMerged();
+    if (typeof render === "function") render();
   } catch (e) {
     console.error(`Erreur application planning ${poste}:`, e);
+    alert(`Erreur réseau lors de la lecture du Google Sheet ${poste}.`);
+    uiExportMsg(`Erreur Sheet ${poste} ❌`, false);
+  }
+}
+
+async function applySheetPlanningForPosteWeek(poste, sheetUrl, dateISO) {
+  if (!isGerant()) {
+    alert("L'application pour toute la semaine est réservée au Gérant.");
+    return;
+  }
+  const members = EQUIPE.filter(e => e.poste === poste);
+  if (!members.length) {
+    alert(`Aucun membre trouvé pour le poste ${poste}.`);
+    return;
+  }
+
+  uiExportMsg(`Lecture Sheet ${poste} (Semaine)…`, true);
+
+  try {
+    const resp = await fetch(sheetUrl, { cache: "no-store" });
+    const text = await resp.text();
+    const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+
+    const [yy, mm, dd] = dateISO.split('-').map(Number);
+    const cur = new Date(Date.UTC(yy, mm - 1, dd));
+    const dayOfWeek = cur.getUTCDay();
+    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+    const monday = new Date(cur);
+    monday.setUTCDate(cur.getUTCDate() + diffToMonday);
+
+    const updates = {};
+    let appliedDaysCount = 0;
+    const missingDays = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setUTCDate(monday.getUTCDate() + i);
+      const iso = d.toISOString().slice(0, 10);
+      const [yN, mN, dN] = iso.split('-').map(Number);
+
+      let matchingRow = null;
+      for (let r = 1; r < rows.length; r++) {
+        const c = parseSheetCsvLine(rows[r]);
+        if (!c[0] || c[0].toUpperCase().includes("DATE")) continue;
+        const rowDate = parseSheetDateLabel(c[0]);
+        if (rowDate &&
+            rowDate.getMonth() === (mN - 1) &&
+            rowDate.getDate() === dN) {
+          const hasExplicitYear = /\b\d{4}\b/.test(c[0]);
+          if (!hasExplicitYear || rowDate.getFullYear() === yN) {
+            matchingRow = c;
+            break;
+          }
+        }
+      }
+
+      if (!matchingRow) {
+        missingDays.push(iso);
+        continue;
+      }
+
+      appliedDaysCount++;
+      const matinStr = matchingRow[1] || "";
+      const soirStr  = matchingRow[2] || "";
+      const morningHour = (typeof getShiftHMatin === "function") ? getShiftHMatin(iso) : (iso >= "2026-09-28" ? "06:45" : SHIFT_H_MATIN);
+
+      members.forEach(emp => {
+        const id = empId(emp);
+        const inMatin = isStaffInSheetShift(matinStr, emp);
+        const inSoir  = isStaffInSheetShift(soirStr, emp);
+
+        if (inMatin || inSoir) {
+          updates[`presences/${iso}/${id}/hP`] = (inMatin ? morningHour : SHIFT_H_SOIR);
+          updates[`presences/${iso}/${id}/off`] = false;
+        } else {
+          updates[`presences/${iso}/${id}/off`] = true;
+          updates[`presences/${iso}/${id}/hP`] = null;
+        }
+      });
+    }
+
+    if (appliedDaysCount === 0) {
+      alert(`Aucune date de la semaine trouvée dans le Google Sheet ${poste}.`);
+      uiExportMsg(`Dates absentes du Sheet ⚠️`, false);
+      return;
+    }
+
+    await database.ref().update(updates);
+    const msg = missingDays.length > 0
+      ? `Planning ${poste} appliqué pour ${appliedDaysCount}/7 jours (manquants: ${missingDays.join(', ')}) ⚠️`
+      : `Planning ${poste} appliqué pour toute la semaine (${appliedDaysCount} jours) ✅`;
+    uiExportMsg(msg, missingDays.length === 0);
+
+    if (typeof rebuildMerged === "function") rebuildMerged();
+    if (typeof render === "function") render();
+  } catch (e) {
+    console.error(`Erreur application semaine ${poste}:`, e);
     alert(`Erreur réseau lors de la lecture du Google Sheet ${poste}.`);
     uiExportMsg(`Erreur Sheet ${poste} ❌`, false);
   }
@@ -712,6 +811,14 @@ async function applyBarPlanningForDate(dateISO) {
   return applySheetPlanningForPoste("BAR", BAR_SHEET_URL, dateISO);
 }
 
+async function applyBarPlanningForWeek(dateISO) {
+  return applySheetPlanningForPosteWeek("BAR", BAR_SHEET_URL, dateISO);
+}
+
 async function applyServicePlanningForDate(dateISO) {
   return applySheetPlanningForPoste("SERVICE", SERVICE_SHEET_URL, dateISO);
+}
+
+async function applyServicePlanningForWeek(dateISO) {
+  return applySheetPlanningForPosteWeek("SERVICE", SERVICE_SHEET_URL, dateISO);
 }
