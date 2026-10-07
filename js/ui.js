@@ -289,9 +289,16 @@ function render() {
           </div>
         ` : (poste === "MENAGE" || poste === "MÉNAGE") ? `
           <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-[10px] font-bold text-sky-800 bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 rounded-full">
-              🧹 Pas de pointage · Créneaux : 07:00 · 12:00 · 14:00 · 15:00
-            </span>
+            <button type="button" onclick="event.stopPropagation(); applyMenagePlanningForDate(document.getElementById('datePicker').value)"
+              title="Remplir les heures d'arrivée (hA) et repos (OFF) du Ménage selon le planning permanent pour la date sélectionnée"
+              class="text-[10px] font-extrabold bg-sky-600 hover:bg-sky-700 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+              ⚡ Remplir Ménage (Jour)
+            </button>
+            <button type="button" onclick="event.stopPropagation(); applyMenagePlanningForWeek(document.getElementById('datePicker').value)"
+              title="Remplir les hA et OFF du Ménage pour toute la semaine (7 jours) selon le planning permanent (S1 / S2)"
+              class="text-[10px] font-extrabold bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 active:scale-95 transition-all">
+              📅 Semaine Ménage
+            </button>
           </div>
         ` : ''}
       </div>
@@ -331,10 +338,17 @@ function render() {
         if (sched.isOff) {
           statusBadges.push(`<span class="badge bad">Repos (OUT)</span>`);
         } else if (sched.isMenage) {
+          if (sched.menagePlan) {
+            if (sched.menagePlan.off) {
+              statusBadges.push(`<span class="badge" style="border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.10);color:#b91c1c">📋 Repos (${sched.menagePlan.week})</span>`);
+            } else {
+              statusBadges.push(`<span class="badge" style="border-color:rgba(14,165,233,.35);background:rgba(14,165,233,.10);color:#0369a1">📋 Plan ${sched.menagePlan.week}: <strong>${sched.menagePlan.shift}</strong></span>`);
+            }
+          }
           if (sched.hasHA) {
             statusBadges.push(`<span class="badge ok">🧹 Pointé (${sched.safeHA})</span>`);
           } else {
-            statusBadges.push(`<span class="badge" style="border-color:rgba(14,165,233,.35);background:rgba(14,165,233,.10);color:#0369a1">🧹 Saisie manuelle</span>`);
+            statusBadges.push(`<span class="badge" style="border-color:rgba(14,165,233,.35);background:rgba(14,165,233,.10);color:#0369a1">🧹 Non pointé</span>`);
           }
         } else if (sched.hasHA) {
           statusBadges.push(`<span class="badge ok">Pointé</span>`);
@@ -467,13 +481,25 @@ function render() {
             <div class="mt-4 p-3.5 rounded-2xl bg-sky-50/80 border border-sky-200/90 shadow-sm">
               <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
                 <div>
-                  <div class="flex items-center gap-1.5">
+                  <div class="flex items-center gap-1.5 flex-wrap">
                     <label class="text-[10px] font-black tracking-[0.14em] uppercase text-sky-950 block">
                       🧹 Pointage Réel (hA) — Créneaux Rapides
                     </label>
+                    ${sched.menagePlan ? `
+                      <span class="text-[10px] font-bold text-sky-900 bg-sky-100 border border-sky-300 rounded px-1.5 py-0.5">
+                        📋 ${sched.menagePlan.week} : <strong>${sched.menagePlan.shift}</strong>
+                      </span>
+                      ${canHA ? `
+                        <button type="button" onclick="applySingleMenagePlan('${safeId}', '${selectedDate}')"
+                          title="Appliquer le shift du planning permanent"
+                          class="text-[9px] font-extrabold text-sky-900 hover:bg-sky-200 bg-white border border-sky-400 rounded px-2 py-0.5 transition-all shadow-sm active:scale-95">
+                          ⚡ Appliquer [${sched.menagePlan.off ? 'OFF' : sched.menagePlan.hA}]
+                        </button>
+                      ` : ''}
+                    ` : ''}
                   </div>
                   <p class="text-[10px] text-sky-700 font-semibold mt-0.5">
-                    Choisir un créneau au choix ou entrer une heure libre.
+                    Choisir un créneau au choix, appliquer le planning, ou entrer une heure libre.
                   </p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -490,15 +516,15 @@ function render() {
                 </div>
               </div>
 
-              <!-- Boutons créneaux au choix (07:00, 12:00, 14:00, 15:00) -->
-              <div class="grid grid-cols-4 gap-2 my-2.5">
-                ${["07:00", "12:00", "14:00", "15:00"].map(creneau => {
+              <!-- Boutons créneaux au choix (06:30, 07:00, 12:00, 14:00, 15:00) -->
+              <div class="grid grid-cols-5 gap-1.5 my-2.5">
+                ${["06:30", "07:00", "12:00", "14:00", "15:00"].map(creneau => {
                   const isActive = (sched.safeHA === creneau);
                   return `
                     <button type="button"
                       ${canHA ? `onclick="upd('${safeId}','hA','${isActive ? '' : creneau}')"` : 'disabled'}
                       title="${isActive ? 'Désélectionner ce créneau' : `Valider ${creneau}`}"
-                      class="py-2.5 px-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
+                      class="py-2 px-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95 ${
                         isActive
                           ? 'bg-sky-600 text-white ring-2 ring-sky-400 shadow-md font-black'
                           : 'bg-white hover:bg-sky-100/80 text-sky-950 border border-sky-300 font-extrabold'

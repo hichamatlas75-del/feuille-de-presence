@@ -639,6 +639,165 @@ async function applyCaissePlanningForWeek(dateISO) {
   }
 }
 
+// ─── ACTIONS PLANNING MÉNAGE (S1 / S2 PERMANENT) ───
+async function applySingleMenagePlan(id, dateISO) {
+  const plan = getMenagePlanningInfo(id, dateISO);
+  if (!plan) return;
+  if (plan.off) {
+    await upd(id, 'off', true);
+  } else {
+    await upd(id, 'off', false);
+    await upd(id, 'hA', plan.hA);
+  }
+}
+
+async function applyMenagePlanningForDate(dateISO) {
+  if (!isGerant() && dateISO !== getMarocDate()) {
+    alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
+    return;
+  }
+  const menageMembers = EQUIPE.filter(e => isMenageStaff(e) || isMenageStaff(empId(e)));
+  if (!menageMembers.length) {
+    alert("Aucun membre de l'équipe ménage trouvé.");
+    return;
+  }
+  const updates = {};
+  const now = Date.now();
+  const isAdmin = isGerant();
+
+  menageMembers.forEach(emp => {
+    const id = empId(emp);
+    const plan = getMenagePlanningInfo(emp, dateISO);
+    if (!plan) return;
+
+    if (plan.off) {
+      updates[`presences/${dateISO}/${id}/off`] = true;
+      updates[`presences/${dateISO}/${id}/hA`] = null;
+      updates[`presences/${dateISO}/${id}/hP`] = null;
+      updates[`presences/${dateISO}/${id}/retard`] = null;
+      updates[`presences/${dateISO}/${id}/retardMin`] = null;
+      updates[`presences/${dateISO}/${id}/timestamp`] = null;
+      updates[`presences/${dateISO}/${id}/lastEditAt`] = now;
+      updates[`presences/${dateISO}/${id}/lastEditByAdmin`] = isAdmin;
+      if (isAdmin) {
+        updates[`punches/${dateISO}/${id}`] = null;
+      }
+    } else {
+      updates[`presences/${dateISO}/${id}/off`] = false;
+      updates[`presences/${dateISO}/${id}/hA`] = plan.hA;
+      updates[`presences/${dateISO}/${id}/hP`] = plan.hA;
+      updates[`presences/${dateISO}/${id}/retard`] = false;
+      updates[`presences/${dateISO}/${id}/retardMin`] = 0;
+      updates[`presences/${dateISO}/${id}/timestamp`] = now;
+      updates[`presences/${dateISO}/${id}/lastEditAt`] = now;
+      updates[`presences/${dateISO}/${id}/lastEditByAdmin`] = isAdmin;
+      if (isAdmin) {
+        updates[`punches/${dateISO}/${id}`] = {
+          empKey: id,
+          hA: plan.hA,
+          retard: false,
+          retardMin: 0,
+          timestamp: now
+        };
+      }
+    }
+  });
+
+  try {
+    await database.ref().update(updates);
+    menageMembers.forEach(emp => {
+      const id = empId(emp);
+      const plan = getMenagePlanningInfo(emp, dateISO);
+      if (!plan) return;
+      schedulePresenceExport(id, empName(emp), dateISO, {
+        hP: plan.off ? "" : plan.hA,
+        hA: plan.off ? "" : plan.hA,
+        off: plan.off,
+        retard: false,
+        retardMin: 0
+      });
+    });
+    if (typeof rebuildMerged === "function") rebuildMerged();
+    if (typeof render === "function") render();
+    uiExportMsg(`Planning Ménage appliqué (${dateISO}) ✅`, true);
+  } catch (e) {
+    console.error("Erreur application planning ménage:", e);
+    uiExportMsg("Erreur lors de l'application du planning ménage ❌", false);
+  }
+}
+
+async function applyMenagePlanningForWeek(dateISO) {
+  if (!isGerant()) {
+    alert("L'application pour toute la semaine est réservée au Gérant.");
+    return;
+  }
+  const [yy, mm, dd] = dateISO.split('-').map(Number);
+  const cur = new Date(Date.UTC(yy, mm - 1, dd));
+  const dayOfWeek = cur.getUTCDay();
+  const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+  const monday = new Date(cur);
+  monday.setUTCDate(cur.getUTCDate() + diffToMonday);
+
+  const menageMembers = EQUIPE.filter(e => isMenageStaff(e) || isMenageStaff(empId(e)));
+  if (!menageMembers.length) {
+    alert("Aucun membre de l'équipe ménage trouvé.");
+    return;
+  }
+
+  const updates = {};
+  const now = Date.now();
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+
+    menageMembers.forEach(emp => {
+      const id = empId(emp);
+      const plan = getMenagePlanningInfo(emp, iso);
+      if (!plan) return;
+
+      if (plan.off) {
+        updates[`presences/${iso}/${id}/off`] = true;
+        updates[`presences/${iso}/${id}/hA`] = null;
+        updates[`presences/${iso}/${id}/hP`] = null;
+        updates[`presences/${iso}/${id}/retard`] = null;
+        updates[`presences/${iso}/${id}/retardMin`] = null;
+        updates[`presences/${iso}/${id}/timestamp`] = null;
+        updates[`presences/${iso}/${id}/lastEditAt`] = now;
+        updates[`presences/${iso}/${id}/lastEditByAdmin`] = true;
+        updates[`punches/${iso}/${id}`] = null;
+      } else {
+        updates[`presences/${iso}/${id}/off`] = false;
+        updates[`presences/${iso}/${id}/hA`] = plan.hA;
+        updates[`presences/${iso}/${id}/hP`] = plan.hA;
+        updates[`presences/${iso}/${id}/retard`] = false;
+        updates[`presences/${iso}/${id}/retardMin`] = 0;
+        updates[`presences/${iso}/${id}/timestamp`] = now;
+        updates[`presences/${iso}/${id}/lastEditAt`] = now;
+        updates[`presences/${iso}/${id}/lastEditByAdmin`] = true;
+        updates[`punches/${iso}/${id}`] = {
+          empKey: id,
+          hA: plan.hA,
+          retard: false,
+          retardMin: 0,
+          timestamp: now
+        };
+      }
+    });
+  }
+
+  try {
+    await database.ref().update(updates);
+    if (typeof rebuildMerged === "function") rebuildMerged();
+    if (typeof render === "function") render();
+    uiExportMsg("Planning Ménage appliqué pour toute la semaine ✅", true);
+  } catch (e) {
+    console.error("Erreur semaine ménage:", e);
+    uiExportMsg("Erreur application semaine ménage ❌", false);
+  }
+}
+
 async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
   if (!canEditHP("", dateISO)) {
     alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");

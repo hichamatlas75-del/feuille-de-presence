@@ -42,7 +42,10 @@ function getShiftHMatin(dateISO) {
 }
 
 // Collaborateurs autorisés à saisir hA aujourd'hui si équipe
-const haExceptionsToday = ["SBAI_HAKIMA", "ELGORRAMY_ANISSA", "ELGORRAMY_SOUAD", "ABOUARSA_EDDRISSIA"];
+const haExceptionsToday = [
+  "SBAI_HAKIMA", "EZHAR_FOUZIA", "FOUZIA", "KHALISSA_KHALISSA", "KHALISSA",
+  "FATIMZAHRA_FATIMA", "FATIMZAHRA", "ELGORRAMY_ANISSA", "ELGORRAMY_SOUAD", "ABOUARSA_EDDRISSIA"
+];
 const noLateCalcIds = [];
 
 // Heures habituelles standards de référence
@@ -72,5 +75,8 @@ const DEFAULT_EQUIPE = [
   { nom: 'MOUJAHID',   prenom: 'IMANE',     poste: 'CUISINE' },
   { nom: 'SALIL',      prenom: 'HOUDA',     poste: 'CAISSE' },
   { nom: 'SBAI',       prenom: 'HAKIMA',    poste: 'MENAGE' },
+  { nom: 'EZHAR',      prenom: 'FOUZIA',    poste: 'MENAGE' },
+  { nom: 'KHALISSA',   prenom: 'KHALISSA',  poste: 'MENAGE' },
+  { nom: 'FATIMZAHRA', prenom: 'FATIMA',    poste: 'MENAGE' },
   { nom: 'ZAIR',       prenom: 'FATIMA',    poste: 'CUISINE' }
 ];
