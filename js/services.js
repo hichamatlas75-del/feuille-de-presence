@@ -798,6 +798,34 @@ async function applyMenagePlanningForWeek(dateISO) {
   }
 }
 
+async function fetchSheetCsvRows(sheetUrl) {
+  let url = sheetUrl;
+  if (!url.includes("headers=")) {
+    url += (url.includes("?") ? "&" : "?") + "headers=1";
+  }
+  let resp = await fetch(url, { cache: "no-store" });
+  let text = await resp.text();
+  let rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+
+  // Sécurité anti-agrégation GViz : si <= 8 lignes retournées, bascule sur export CSV direct
+  if (rows.length <= 8 && sheetUrl.includes("/gviz/tq")) {
+    try {
+      const gidMatch = sheetUrl.match(/gid=([^&]+)/);
+      const exportUrl = sheetUrl.replace(/\/gviz\/tq.*$/, "/export?format=csv") +
+        (gidMatch ? "&gid=" + gidMatch[1] : "");
+      const expResp = await fetch(exportUrl, { cache: "no-store" });
+      if (expResp.ok) {
+        const expText = await expResp.text();
+        const expRows = expText.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+        if (expRows.length > rows.length) rows = expRows;
+      }
+    } catch (e) {
+      console.warn("Repli export CSV ignoré:", e);
+    }
+  }
+  return rows;
+}
+
 async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
   if (!canEditHP("", dateISO)) {
     alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
@@ -812,9 +840,7 @@ async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
   uiExportMsg(`Lecture Sheet ${poste}…`, true);
 
   try {
-    const resp = await fetch(sheetUrl, { cache: "no-store" });
-    const text = await resp.text();
-    const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+    const rows = await fetchSheetCsvRows(sheetUrl);
 
     const [yy, mm, dd] = dateISO.split('-').map(Number);
     const targetDate = new Date(yy, mm - 1, dd);
@@ -825,11 +851,14 @@ async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
       const c = parseSheetCsvLine(rows[i]);
       if (!c[0] || c[0].toUpperCase().includes("DATE")) continue;
       const rowDate = parseSheetDateLabel(c[0]);
-      if (rowDate && rowDate.getFullYear() === targetDate.getFullYear() &&
+      if (rowDate &&
           rowDate.getMonth() === targetDate.getMonth() &&
           rowDate.getDate() === targetDate.getDate()) {
-        matchingRow = c;
-        break;
+        const hasExplicitYear = /\b\d{4}\b/.test(c[0]);
+        if (!hasExplicitYear || rowDate.getFullYear() === targetDate.getFullYear()) {
+          matchingRow = c;
+          break;
+        }
       }
     }
 
@@ -883,9 +912,7 @@ async function applySheetPlanningForPosteWeek(poste, sheetUrl, dateISO) {
   uiExportMsg(`Lecture Sheet ${poste} (Semaine)…`, true);
 
   try {
-    const resp = await fetch(sheetUrl, { cache: "no-store" });
-    const text = await resp.text();
-    const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+    const rows = await fetchSheetCsvRows(sheetUrl);
 
     const [yy, mm, dd] = dateISO.split('-').map(Number);
     const cur = new Date(Date.UTC(yy, mm - 1, dd));

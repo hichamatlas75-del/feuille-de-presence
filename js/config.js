@@ -26,8 +26,8 @@ async function getAuthToken() {
 }
 
 // ─── GOOGLE SHEETS PLANNING (BAR & SERVICE) ───
-const BAR_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mfwB4zNHS79YsNH4vTMUGOdWeQwC3htMgPtDWsrMbWg/gviz/tq?tqx=out:csv&gid=294813093";
-const SERVICE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1aKrmu7Hdf1tb4_0QFCGC6VYjUVlRKeDJYLYs9qIM6Aw/gviz/tq?tqx=out:csv&gid=0";
+const BAR_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mfwB4zNHS79YsNH4vTMUGOdWeQwC3htMgPtDWsrMbWg/gviz/tq?tqx=out:csv&gid=294813093&headers=1";
+const SERVICE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1aKrmu7Hdf1tb4_0QFCGC6VYjUVlRKeDJYLYs9qIM6Aw/gviz/tq?tqx=out:csv&gid=0&headers=1";
 
 const SHIFT_H_MATIN = "07:00";
 const SHIFT_H_MATIN_NEW = "06:45";
