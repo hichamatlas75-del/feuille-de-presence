@@ -258,7 +258,7 @@ function isMenageStaff(empOrId) {
   }
   const s = String(empOrId).toUpperCase();
   return s.includes("SBAI") || s.includes("ELGORRAMY") || s.includes("ABOUARSA") ||
-         s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("KHALISSA") || s.includes("FATIMZAHRA");
+         s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("KHALISSA") || s.includes("FATIMZAHRA") || s.includes("AZHARY") || s.includes("NAJIA");
 }
 
 function matchCuisineStaffKey(nameOrId) {
@@ -366,6 +366,18 @@ function parseSheetDateLabel(label) {
   if (m) { const d = new Date(+m[1], +m[2]-1, +m[3]); d.setHours(0,0,0,0); return d; }
   m = s.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b/);
   if (m) { const d = new Date(+m[3], +m[2]-1, +m[1]); d.setHours(0,0,0,0); return d; }
+
+  // Format JJ/MM sans année explicite -> année courante
+  m = s.match(/\b(\d{1,2})[\/-](\d{1,2})\b/);
+  if (m) {
+    const day = +m[1];
+    const month = +m[2];
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      const d = new Date(new Date().getFullYear(), month - 1, day);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+  }
 
   const months = {
     "janvier":0,"janv":0, "fevrier":1,"fev":1, "mars":2, "mar":2, "avril":3,"avr":3,
@@ -565,11 +577,20 @@ const PHOTO_MAP = {
   "WALID": "images/WALID.jpg",
   "FOUZIA": "images/FOUZIA.jpg",
   "EZHAR_FOUZIA": "images/FOUZIA.jpg",
-  "FOUZIA_EZHAR": "images/FOUZIA.jpg"
+  "FOUZIA_EZHAR": "images/FOUZIA.jpg",
+  "EL_AZHARY_NAJIA": "images/EL_AZHARY.jpg",
+  "ELAZHARY_NAJIA": "images/EL_AZHARY.jpg",
+  "AZHARY_NAJIA": "images/EL_AZHARY.jpg",
+  "EL_AZHARY": "images/EL_AZHARY.jpg",
+  "ELAZHARY": "images/EL_AZHARY.jpg",
+  "AZHARY": "images/EL_AZHARY.jpg",
+  "NAJIA_EL_AZHARY": "images/EL_AZHARY.jpg",
+  "NAJIA": "images/EL_AZHARY.jpg"
 };
 
 const KNOWN_IMAGE_FILES = [
   "BAJJOU.jpeg",
+  "EL_AZHARY.jpg",
   "BELQASIM_KHAOULA.jpg",
   "BENKHADA_ABDESSLAM.jpg",
   "BOUCHNAK_NAOUAL.jpg",
@@ -638,6 +659,9 @@ function getCollaboratorPhoto(emp) {
   }
   if (fullStr.includes("SAAD") || fullStr.includes("OUDGHRI")) {
     return "images/IDRISSI_OUDGHRI_SAAD.jpg";
+  }
+  if (fullStr.includes("AZHARY") || fullStr.includes("NAJIA")) {
+    return "images/EL_AZHARY.jpg";
   }
 
   // 1. Recherche dans le dictionnaire direct

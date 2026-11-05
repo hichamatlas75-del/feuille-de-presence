@@ -827,6 +827,7 @@ async function fetchSheetCsvRows(sheetUrl) {
 }
 
 async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
+  if (!dateISO) dateISO = (typeof getMarocDate === "function" ? getMarocDate() : new Date().toISOString().slice(0, 10));
   if (!canEditHP("", dateISO)) {
     alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
     return;
@@ -863,7 +864,21 @@ async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
     }
 
     if (!matchingRow) {
-      alert(`Date ${dateISO} introuvable dans le Google Sheet ${poste}.`);
+      const detected = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = parseSheetCsvLine(rows[r]);
+        if (!row[0] || row[0].toUpperCase().includes("DATE")) continue;
+        const pd = parseSheetDateLabel(row[0]);
+        if (pd) detected.push(pd);
+      }
+      let rangeMsg = "";
+      if (detected.length > 0) {
+        const d0 = detected[0];
+        const dEnd = detected[detected.length - 1];
+        const fmtD = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        rangeMsg = `\n\nDates présentes dans le Google Sheet : du ${fmtD(d0)} au ${fmtD(dEnd)}.`;
+      }
+      alert(`Date ${dateISO} introuvable dans le Google Sheet ${poste}.${rangeMsg}\n\nVérifiez que cette date est bien renseignée dans votre Google Sheet.`);
       uiExportMsg(`Date absente du Sheet ⚠️`, false);
       return;
     }
@@ -899,6 +914,7 @@ async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
 }
 
 async function applySheetPlanningForPosteWeek(poste, sheetUrl, dateISO) {
+  if (!dateISO) dateISO = (typeof getMarocDate === "function" ? getMarocDate() : new Date().toISOString().slice(0, 10));
   if (!isGerant()) {
     alert("L'application pour toute la semaine est réservée au Gérant.");
     return;
@@ -973,7 +989,25 @@ async function applySheetPlanningForPosteWeek(poste, sheetUrl, dateISO) {
     }
 
     if (appliedDaysCount === 0) {
-      alert(`Aucune date de la semaine trouvée dans le Google Sheet ${poste}.`);
+      const detected = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = parseSheetCsvLine(rows[r]);
+        if (!row[0] || row[0].toUpperCase().includes("DATE")) continue;
+        const pd = parseSheetDateLabel(row[0]);
+        if (pd) detected.push(pd);
+      }
+      let rangeMsg = "";
+      if (detected.length > 0) {
+        const d0 = detected[0];
+        const dEnd = detected[detected.length - 1];
+        const fmtD = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        rangeMsg = `\n\nDates actuellement présentes dans le Google Sheet : du ${fmtD(d0)} au ${fmtD(dEnd)}.`;
+      }
+      const startMondayIso = monday.toISOString().slice(0, 10);
+      const endSunday = new Date(monday);
+      endSunday.setUTCDate(monday.getUTCDate() + 6);
+      const endSundayIso = endSunday.toISOString().slice(0, 10);
+      alert(`Aucune date de la semaine (${startMondayIso} au ${endSundayIso}) trouvée dans le Google Sheet ${poste}.${rangeMsg}\n\nVeuillez vérifier que cette semaine est bien saisie dans votre Google Sheet.`);
       uiExportMsg(`Dates absentes du Sheet ⚠️`, false);
       return;
     }
