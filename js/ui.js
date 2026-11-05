@@ -80,6 +80,7 @@ function collectHPFromCache() {
 function rebuildMerged() {
   const allPunches = mergeEmpMaps(punchesCache || {}, rootPunchesCache || {});
   const merged = {};
+  const selectedDate = (typeof document !== 'undefined' && document.getElementById('datePicker')?.value) || (typeof getMarocDate === "function" ? getMarocDate() : "");
 
   EQUIPE.forEach(emp => {
     const id = empId(emp);
@@ -88,15 +89,39 @@ function rebuildMerged() {
     const mo = (motifsCache && (motifsCache[id] || findEmpRecord(motifsCache, emp))) || {};
     const motif = extractMotif(pu?.motif) || extractMotif(p?.motif) || extractMotif(mo);
 
+    let hP = normalizeHHMM(p?.hP || pu?.hP || "");
+    let hA = normalizeHHMM((pu && pu.hA) ? pu.hA : (p && p.hA ? p.hA : ""));
+    let off = p?.off === true;
+
+    // Pointage automatique du ménage selon PLANNING MÉNAGE
+    const isMenage = (typeof isMenageStaff === "function") && (isMenageStaff(emp) || isMenageStaff(id));
+    const wasExplicitlyCleared = !!(p && p.lastEditAt && !p.hA && p.off !== true && !pu?.hA);
+
+    if (isMenage && !hA && p?.off === undefined && !wasExplicitlyCleared && (typeof getMenagePlanningInfo === "function")) {
+      const plan = getMenagePlanningInfo(emp, selectedDate);
+      if (plan) {
+        if (plan.off) {
+          off = true;
+          hA = "";
+        } else if (plan.hA) {
+          hA = plan.hA;
+          off = false;
+        }
+        if (!hP && plan.hA) {
+          hP = plan.hA;
+        }
+      }
+    }
+
     merged[id] = {
       ...p,
       ...pu,
       motif,
-      hP: normalizeHHMM(p?.hP || pu?.hP || ""),
-      hA: normalizeHHMM((pu && pu.hA) ? pu.hA : (p && p.hA ? p.hA : "")),
+      hP,
+      hA,
       retard: (pu && typeof pu.retard === "boolean") ? pu.retard : (p && typeof p.retard === "boolean" ? p.retard : false),
       retardMin: (pu && typeof pu.retardMin === "number") ? pu.retardMin : (p && typeof p.retardMin === "number" ? p.retardMin : 0),
-      off: p?.off === true
+      off
     };
   });
 
@@ -346,7 +371,7 @@ function render() {
             }
           }
           if (sched.hasHA) {
-            statusBadges.push(`<span class="badge ok">🧹 Pointé (${sched.safeHA})</span>`);
+            statusBadges.push(`<span class="badge ok">🧹 ${sched.isAutoPunched ? 'Pointage auto' : 'Pointé'} (${sched.safeHA})</span>`);
           } else {
             statusBadges.push(`<span class="badge" style="border-color:rgba(14,165,233,.35);background:rgba(14,165,233,.10);color:#0369a1">🧹 Non pointé</span>`);
           }
@@ -489,9 +514,14 @@ function render() {
                       <span class="text-[10px] font-bold text-sky-900 bg-sky-100 border border-sky-300 rounded px-1.5 py-0.5">
                         📋 ${sched.menagePlan.week} : <strong>${sched.menagePlan.shift}</strong>
                       </span>
+                      ${sched.isAutoPunched ? `
+                        <span class="text-[9px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 rounded px-1.5 py-0.5 shadow-sm">
+                          ⚡ Auto
+                        </span>
+                      ` : ''}
                       ${canHA ? `
                         <button type="button" onclick="applySingleMenagePlan('${safeId}', '${selectedDate}')"
-                          title="Appliquer le shift du planning permanent"
+                          title="Rétablir / Appliquer le shift du planning permanent"
                           class="text-[9px] font-extrabold text-sky-900 hover:bg-sky-200 bg-white border border-sky-400 rounded px-2 py-0.5 transition-all shadow-sm active:scale-95">
                           ⚡ Appliquer [${sched.menagePlan.off ? 'OFF' : sched.menagePlan.hA}]
                         </button>
@@ -499,12 +529,12 @@ function render() {
                     ` : ''}
                   </div>
                   <p class="text-[10px] text-sky-700 font-semibold mt-0.5">
-                    Choisir un créneau au choix, appliquer le planning, ou entrer une heure libre.
+                    Pointage automatique actif selon planning permanent. Créneau modifiable ci-dessous.
                   </p>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="text-[11px] font-black ${sched.safeHA ? 'text-sky-900 bg-sky-100 border border-sky-300' : 'text-slate-500 bg-slate-100'} px-2.5 py-0.5 rounded-lg whitespace-nowrap">
-                    ${sched.safeHA ? `✅ Pointé ${sched.safeHA}` : '💤 Repos / Congé auto'}
+                  <span class="text-[11px] font-black ${sched.safeHA ? 'text-emerald-900 bg-emerald-100 border border-emerald-300' : 'text-slate-500 bg-slate-100'} px-2.5 py-0.5 rounded-lg whitespace-nowrap">
+                    ${sched.safeHA ? `✅ Pointé ${sched.safeHA}${sched.isAutoPunched ? ' (Auto)' : ''}` : '💤 Repos / Congé auto'}
                   </span>
                   ${canHA && sched.safeHA ? `
                     <button type="button" onclick="upd('${safeId}','hA','')"

@@ -116,29 +116,30 @@ const getMarocDate = () =>
   }).format(new Date());
 
 // ─── PLANNING FIXE MÉNAGE (Alternance 2 semaines S1 / S2) ───
+// Fatimzahra et Khalissa remplacées par Najia
 const MENAGE_PLANNING_DATA = {
   S1: {
     title: 'Semaine 01',
     schedules: [
-      { day: 'lundi', matin: { staff: 'FOUZIA' }, soir: { staff: 'Khalissa / fatimzahra' } },
-      { day: 'mardi', matin: { staff: 'fatimzahra' }, soir: { staff: 'fatimzahra / FOUZIA' } },
-      { day: 'mercredi', matin: { staff: 'HAKIMA' }, soir: { staff: 'Khalissa / fatimzahra' } },
-      { day: 'jeudi', matin: { staff: 'Khalissa' }, soir: { staff: 'Hakima / FOUZIA' } },
-      { day: 'vendredi', matin: { staff: 'Hakima / FOUZIA' }, soir: { staff: 'Khalissa / fatimzahra' } },
-      { day: 'samedi', matin: { staff: 'Khalissa / fatimzahra' }, soir: { staff: 'Hakima / FOUZIA' } },
-      { day: 'dimanche', matin: { staff: 'Hakima / FOUZIA' }, soir: { staff: 'Khalissa / fatimzahra' } },
+      { day: 'lundi', matin: { staff: 'Fouzia' }, soir: { staff: 'Najia' } },
+      { day: 'mardi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'mercredi', matin: { staff: 'Hakima' }, soir: { staff: 'Najia' } },
+      { day: 'jeudi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'vendredi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Najia' } },
+      { day: 'samedi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'dimanche', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Najia' } },
     ]
   },
   S2: {
     title: 'Semaine 02',
     schedules: [
-      { day: 'lundi', matin: { staff: 'FATIMZAHRA' }, soir: { staff: 'Hakima / FOUZIA' } },
-      { day: 'mardi', matin: { staff: 'FOUZIA' }, soir: { staff: 'FATIMZAHRA / Khalissa' } },
-      { day: 'mercredi', matin: { staff: 'Khalissa' }, soir: { staff: 'Hakima / FOUZIA' } },
-      { day: 'jeudi', matin: { staff: 'Hakima' }, soir: { staff: 'FATIMZAHRA / Khalissa' } },
-      { day: 'vendredi', matin: { staff: 'FATIMZAHRA / Khalissa' }, soir: { staff: 'Hakima / FOUZIA' } },
-      { day: 'samedi', matin: { staff: 'Hakima / FOUZIA' }, soir: { staff: 'FATIMZAHRA / Khalissa' } },
-      { day: 'dimanche', matin: { staff: 'FATIMZAHRA / Khalissa' }, soir: { staff: 'Hakima / FOUZIA' } },
+      { day: 'lundi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'mardi', matin: { staff: 'Fouzia' }, soir: { staff: 'Najia' } },
+      { day: 'mercredi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'jeudi', matin: { staff: 'Hakima' }, soir: { staff: 'Najia' } },
+      { day: 'vendredi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'samedi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Najia' } },
+      { day: 'dimanche', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
     ]
   }
 };
@@ -167,10 +168,13 @@ function getMenageStaffKey(empOrId) {
     : String(empOrId)
   ).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+  if (s.includes("NAJIA") || s.includes("AZHARY") || s.includes("ELAZHARY") ||
+      s.includes("KHALISSA") || s.includes("KHALISA") || s.includes("EDDRISSIA") || s.includes("EDRISSIA") || s.includes("ABOUARSA") ||
+      s.includes("FATIMZAHRA") || s.includes("FATIM") || s.includes("ZAHRA")) {
+    return "NAJIA";
+  }
   if (s.includes("HAKIMA") || s.includes("SBAI")) return "HAKIMA";
-  if (s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("ZHAR")) return "FOUZIA";
-  if (s.includes("KHALISSA") || s.includes("KHALISA")) return "KHALISSA";
-  if (s.includes("FATIMZAHRA") || s.includes("FATIM") || s.includes("ZAHRA")) return "FATIMZAHRA";
+  if (s.includes("FOUZIA") || s.includes("EZHAR") || (s.includes("ZHAR") && !s.includes("AZHAR"))) return "FOUZIA";
   return null;
 }
 
@@ -181,8 +185,7 @@ function isStaffInMenageShift(shiftStaffStr, empOrId) {
   const s = String(shiftStaffStr).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (staffKey === "HAKIMA") return s.includes("HAKIMA");
   if (staffKey === "FOUZIA") return s.includes("FOUZIA");
-  if (staffKey === "KHALISSA") return s.includes("KHALISSA") || s.includes("KHALISA");
-  if (staffKey === "FATIMZAHRA") return s.includes("FATIM") || s.includes("ZAHRA");
+  if (staffKey === "NAJIA") return s.includes("NAJIA") || s.includes("AZHARY") || s.includes("KHALISSA") || s.includes("EDRISSIA") || s.includes("FATIM") || s.includes("ZAHRA");
   return false;
 }
 
@@ -429,8 +432,8 @@ function isStaffInSheetShift(shiftStr, emp) {
 function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   const id = empId(emp);
   const safeHP = normalizeHHMM(currentData.hP || "");
-  const safeHA = normalizeHHMM(currentData.hA || "");
-  const isOff = currentData.off === true;
+  let safeHA = normalizeHHMM(currentData.hA || "");
+  let isOff = currentData.off === true;
 
   const isSecurite = (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ");
   const isCuisine = (emp.poste === "CUISINE");
@@ -443,6 +446,26 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   const caissePlan = isCaisseAlt ? getCaisseAlternance(id, dateISO) : null;
   const menagePlan = isMenage ? getMenagePlanningInfo(emp, dateISO) : null;
 
+  // ─── POINTAGE AUTOMATIQUE DU MÉNAGE SELON PLANNING MÉNAGE ───
+  let isAutoPunched = false;
+  if (isMenage && menagePlan) {
+    const hasExplicitPunch = !!safeHA;
+    const hasExplicitOff = (currentData.off === true);
+    const wasExplicitlyCleared = !!(currentData.lastEditAt && !currentData.hA && currentData.off !== true);
+
+    if (!hasExplicitPunch && !hasExplicitOff && !wasExplicitlyCleared) {
+      if (menagePlan.off) {
+        isOff = true;
+        safeHA = "";
+        isAutoPunched = true;
+      } else if (menagePlan.hA) {
+        safeHA = menagePlan.hA;
+        isOff = false;
+        isAutoPunched = true;
+      }
+    }
+  }
+
   const [yy, mm, ddNum] = (dateISO || getMarocDate()).split('-').map(Number);
   const dt = new Date(Date.UTC(yy, mm - 1, ddNum));
   const isMonday = (dt.getUTCDay() === 1);
@@ -450,7 +473,8 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   // Détermination de l'heure effective de début (saisie ou planifiée)
   let effectiveHP = safeHP;
   if (!effectiveHP) {
-    if (soumiaPlan && !soumiaPlan.off) effectiveHP = soumiaPlan.hP;
+    if (isMenage && menagePlan && !menagePlan.off) effectiveHP = menagePlan.hA;
+    else if (soumiaPlan && !soumiaPlan.off) effectiveHP = soumiaPlan.hP;
     else if (caissePlan && caissePlan.hP) effectiveHP = caissePlan.hP;
     else if (isSecurite && !isMonday) effectiveHP = "09:00";
     else if (cuisinePlan && !cuisinePlan.off) effectiveHP = cuisinePlan.hP;
@@ -494,6 +518,7 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
     lateMin,
     handled,
     incomplete,
+    isAutoPunched,
     motif: (isLate && lateMin > 0) ? String(currentData.motif || "").trim() : "",
     isMenage,
     isSecurite,

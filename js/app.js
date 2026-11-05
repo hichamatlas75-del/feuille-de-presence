@@ -83,6 +83,10 @@ function load() {
     };
     refRootPunch.on("value", cbRootPunch);
     activeRefs.push({ ref: refRootPunch, cb: cbRootPunch });
+
+    if (typeof autoSyncMenagePlanningIfEmpty === "function") {
+      autoSyncMenagePlanningIfEmpty(selectedDate);
+    }
   } else {
     punchesCache = {};
     rootPunchesCache = {};

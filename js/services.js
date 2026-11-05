@@ -130,11 +130,32 @@ function normalizeEquipeSnapshot(val) {
   const seen = new Set();
   const out = [];
   for (const e of cleaned) {
-    const id = `${normalizeKeyPart(e.nom)}_${normalizeKeyPart(e.prenom)}`;
+    const normNom = normalizeKeyPart(e.nom);
+    const normPrenom = normalizeKeyPart(e.prenom);
+    const isOldMenage = (e.poste === "MENAGE" || e.poste === "MÉNAGE") &&
+      (normNom.includes("FATIM") || normNom.includes("ZAHRA") || normPrenom.includes("FATIM") || normPrenom.includes("ZAHRA") ||
+       normNom.includes("KHALISSA") || normPrenom.includes("KHALISSA") || normNom.includes("ABOUARSA") || normPrenom.includes("EDDRISSIA"));
+
+    // Remplacement de Fatimzahra et Khalissa par Najia
+    if (isOldMenage) {
+      continue;
+    }
+
+    const id = `${normNom}_${normPrenom}`;
     if (seen.has(id)) continue;
     seen.add(id);
     out.push(e);
   }
+
+  // Intégration systématique de EL AZHARY NAJIA dans la catégorie ménage
+  const hasNajia = out.some(e => {
+    const k = `${e.nom} ${e.prenom}`.toUpperCase();
+    return k.includes("NAJIA") || k.includes("AZHARY");
+  });
+  if (!hasNajia) {
+    out.push({ nom: 'EL AZHARY', prenom: 'NAJIA', poste: 'MENAGE', dateDebut: '' });
+  }
+
   return out;
 }
 
@@ -641,13 +662,67 @@ async function applyCaissePlanningForWeek(dateISO) {
 
 // ─── ACTIONS PLANNING MÉNAGE (S1 / S2 PERMANENT) ───
 async function applySingleMenagePlan(id, dateISO) {
-  const plan = getMenagePlanningInfo(id, dateISO);
+  const emp = (typeof EQUIPE !== "undefined" ? EQUIPE : []).find(x => empId(x) === id);
+  const plan = getMenagePlanningInfo(emp || id, dateISO);
   if (!plan) return;
   if (plan.off) {
     await upd(id, 'off', true);
   } else {
     await upd(id, 'off', false);
     await upd(id, 'hA', plan.hA);
+  }
+}
+
+async function autoSyncMenagePlanningIfEmpty(dateISO) {
+  if (!isGerant()) return;
+  if (!dateISO) dateISO = (typeof getMarocDate === "function" ? getMarocDate() : new Date().toISOString().slice(0, 10));
+
+  const menageMembers = (typeof EQUIPE !== "undefined" ? EQUIPE : []).filter(e => isMenageStaff(e) || isMenageStaff(empId(e)));
+  if (!menageMembers.length) return;
+
+  let needsUpdate = false;
+  const updates = {};
+  const now = Date.now();
+
+  menageMembers.forEach(emp => {
+    const id = empId(emp);
+    const p = presencesCache[id];
+    const pu = (punchesCache && punchesCache[id]) || (rootPunchesCache && rootPunchesCache[id]);
+
+    // Si aucun pointage ni statut n'existe dans Firebase pour cette date
+    if (!p && !pu) {
+      const plan = getMenagePlanningInfo(emp, dateISO);
+      if (!plan) return;
+      needsUpdate = true;
+      if (plan.off) {
+        updates[`presences/${dateISO}/${id}/off`] = true;
+      } else {
+        updates[`presences/${dateISO}/${id}/off`] = false;
+        updates[`presences/${dateISO}/${id}/hA`] = plan.hA;
+        updates[`presences/${dateISO}/${id}/hP`] = plan.hA;
+        updates[`presences/${dateISO}/${id}/retard`] = false;
+        updates[`presences/${dateISO}/${id}/retardMin`] = 0;
+        updates[`presences/${dateISO}/${id}/timestamp`] = now;
+        updates[`presences/${dateISO}/${id}/lastEditAt`] = now;
+        updates[`presences/${dateISO}/${id}/lastEditByAdmin`] = true;
+        updates[`punches/${dateISO}/${id}`] = {
+          empKey: id,
+          hA: plan.hA,
+          retard: false,
+          retardMin: 0,
+          timestamp: now
+        };
+      }
+    }
+  });
+
+  if (needsUpdate && Object.keys(updates).length > 0) {
+    try {
+      await database.ref().update(updates);
+      console.log("Pointage auto ménage enregistré dans Firebase pour", dateISO);
+    } catch (e) {
+      console.warn("Auto-sync ménage discret:", e);
+    }
   }
 }
 
