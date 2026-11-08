@@ -181,6 +181,7 @@ function applyFilters() {
     if (currentFilter === "pending") matchFilter = card.dataset.pending === "1";
     if (currentFilter === "late") matchFilter = card.dataset.late === "1";
     if (currentFilter === "incomplete") matchFilter = card.dataset.incomplete === "1";
+    if (currentFilter === "maladie") matchFilter = card.dataset.maladie === "1";
 
     card.style.display = (matchName && matchFilter) ? "block" : "none";
   });
@@ -359,11 +360,13 @@ function computeKPIs() {
     const d = latestDataCache[id] || {};
     const sched = resolveEmployeeSchedule(emp, selectedDate, d);
 
-    if (sched.hasHA) punched++;
-    if (sched.isOff) off++;
-    if (!sched.handled) pending++;
+    if (sched.isMaladie) {
+      // Arrêt maladie validé par la direction : traité (justifié), jamais compté en attente
+    } else if (sched.hasHA) punched++;
+    else if (sched.isOff) off++;
+    else if (!sched.handled) pending++;
 
-    if (sched.hasHP && sched.hasHA && sched.isLate) {
+    if (sched.hasHP && sched.hasHA && sched.isLate && !sched.isMaladie) {
       lateCount++;
       lateMinSum += sched.lateMin;
     }
@@ -562,7 +565,12 @@ function render() {
 
         const statusBadges = [];
 
-        if (sched.isOff) {
+        if (sched.isMaladie) {
+          statusBadges.push(`<span class="badge" style="border-color:rgba(225,29,72,.35);background:rgba(225,29,72,.12);color:#be123c">🩺 Arrêt Maladie (M)</span>`);
+          if (sched.motifMaladie) {
+            statusBadges.push(`<span class="badge" style="border-color:rgba(225,29,72,.25);background:rgba(255,255,255,.70);color:#9f1239">« ${escapeHtml(sched.motifMaladie)} »</span>`);
+          }
+        } else if (sched.isOff) {
           statusBadges.push(`<span class="badge bad">Repos (OUT)</span>`);
         } else if (sched.isMenage) {
           if (sched.menagePlan) {
@@ -620,7 +628,9 @@ function render() {
         // - Retard saignant (> 15 min) : Fond rouge alerte (.late-heavy)
         // - Repos : (.emp-off)
         let cardClasses = "card rounded-2xl p-4 empCard";
-        if (sched.isOff) {
+        if (sched.isMaladie) {
+          cardClasses += " emp-maladie";
+        } else if (sched.isOff) {
           cardClasses += " emp-off";
         } else if (sched.isLateHeavy) {
           cardClasses += " late-heavy";
@@ -638,6 +648,7 @@ function render() {
         card.dataset.punched = sched.hasHA ? "1" : "0";
         card.dataset.off = sched.isOff ? "1" : "0";
         card.dataset.pending = (!sched.handled) ? "1" : "0";
+        card.dataset.maladie = sched.isMaladie ? "1" : "0";
         card.dataset.late = sched.isLate ? "1" : "0";
         card.dataset.lateHeavy = sched.isLateHeavy ? "1" : "0";
         card.dataset.lateLight = sched.isLateLight ? "1" : "0";
@@ -654,7 +665,9 @@ function render() {
         const fallbackAvatar = getInitialsAvatar(emp);
 
         let photoBorderClass = "border border-slate-200 shadow-sm";
-        if (sched.isOff) {
+        if (sched.isMaladie) {
+          photoBorderClass = "border-2 border-rose-400 shadow-sm";
+        } else if (sched.isOff) {
           photoBorderClass = "border border-slate-300 opacity-60 grayscale";
         } else if (sched.isLateHeavy) {
           photoBorderClass = "border-2 border-red-500 shadow-md ring-2 ring-red-300/80";
@@ -682,7 +695,7 @@ function render() {
               </div>
 
               <div class="min-w-0 flex-1">
-                <div class="font-extrabold text-sm sm:text-base tracking-tight ${sched.isLateHeavy ? 'text-red-950 font-black' : sched.hasHA && !sched.isLate ? 'text-emerald-950' : 'text-slate-900'} truncate">
+                <div class="font-extrabold text-sm sm:text-base tracking-tight ${sched.isMaladie ? 'text-rose-950 font-black' : sched.isLateHeavy ? 'text-red-950 font-black' : sched.hasHA && !sched.isLate ? 'text-emerald-950' : 'text-slate-900'} truncate">
                   ${safeName} ${safePrenom}
                 </div>
                 <div class="mt-1 flex gap-1.5 flex-wrap">
@@ -692,20 +705,43 @@ function render() {
             </div>
 
             <div class="toggleWrap rounded-2xl p-2 flex gap-2 ${
+              sched.isMaladie ? 'border-rose-300 bg-rose-100/60' :
               sched.isLateHeavy ? 'border-red-300 bg-red-100/50' :
               sched.isLateLight ? 'border-amber-300 bg-amber-100/50' :
               sched.hasHA && !sched.isOff ? 'border-emerald-200 bg-emerald-100/50' : ''
             }">
-              <label class="flex flex-col items-center px-2">
-                <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
-                <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
-                  ${sched.isOff ? "checked" : ""} ${canOFF ? "" : "disabled"}
-                  onchange="upd('${safeId}','off',this.checked)">
-              </label>
+              ${sched.isMaladie ? `
+                <div class="flex flex-col items-center px-1.5 py-0.5" title="Arrêt maladie saisi et justifié par la direction">
+                  <span class="text-[13px]">🩺</span>
+                  <span class="text-[8.5px] font-black uppercase text-rose-800 tracking-tight">MALADIE</span>
+                </div>
+              ` : `
+                <label class="flex flex-col items-center px-2">
+                  <span class="text-[9px] font-extrabold text-slate-400 tracking-wide">OUT</span>
+                  <input type="checkbox" class="w-4 h-4 accent-[color:var(--accent)]"
+                    ${sched.isOff ? "checked" : ""} ${canOFF ? "" : "disabled"}
+                    onchange="upd('${safeId}','off',this.checked)">
+                </label>
+              `}
             </div>
           </div>
 
-          ${sched.isMenage ? `
+          ${sched.isMaladie ? `
+            <div class="mt-4 p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200/90 shadow-sm flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-2xl flex-shrink-0">🩺</span>
+                <div class="min-w-0">
+                  <div class="text-xs font-black text-rose-950">Collaborateur en Arrêt Maladie justifié (M)</div>
+                  <div class="text-[10.5px] font-semibold text-rose-800 truncate">
+                    ${sched.motif ? `Motif : « ${escapeHtml(sched.motif)} »` : `Certificat médical enregistré et contrôlé par la direction.`}
+                  </div>
+                </div>
+              </div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-rose-900 bg-rose-100 border border-rose-300 rounded-lg px-2.5 py-1 flex-shrink-0">
+                Certifié M
+              </span>
+            </div>
+          ` : sched.isMenage ? `
             <div class="mt-4 p-3.5 rounded-2xl bg-sky-50/80 border border-sky-200/90 shadow-sm">
               <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
                 <div>

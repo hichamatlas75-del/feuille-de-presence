@@ -499,6 +499,50 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
     };
   }
 
+  // ─── PRISE EN COMPTE DES ARRÊTS MALADIE JUSTIFIÉS (M) ───
+  const isMaladie = (typeof isExplicitMaladie === "function")
+    ? isExplicitMaladie(currentData)
+    : (currentData.maladie === true || String(currentData.statut || "").toUpperCase() === "MALADIE" || String(currentData.statut || "").toUpperCase() === "M");
+
+  if (isMaladie) {
+    const motifMaladie = String(currentData.motifMaladie || currentData.motif || "")
+      .replace(/^\[MALADIE\]\s*:?\s*/i, "")
+      .trim();
+    return {
+      id,
+      emp,
+      startDate,
+      notStartedYet: false,
+      isMaladie: true,
+      motifMaladie,
+      safeHP: "",
+      safeHA: "",
+      effectiveHP: "",
+      displayHP: "🩺 Arrêt Maladie",
+      hasHA: false,
+      hasHP: false,
+      isOff: false,
+      isLate: false,
+      isLateLight: false,
+      isLateHeavy: false,
+      lateMin: null,
+      handled: true, // Collaborateur traité (justifié en maladie), PAS en attente de pointage !
+      incomplete: false,
+      isAutoPunched: false,
+      motif: motifMaladie,
+      isMenage: (typeof isMenageStaff === "function") && (isMenageStaff(emp) || isMenageStaff(id)),
+      isSecurite: (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ"),
+      isCuisine: (emp.poste === "CUISINE"),
+      isSoumia: (typeof isSoumiaStaff === "function") && isSoumiaStaff(id),
+      isCaisseAlt: (typeof isSalilStaff === "function" && typeof isBenkhadaStaff === "function") && (isSalilStaff(id) || isBenkhadaStaff(id)),
+      isMonday: false,
+      cuisinePlan: null,
+      soumiaPlan: null,
+      caissePlan: null,
+      menagePlan: null
+    };
+  }
+
   const safeHP = normalizeHHMM(currentData.hP || "");
   let safeHA = normalizeHHMM(currentData.hA || "");
   let isOff = currentData.off === true;

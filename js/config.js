@@ -48,6 +48,23 @@ const haExceptionsToday = [
 ];
 const noLateCalcIds = [];
 
+/**
+ * Détection centralisée des Arrêts Maladie (M) enregistrés par la direction
+ */
+function isExplicitMaladie(rec) {
+  if (!rec || typeof rec !== "object") return false;
+  const s = String(rec.statut || rec.status || "").trim().toUpperCase();
+  const m = String(rec.motif || rec.motifMaladie || "").trim().toUpperCase();
+  const isMaladieMotif = m === "[MALADIE]" || m.startsWith("[MALADIE] ") || m.startsWith("[MALADIE]:");
+  return rec.maladie === true ||
+         s === "MALADIE" ||
+         s === "M" ||
+         s === "ARRET_MALADIE" ||
+         s === "ARRÊT MALADIE" ||
+         s === "ARRET MALADIE" ||
+         (isMaladieMotif && rec.lastEditByAdmin === true);
+}
+
 // Heures habituelles standards de référence
 const defaultHPTimes = ["06:00", "06:45", "07:00", "07:30", "09:00", "10:00", "12:00", "13:00", "14:00", "14:30", "15:00", "17:00"];
 
