@@ -84,6 +84,10 @@ function rebuildMerged() {
 
   EQUIPE.forEach(emp => {
     const id = empId(emp);
+    if (!isEmployeeStartedOnDate(emp, selectedDate)) {
+      merged[id] = { motif: "", hP: "", hA: "", retard: false, retardMin: 0, off: false };
+      return;
+    }
     const p = presencesCache[id] || findEmpRecord(presencesCache, emp) || {};
     const pu = allPunches[id] || findEmpRecord(allPunches, emp) || {};
     const mo = (motifsCache && (motifsCache[id] || findEmpRecord(motifsCache, emp))) || {};
@@ -187,18 +191,20 @@ function renderPendingBanner() {
   const wrap = document.getElementById("pendingBannerWrap");
   if (!wrap) return;
 
-  if (!EQUIPE.length) {
+  const selectedDate = document.getElementById('datePicker')?.value || getMarocDate();
+  const activeEquipe = getActiveEquipeForDate(selectedDate, EQUIPE);
+
+  if (!activeEquipe.length) {
     wrap.innerHTML = "";
     return;
   }
 
-  const selectedDate = document.getElementById('datePicker')?.value || getMarocDate();
   const canOFF = canEditOFF(selectedDate);
   const pendingItems = [];
   let punchedCount = 0;
   let offCount = 0;
 
-  EQUIPE.forEach(emp => {
+  activeEquipe.forEach(emp => {
     const id = empId(emp);
     const d = latestDataCache[id] || {};
     const sched = resolveEmployeeSchedule(emp, selectedDate, d);
@@ -216,7 +222,7 @@ function renderPendingBanner() {
           <span class="w-8 h-8 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-sm font-black shadow-sm">✓</span>
           <div>
             <div class="text-xs sm:text-sm font-extrabold text-emerald-950 tracking-tight">
-              Feuille complète — Aucun collaborateur en attente (${EQUIPE.length}/${EQUIPE.length})
+              Feuille complète — Aucun collaborateur en attente (${activeEquipe.length}/${activeEquipe.length})
             </div>
             <div class="text-[11px] font-semibold text-emerald-800">
               Tout le monde est pointé (${punchedCount} présent${punchedCount > 1 ? 's' : ''}) ou déclaré en Repos / Absent (${offCount} OUT).
@@ -343,11 +349,12 @@ function renderPendingBanner() {
 
 // ─── CALCUL DES KPIS (LOGIQUE UNIFIÉE DRY) ───
 function computeKPIs() {
-  const total = EQUIPE.length;
-  let punched = 0, off = 0, pending = 0, lateCount = 0, lateMinSum = 0;
   const selectedDate = document.getElementById('datePicker')?.value || getMarocDate();
+  const activeEquipe = getActiveEquipeForDate(selectedDate, EQUIPE);
+  const total = activeEquipe.length;
+  let punched = 0, off = 0, pending = 0, lateCount = 0, lateMinSum = 0;
 
-  EQUIPE.forEach(emp => {
+  activeEquipe.forEach(emp => {
     const id = empId(emp);
     const d = latestDataCache[id] || {};
     const sched = resolveEmployeeSchedule(emp, selectedDate, d);
@@ -425,12 +432,13 @@ function render() {
   if (!list) return;
 
   const fragment = document.createDocumentFragment();
+  const activeEquipe = getActiveEquipeForDate(selectedDate, EQUIPE);
 
-  if (!EQUIPE.length) {
+  if (!activeEquipe.length) {
     list.innerHTML = `
       <div class="card rounded-3xl p-6 text-center">
         <div class="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500">Équipe</div>
-        <div class="mt-2 text-sm font-extrabold text-slate-800">Aucun collaborateur</div>
+        <div class="mt-2 text-sm font-extrabold text-slate-800">Aucun collaborateur actif à cette date</div>
         <div class="mt-1 text-[11px] font-semibold text-slate-500">
           Ajoute des personnes via le Dashboard (settings/equipe).
         </div>
@@ -440,7 +448,7 @@ function render() {
     return;
   }
 
-  const groupes = EQUIPE.reduce((acc, emp) => {
+  const groupes = activeEquipe.reduce((acc, emp) => {
     (acc[emp.poste] = acc[emp.poste] || []).push(emp);
     return acc;
   }, {});

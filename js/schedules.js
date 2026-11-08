@@ -115,6 +115,40 @@ const getMarocDate = () =>
     day: '2-digit'
   }).format(new Date());
 
+// ─── GESTION DE LA DATE D'AJOUT / DÉBUT DU COLLABORATEUR ───
+function normalizeDateISO(val) {
+  const s = String(val || "").trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const mDMY = s.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+  if (mDMY) return `${mDMY[3]}-${mDMY[2]}-${mDMY[1]}`;
+  const mYMD = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+  if (mYMD) return `${mYMD[1]}-${String(mYMD[2]).padStart(2, "0")}-${String(mYMD[3]).padStart(2, "0")}`;
+  return "";
+}
+
+function getEmployeeStartDate(emp) {
+  if (!emp || typeof emp !== "object") return "";
+  const explicit = normalizeDateISO(emp.dateDebut || emp.dateAjout || emp.startDate || emp.createdAt || "");
+  if (explicit) return explicit;
+  const k = `${emp.nom || ""} ${emp.prenom || ""}`.toUpperCase();
+  if (k.includes("NAJIA") || k.includes("AZHARY")) return "2026-11-05";
+  return "";
+}
+
+function isEmployeeStartedOnDate(emp, dateISO) {
+  if (!emp) return false;
+  const start = getEmployeeStartDate(emp);
+  if (!start || !dateISO) return true;
+  return String(dateISO) >= start;
+}
+
+function getActiveEquipeForDate(dateISO, list) {
+  const arr = Array.isArray(list) ? list : (typeof EQUIPE !== "undefined" ? EQUIPE : []);
+  if (!dateISO) return arr;
+  return arr.filter(emp => isEmployeeStartedOnDate(emp, dateISO));
+}
+
 // ─── PLANNING FIXE MÉNAGE (Alternance 2 semaines S1 / S2) ───
 // Fatimzahra et Khalissa remplacées par Najia
 const MENAGE_PLANNING_DATA = {
@@ -428,6 +462,43 @@ function isStaffInSheetShift(shiftStr, emp) {
  */
 function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   const id = empId(emp);
+  const startDate = getEmployeeStartDate(emp);
+  const notStartedYet = !!(startDate && dateISO && String(dateISO) < startDate);
+
+  if (notStartedYet) {
+    return {
+      id,
+      emp,
+      startDate,
+      notStartedYet: true,
+      safeHP: "",
+      safeHA: "",
+      effectiveHP: "",
+      displayHP: "",
+      hasHA: false,
+      hasHP: false,
+      isOff: false,
+      isLate: false,
+      isLateLight: false,
+      isLateHeavy: false,
+      lateMin: null,
+      handled: true,
+      incomplete: false,
+      isAutoPunched: false,
+      motif: "",
+      isMenage: isMenageStaff(emp) || isMenageStaff(id),
+      isSecurite: (emp.poste === "SECURITE" || emp.poste === "SÉCURITÉ"),
+      isCuisine: (emp.poste === "CUISINE"),
+      isSoumia: isSoumiaStaff(id),
+      isCaisseAlt: (isSalilStaff(id) || isBenkhadaStaff(id)),
+      isMonday: false,
+      cuisinePlan: null,
+      soumiaPlan: null,
+      caissePlan: null,
+      menagePlan: null
+    };
+  }
+
   const safeHP = normalizeHHMM(currentData.hP || "");
   let safeHA = normalizeHHMM(currentData.hA || "");
   let isOff = currentData.off === true;

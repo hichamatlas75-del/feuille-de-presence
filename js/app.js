@@ -32,6 +32,9 @@ function startEquipeListener() {
     EQUIPE = norm.length ? norm : DEFAULT_EQUIPE;
     rebuildMerged();
     render();
+    if (isGerant() && typeof autoSyncMenagePlanningIfEmpty === "function") {
+      autoSyncMenagePlanningIfEmpty(document.getElementById('datePicker')?.value);
+    }
   };
   equipeRef.on("value", equipeCb);
 }

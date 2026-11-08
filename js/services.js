@@ -123,7 +123,7 @@ function normalizeEquipeSnapshot(val) {
       nom: normalizeLabelPart(x?.nom),
       prenom: normalizeLabelPart(x?.prenom),
       poste: normalizeLabelPart(x?.poste),
-      dateDebut: String(x?.dateDebut || "").trim()
+      dateDebut: normalizeDateISO(x?.dateDebut || x?.dateAjout || x?.startDate || x?.createdAt || "")
     }))
     .filter(x => x.nom && x.prenom && x.poste);
 
@@ -149,13 +149,20 @@ function normalizeEquipeSnapshot(val) {
     out.push(e);
   }
 
-  // Intégration systématique de EL AZHARY NAJIA dans la catégorie ménage
+  // Intégration systématique de EL AZHARY NAJIA dans la catégorie ménage (ajoutée le 2026-11-05)
   const hasNajia = out.some(e => {
     const k = `${e.nom} ${e.prenom}`.toUpperCase();
     return k.includes("NAJIA") || k.includes("AZHARY");
   });
   if (!hasNajia) {
-    out.push({ nom: 'EL AZHARY', prenom: 'NAJIA', poste: 'MENAGE', dateDebut: '' });
+    out.push({ nom: 'EL AZHARY', prenom: 'NAJIA', poste: 'MENAGE', dateDebut: '2026-11-05' });
+  } else {
+    out.forEach(e => {
+      const k = `${e.nom} ${e.prenom}`.toUpperCase();
+      if ((k.includes("NAJIA") || k.includes("AZHARY")) && !e.dateDebut) {
+        e.dateDebut = '2026-11-05';
+      }
+    });
   }
 
   return out;
@@ -274,6 +281,11 @@ async function removeEmployeeMotif(id, date) {
 async function upd(id, f, v) {
   const date = document.getElementById('datePicker').value;
   const emp = EQUIPE.find(x => empId(x) === id);
+  if (emp && !isEmployeeStartedOnDate(emp, date)) {
+    const start = getEmployeeStartDate(emp);
+    uiExportMsg(`⚠️ Collaborateur ajouté le ${start} (non actif le ${date})`, false);
+    return;
+  }
   const name = emp ? empName(emp) : "";
 
   if (f === "off") {
@@ -473,7 +485,7 @@ async function markAllPendingAsOff(dateISO) {
     return;
   }
 
-  const pendingEmps = EQUIPE.filter(emp => {
+  const pendingEmps = getActiveEquipeForDate(selectedDate, EQUIPE).filter(emp => {
     const id = empId(emp);
     const d = latestDataCache[id] || {};
     const sched = resolveEmployeeSchedule(emp, selectedDate, d);
@@ -536,9 +548,9 @@ async function applyCuisinePlanningForDate(dateISO) {
     alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
     return;
   }
-  const cuisineMembers = EQUIPE.filter(e => e.poste === "CUISINE");
+  const cuisineMembers = getActiveEquipeForDate(dateISO, EQUIPE).filter(e => e.poste === "CUISINE");
   if (!cuisineMembers.length) {
-    alert("Aucun membre en cuisine trouvé.");
+    alert("Aucun membre actif en cuisine trouvé pour cette date.");
     return;
   }
 
@@ -586,6 +598,7 @@ async function applyCuisinePlanningForWeek(dateISO) {
     const iso = d.toISOString().slice(0, 10);
 
     cuisineMembers.forEach(emp => {
+      if (!isEmployeeStartedOnDate(emp, iso)) return;
       const id = empId(emp);
       const plan = getCuisinePlanningInfo(id, iso);
       if (!plan) return;
@@ -632,9 +645,9 @@ async function applyCaissePlanningForDate(dateISO) {
     alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
     return;
   }
-  const caisseMembers = EQUIPE.filter(e => e.poste === "CAISSE");
+  const caisseMembers = getActiveEquipeForDate(dateISO, EQUIPE).filter(e => e.poste === "CAISSE");
   if (!caisseMembers.length) {
-    alert("Aucun membre en caisse trouvé.");
+    alert("Aucun membre actif en caisse trouvé pour cette date.");
     return;
   }
   const updates = {};
@@ -687,6 +700,7 @@ async function applyCaissePlanningForWeek(dateISO) {
     const iso = d.toISOString().slice(0, 10);
 
     caisseMembers.forEach(emp => {
+      if (!isEmployeeStartedOnDate(emp, iso)) return;
       const id = empId(emp);
       if (isSoumiaStaff(id)) {
         const plan = getSoumiaPlanning(iso);
@@ -733,52 +747,77 @@ async function autoSyncMenagePlanningIfEmpty(dateISO) {
   if (!isGerant()) return;
   if (!dateISO) dateISO = (typeof getMarocDate === "function" ? getMarocDate() : new Date().toISOString().slice(0, 10));
 
-  const menageMembers = (typeof EQUIPE !== "undefined" ? EQUIPE : []).filter(e => isMenageStaff(e) || isMenageStaff(empId(e)));
-  if (!menageMembers.length) return;
+  const allEquipe = (typeof EQUIPE !== "undefined" && EQUIPE.length) ? EQUIPE : DEFAULT_EQUIPE;
+  if (!allEquipe.length) return;
 
-  let needsUpdate = false;
-  const updates = {};
-  const now = Date.now();
+  try {
+    const [presSnap, punchSnap] = await Promise.all([
+      database.ref('presences/' + dateISO).once('value'),
+      database.ref('punches/' + dateISO).once('value')
+    ]);
+    const currentPres = presSnap.val() || {};
+    const currentPunch = punchSnap.val() || {};
 
-  menageMembers.forEach(emp => {
-    const id = empId(emp);
-    const p = presencesCache[id];
-    const pu = (punchesCache && punchesCache[id]) || (rootPunchesCache && rootPunchesCache[id]);
+    let needsUpdate = false;
+    const updates = {};
+    const now = Date.now();
 
-    // Si aucun pointage ni statut n'existe dans Firebase pour cette date
-    if (!p && !pu) {
-      const plan = getMenagePlanningInfo(emp, dateISO);
-      if (!plan) return;
-      needsUpdate = true;
-      if (plan.off) {
-        updates[`presences/${dateISO}/${id}/off`] = true;
-      } else {
-        updates[`presences/${dateISO}/${id}/off`] = false;
-        updates[`presences/${dateISO}/${id}/hA`] = plan.hA;
-        updates[`presences/${dateISO}/${id}/hP`] = plan.hA;
-        updates[`presences/${dateISO}/${id}/retard`] = false;
-        updates[`presences/${dateISO}/${id}/retardMin`] = 0;
-        updates[`presences/${dateISO}/${id}/timestamp`] = now;
-        updates[`presences/${dateISO}/${id}/lastEditAt`] = now;
-        updates[`presences/${dateISO}/${id}/lastEditByAdmin`] = true;
-        updates[`punches/${dateISO}/${id}`] = {
-          empKey: id,
-          hA: plan.hA,
-          retard: false,
-          retardMin: 0,
-          timestamp: now
-        };
+    // 1. Nettoyage automatique de toute présence enregistrée avant la date d'ajout (dateDebut) d'un collaborateur
+    allEquipe.forEach(emp => {
+      if (!isEmployeeStartedOnDate(emp, dateISO)) {
+        const id = empId(emp);
+        if (currentPres[id] !== undefined) {
+          updates[`presences/${dateISO}/${id}`] = null;
+          needsUpdate = true;
+        }
+        if (currentPunch[id] !== undefined) {
+          updates[`punches/${dateISO}/${id}`] = null;
+          needsUpdate = true;
+        }
       }
-    }
-  });
+    });
 
-  if (needsUpdate && Object.keys(updates).length > 0) {
-    try {
+    // 2. Pointage auto ménage uniquement pour les collaborateurs déjà actifs à cette date
+    const menageMembers = getActiveEquipeForDate(dateISO, allEquipe).filter(e => isMenageStaff(e) || isMenageStaff(empId(e)));
+    menageMembers.forEach(emp => {
+      if (!isEmployeeStartedOnDate(emp, dateISO)) return;
+      const id = empId(emp);
+      const p = currentPres[id];
+      const pu = currentPunch[id];
+
+      // Si aucun pointage ni statut n'existe dans Firebase pour cette date
+      if (!p && !pu) {
+        const plan = getMenagePlanningInfo(emp, dateISO);
+        if (!plan) return;
+        needsUpdate = true;
+        if (plan.off) {
+          updates[`presences/${dateISO}/${id}/off`] = true;
+        } else {
+          updates[`presences/${dateISO}/${id}/off`] = false;
+          updates[`presences/${dateISO}/${id}/hA`] = plan.hA;
+          updates[`presences/${dateISO}/${id}/hP`] = plan.hA;
+          updates[`presences/${dateISO}/${id}/retard`] = false;
+          updates[`presences/${dateISO}/${id}/retardMin`] = 0;
+          updates[`presences/${dateISO}/${id}/timestamp`] = now;
+          updates[`presences/${dateISO}/${id}/lastEditAt`] = now;
+          updates[`presences/${dateISO}/${id}/lastEditByAdmin`] = true;
+          updates[`punches/${dateISO}/${id}`] = {
+            empKey: id,
+            hA: plan.hA,
+            retard: false,
+            retardMin: 0,
+            timestamp: now
+          };
+        }
+      }
+    });
+
+    if (needsUpdate && Object.keys(updates).length > 0) {
       await database.ref().update(updates);
-      console.log("Pointage auto ménage enregistré dans Firebase pour", dateISO);
-    } catch (e) {
-      console.warn("Auto-sync ménage discret:", e);
+      console.log("Synchronisation présence / dateDebut appliquée pour", dateISO);
     }
+  } catch (e) {
+    console.warn("Auto-sync ménage discret:", e);
   }
 }
 
@@ -787,9 +826,9 @@ async function applyMenagePlanningForDate(dateISO) {
     alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
     return;
   }
-  const menageMembers = EQUIPE.filter(e => isMenageStaff(e) || isMenageStaff(empId(e)));
+  const menageMembers = getActiveEquipeForDate(dateISO, EQUIPE).filter(e => isMenageStaff(e) || isMenageStaff(empId(e)));
   if (!menageMembers.length) {
-    alert("Aucun membre de l'équipe ménage trouvé.");
+    alert("Aucun membre actif de l'équipe ménage trouvé pour cette date.");
     return;
   }
   const updates = {};
@@ -884,6 +923,7 @@ async function applyMenagePlanningForWeek(dateISO) {
     const iso = d.toISOString().slice(0, 10);
 
     menageMembers.forEach(emp => {
+      if (!isEmployeeStartedOnDate(emp, iso)) return;
       const id = empId(emp);
       const plan = getMenagePlanningInfo(emp, iso);
       if (!plan) return;
@@ -1020,6 +1060,7 @@ async function applySheetPlanningForPoste(poste, sheetUrl, dateISO) {
     const updates = {};
     const morningHour = (typeof getShiftHMatin === "function") ? getShiftHMatin(dateISO) : (dateISO >= "2026-09-28" ? "06:45" : SHIFT_H_MATIN);
     members.forEach(emp => {
+      if (!isEmployeeStartedOnDate(emp, dateISO)) return;
       const id = empId(emp);
       const inMatin = isStaffInSheetShift(matinStr, emp);
       const inSoir  = isStaffInSheetShift(soirStr, emp);
@@ -1105,6 +1146,7 @@ async function applySheetPlanningForPosteWeek(poste, sheetUrl, dateISO) {
       const morningHour = (typeof getShiftHMatin === "function") ? getShiftHMatin(iso) : (iso >= "2026-09-28" ? "06:45" : SHIFT_H_MATIN);
 
       members.forEach(emp => {
+        if (!isEmployeeStartedOnDate(emp, iso)) return;
         const id = empId(emp);
         const inMatin = isStaffInSheetShift(matinStr, emp);
         const inSoir  = isStaffInSheetShift(soirStr, emp);

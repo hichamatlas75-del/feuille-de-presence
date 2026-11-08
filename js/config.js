@@ -74,6 +74,6 @@ const DEFAULT_EQUIPE = [
   { nom: 'SALIL',      prenom: 'HOUDA',     poste: 'CAISSE' },
   { nom: 'SBAI',       prenom: 'HAKIMA',    poste: 'MENAGE' },
   { nom: 'EZHAR',      prenom: 'FOUZIA',    poste: 'MENAGE' },
-  { nom: 'EL AZHARY',  prenom: 'NAJIA',     poste: 'MENAGE' },
+  { nom: 'EL AZHARY',  prenom: 'NAJIA',     poste: 'MENAGE', dateDebut: '2026-11-05' },
   { nom: 'ZAIR',       prenom: 'FATIMA',    poste: 'CUISINE' }
 ];
