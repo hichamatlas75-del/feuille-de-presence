@@ -168,9 +168,7 @@ function getMenageStaffKey(empOrId) {
     : String(empOrId)
   ).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  if (s.includes("NAJIA") || s.includes("AZHARY") || s.includes("ELAZHARY") ||
-      s.includes("KHALISSA") || s.includes("KHALISA") || s.includes("EDDRISSIA") || s.includes("EDRISSIA") || s.includes("ABOUARSA") ||
-      s.includes("FATIMZAHRA") || s.includes("FATIM") || s.includes("ZAHRA")) {
+  if (s.includes("NAJIA") || s.includes("AZHARY") || s.includes("ELAZHARY")) {
     return "NAJIA";
   }
   if (s.includes("HAKIMA") || s.includes("SBAI")) return "HAKIMA";
@@ -185,7 +183,7 @@ function isStaffInMenageShift(shiftStaffStr, empOrId) {
   const s = String(shiftStaffStr).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (staffKey === "HAKIMA") return s.includes("HAKIMA");
   if (staffKey === "FOUZIA") return s.includes("FOUZIA");
-  if (staffKey === "NAJIA") return s.includes("NAJIA") || s.includes("AZHARY") || s.includes("KHALISSA") || s.includes("EDRISSIA") || s.includes("FATIM") || s.includes("ZAHRA");
+  if (staffKey === "NAJIA") return s.includes("NAJIA") || s.includes("AZHARY");
   return false;
 }
 
@@ -260,8 +258,7 @@ function isMenageStaff(empOrId) {
     return p === "MENAGE" || p === "MÉNAGE";
   }
   const s = String(empOrId).toUpperCase();
-  return s.includes("SBAI") || s.includes("ELGORRAMY") || s.includes("ABOUARSA") ||
-         s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("KHALISSA") || s.includes("FATIMZAHRA") || s.includes("AZHARY") || s.includes("NAJIA");
+  return s.includes("SBAI") || s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("AZHARY") || s.includes("NAJIA");
 }
 
 function matchCuisineStaffKey(nameOrId) {
@@ -427,7 +424,7 @@ function isStaffInSheetShift(shiftStr, emp) {
 // ─── RÉSOLUTION UNIFIÉE DU PLANNING & CALCUL DES RETARDS (DRY) ───
 /**
  * Calcule l'état complet d'un employé pour une date donnée :
- * horaire effectif, retard, sévérité du retard (léger <=30m vs saignant >30m), badges.
+ * horaire effectif, retard, sévérité du retard (léger <=15m vs saignant >15m), badges.
  */
 function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   const id = empId(emp);
@@ -570,8 +567,6 @@ const PHOTO_MAP = {
   "CHKAIRI_YOUSSEF": "images/CHKAIRI_YOUSSEF.jpg",
   "ELKOBBI_MOSTAFA": "images/EL_KOBBI_MOSTAFA.jpg",
   "EL_KOBBI_MOSTAFA": "images/EL_KOBBI_MOSTAFA.jpg",
-  "ELGORRAMY_ANISSA": "images/ELGORRAMY_SOUAD.jpg",
-  "ELGORRAMY_SOUAD": "images/ELGORRAMY_SOUAD.jpg",
   "ENNHAILI_SOUMIA": "images/EN-NHAILI_SOUMIA.jpg",
   "EN_NHAILI_SOUMIA": "images/EN-NHAILI_SOUMIA.jpg",
   "HATTAF_MOHAMED": "images/HATTAF_MOHAMMED.jpg",
@@ -623,7 +618,6 @@ const KNOWN_IMAGE_FILES = [
   "CHKAIRI_YOUSSEF.jpg",
   "EL_KOBBI_MOSTAFA.jpg",
   "EL_MOBARAKI_MOHAMED.jpg",
-  "ELGORRAMY_SOUAD.jpg",
   "EN-NHAILI_SOUMIA.jpg",
   "FOUZIA.jpg",
   "FOUZIA6ZHAR.jpg",

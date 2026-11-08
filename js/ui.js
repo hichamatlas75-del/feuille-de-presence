@@ -135,6 +135,33 @@ function setFilter(f) {
   const btn = document.getElementById(`chip-${f}`);
   if (btn) btn.classList.add("active");
   applyFilters();
+  renderPendingBanner();
+}
+
+function focusEmpCard(empIdStr) {
+  const searchEl = document.getElementById("searchInput");
+  if (searchEl && searchEl.value) {
+    searchEl.value = "";
+  }
+  if (currentFilter !== "all" && currentFilter !== "pending") {
+    setFilter("all");
+  } else {
+    applyFilters();
+  }
+
+  const card = document.getElementById(`emp-card-${empIdStr}`);
+  if (!card) return;
+
+  const sectionBody = card.parentElement;
+  if (sectionBody && sectionBody.style.display === "none") {
+    sectionBody.style.display = "block";
+  }
+
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.remove("card-flash-highlight");
+  void card.offsetWidth;
+  card.classList.add("card-flash-highlight");
+  setTimeout(() => card.classList.remove("card-flash-highlight"), 2200);
 }
 
 function applyFilters() {
@@ -153,6 +180,165 @@ function applyFilters() {
 
     card.style.display = (matchName && matchFilter) ? "block" : "none";
   });
+}
+
+// ─── BANDEAU APPARENT DE RAPPEL DES ATTENTES (ANTI-OUBLI) ───
+function renderPendingBanner() {
+  const wrap = document.getElementById("pendingBannerWrap");
+  if (!wrap) return;
+
+  if (!EQUIPE.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+
+  const selectedDate = document.getElementById('datePicker')?.value || getMarocDate();
+  const canOFF = canEditOFF(selectedDate);
+  const pendingItems = [];
+  let punchedCount = 0;
+  let offCount = 0;
+
+  EQUIPE.forEach(emp => {
+    const id = empId(emp);
+    const d = latestDataCache[id] || {};
+    const sched = resolveEmployeeSchedule(emp, selectedDate, d);
+    if (sched.hasHA) punchedCount++;
+    if (sched.isOff) offCount++;
+    if (!sched.handled) {
+      pendingItems.push({ emp, id, sched });
+    }
+  });
+
+  if (pendingItems.length === 0) {
+    wrap.innerHTML = `
+      <div class="pendingBannerComplete rounded-3xl p-3.5 sm:px-5 flex items-center justify-between gap-3 flex-wrap shadow-sm">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-sm font-black shadow-sm">✓</span>
+          <div>
+            <div class="text-xs sm:text-sm font-extrabold text-emerald-950 tracking-tight">
+              Feuille complète — Aucun collaborateur en attente (${EQUIPE.length}/${EQUIPE.length})
+            </div>
+            <div class="text-[11px] font-semibold text-emerald-800">
+              Tout le monde est pointé (${punchedCount} présent${punchedCount > 1 ? 's' : ''}) ou déclaré en Repos / Absent (${offCount} OUT).
+            </div>
+          </div>
+        </div>
+        ${currentFilter === "pending" ? `
+          <button type="button" onclick="setFilter('all')"
+            class="text-[11px] font-extrabold bg-white hover:bg-emerald-50 text-emerald-900 border border-emerald-300 px-3 py-1.5 rounded-full shadow-sm transition-all active:scale-95">
+            Afficher toute l'équipe
+          </button>
+        ` : ''}
+      </div>
+    `;
+    return;
+  }
+
+  // Tri : ceux qui ont une heure prévue (hP) la plus tôt en premier, puis par poste et nom
+  pendingItems.sort((a, b) => {
+    const hpA = a.sched.effectiveHP || "99:99";
+    const hpB = b.sched.effectiveHP || "99:99";
+    if (hpA !== hpB) return hpA.localeCompare(hpB);
+    return (`${a.emp.poste}_${a.emp.nom}_${a.emp.prenom}`).localeCompare(`${b.emp.poste}_${b.emp.nom}_${b.emp.prenom}`);
+  });
+
+  const pillsHtml = pendingItems.map(({ emp, id, sched }) => {
+    const safeId = escapeHtml(id);
+    const safeName = escapeHtml(`${emp.nom} ${emp.prenom}`);
+    const safePoste = escapeHtml(emp.poste);
+    const safePhoto = escapeHtml(getCollaboratorPhoto(emp));
+
+    const plannedOff =
+      (sched.isSoumia && sched.soumiaPlan?.off) ||
+      (sched.isSecurite && sched.isMonday) ||
+      (sched.isCuisine && sched.cuisinePlan?.off);
+
+    let timeTag = `<span class="text-[10px] font-bold text-slate-500">hP non défini</span>`;
+    if (plannedOff) {
+      timeTag = `<span class="text-[10px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md">📋 Repos prévu</span>`;
+    } else if (sched.effectiveHP) {
+      timeTag = `<span class="text-[10px] font-extrabold text-amber-900 bg-amber-100/90 border border-amber-300 px-1.5 py-0.5 rounded-md">⏰ ${escapeHtml(sched.effectiveHP)}</span>`;
+    }
+
+    return `
+      <div onclick="focusEmpCard('${safeId}')"
+        title="Cliquer pour aller à la fiche de ${safeName}"
+        class="pendingPill group cursor-pointer rounded-2xl p-2 pr-2.5 flex items-center justify-between gap-2 transition-all">
+        <div class="flex items-center gap-2 min-w-0">
+          <img src="${safePhoto}" alt="${safeName}"
+            class="w-8 h-8 rounded-xl object-cover bg-slate-100 border border-amber-300 flex-shrink-0"
+            loading="lazy"
+            onerror="handleImgError(this, '${safeId}')" />
+          <div class="min-w-0">
+            <div class="text-[11.5px] font-extrabold text-slate-900 truncate group-hover:text-amber-950">
+              ${safeName}
+            </div>
+            <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <span class="text-[9px] font-black uppercase tracking-wider text-slate-500">${safePoste}</span>
+              ${timeTag}
+            </div>
+          </div>
+        </div>
+        ${canOFF ? `
+          <button type="button"
+            onclick="event.stopPropagation(); upd('${safeId}', 'off', true)"
+            title="Déclarer ${safeName} Absent / Repos (OUT)"
+            class="pendingOutBtn flex-shrink-0 text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-600 hover:text-white hover:border-rose-600 text-rose-800 transition-all active:scale-95 shadow-sm">
+            OUT
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }).join("");
+
+  wrap.innerHTML = `
+    <div class="pendingBannerAlert rounded-3xl p-4 sm:p-5 shadowSoft">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-300/80">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-600 text-white flex items-center justify-center text-lg font-black shadow-sm flex-shrink-0 animate-pulse">
+            ⚠️
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[10px] font-black uppercase tracking-[0.18em] bg-amber-900 text-amber-50 px-2.5 py-0.5 rounded-full">
+                Rappel Anti-Oubli
+              </span>
+              <span class="text-xs sm:text-sm font-black text-amber-950">
+                ${pendingItems.length} collaborateur${pendingItems.length > 1 ? 's' : ''} en attente de pointage
+              </span>
+            </div>
+            <p class="text-[11px] font-bold text-amber-900/90 mt-1">
+              Tout le monde doit être pointé (<strong class="underline">hA</strong>) sinon déclaré Absent / Repos (<strong class="underline">OUT</strong>).
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap sm:justify-end">
+          <button type="button"
+            onclick="setFilter('${currentFilter === 'pending' ? 'all' : 'pending'}')"
+            class="text-[11px] font-extrabold px-3 py-2 rounded-xl border transition-all active:scale-95 shadow-sm ${
+              currentFilter === 'pending'
+                ? 'bg-amber-900 text-white border-amber-950'
+                : 'bg-white hover:bg-amber-50 text-amber-950 border-amber-300'
+            }">
+            ${currentFilter === 'pending' ? '👁️ Voir toute l\'équipe' : `🔍 Filtrer les attentes (${pendingItems.length})`}
+          </button>
+          ${canOFF ? `
+            <button type="button"
+              onclick="markAllPendingAsOff('${selectedDate}')"
+              title="Basculer tous les collaborateurs encore en attente en Absent / Repos (OUT)"
+              class="text-[11px] font-extrabold px-3 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white border border-rose-800 shadow-sm transition-all active:scale-95">
+              🚫 Tout déclarer OUT (${pendingItems.length})
+            </button>
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+        ${pillsHtml}
+      </div>
+    </div>
+  `;
 }
 
 // ─── CALCUL DES KPIS (LOGIQUE UNIFIÉE DRY) ───
@@ -182,6 +368,8 @@ function computeKPIs() {
   document.getElementById("kpiPending").textContent = pending;
   document.getElementById("kpiLate").textContent = lateCount;
   document.getElementById("kpiLateMin").textContent = lateMinSum;
+
+  renderPendingBanner();
 }
 
 // ─── GESTION DE L'AFFICHAGE AUTH & RÔLES ───
@@ -211,6 +399,7 @@ function showLoggedUI() {
   document.getElementById("loginWrap").classList.add("hidden");
   document.getElementById("filtersWrap").classList.remove("hidden");
   document.getElementById("kpisWrap").classList.remove("hidden");
+  document.getElementById("pendingBannerWrap")?.classList.remove("hidden");
   document.getElementById("topActions").classList.remove("hidden");
   setRoleLine();
 }
@@ -219,6 +408,11 @@ function showLoginUI() {
   document.getElementById("loginWrap").classList.remove("hidden");
   document.getElementById("filtersWrap").classList.add("hidden");
   document.getElementById("kpisWrap").classList.add("hidden");
+  const pb = document.getElementById("pendingBannerWrap");
+  if (pb) {
+    pb.classList.add("hidden");
+    pb.innerHTML = "";
+  }
   document.getElementById("topActions").classList.add("hidden");
   document.getElementById("staffList").innerHTML = "";
   setRoleLine();
@@ -414,8 +608,8 @@ function render() {
         // Application de la couleur de vignette demandée :
         // - Pointé à l'heure : Fond vert clair (.on-time)
         // - Non pointé (en attente) : Fond blanc (.not-punched)
-        // - Retard léger (<= 30 min) : Fond orange (.late-light)
-        // - Retard saignant (> 30 min) : Fond rouge alerte (.late-heavy)
+        // - Retard léger (<= 15 min) : Fond orange (.late-light)
+        // - Retard saignant (> 15 min) : Fond rouge alerte (.late-heavy)
         // - Repos : (.emp-off)
         let cardClasses = "card rounded-2xl p-4 empCard";
         if (sched.isOff) {
@@ -430,6 +624,7 @@ function render() {
           cardClasses += " not-punched";
         }
         card.className = cardClasses;
+        card.id = `emp-card-${id}`;
 
         card.dataset.name = `${emp.nom} ${emp.prenom}`.toLowerCase();
         card.dataset.punched = sched.hasHA ? "1" : "0";

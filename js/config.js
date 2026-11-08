@@ -43,8 +43,7 @@ function getShiftHMatin(dateISO) {
 
 // Collaborateurs autorisés à saisir hA aujourd'hui si équipe
 const haExceptionsToday = [
-  "SBAI_HAKIMA", "EZHAR_FOUZIA", "FOUZIA", "KHALISSA_KHALISSA", "KHALISSA",
-  "FATIMZAHRA_FATIMA", "FATIMZAHRA", "ELGORRAMY_ANISSA", "ELGORRAMY_SOUAD", "ABOUARSA_EDDRISSIA",
+  "SBAI_HAKIMA", "EZHAR_FOUZIA", "FOUZIA",
   "EL_AZHARY_NAJIA", "ELAZHARY_NAJIA", "AZHARY_NAJIA", "EL_AZHARY", "AZHARY", "NAJIA"
 ];
 const noLateCalcIds = [];
@@ -60,8 +59,6 @@ const DEFAULT_EQUIPE = [
   { nom: 'BOURAHMA',   prenom: 'ANAS',      poste: 'CUISINE' },
   { nom: 'CHKAIRI',    prenom: 'YOUSSEF',   poste: 'BAR' },
   { nom: 'ELKOBBI',    prenom: 'MOSTAFA',   poste: 'BAR' },
-  { nom: 'ELGORRAMY',  prenom: 'ANISSA',    poste: 'MENAGE' },
-  { nom: 'ELGORRAMY',  prenom: 'SOUAD',     poste: 'MENAGE' },
   { nom: 'ENNHAILI',   prenom: 'SOUMIA',    poste: 'CAISSE' },
   { nom: 'FILALI',     prenom: 'ABDERAFI',  poste: 'BAR' },
   { nom: 'HATTAF',     prenom: 'MOHAMED',   poste: 'SERVICE' },

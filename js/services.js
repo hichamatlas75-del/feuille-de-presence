@@ -132,12 +132,14 @@ function normalizeEquipeSnapshot(val) {
   for (const e of cleaned) {
     const normNom = normalizeKeyPart(e.nom);
     const normPrenom = normalizeKeyPart(e.prenom);
-    const isOldMenage = (e.poste === "MENAGE" || e.poste === "MÉNAGE") &&
-      (normNom.includes("FATIM") || normNom.includes("ZAHRA") || normPrenom.includes("FATIM") || normPrenom.includes("ZAHRA") ||
-       normNom.includes("KHALISSA") || normPrenom.includes("KHALISSA") || normNom.includes("ABOUARSA") || normPrenom.includes("EDDRISSIA"));
+    const isRemovedStaff =
+      normNom.includes("ELGORRAMY") || normPrenom.includes("ANISSA") || normPrenom.includes("SOUAD") ||
+      ((e.poste === "MENAGE" || e.poste === "MÉNAGE") &&
+        (normNom.includes("FATIM") || normNom.includes("ZAHRA") || normPrenom.includes("FATIM") || normPrenom.includes("ZAHRA") ||
+         normNom.includes("KHALISSA") || normPrenom.includes("KHALISSA") || normNom.includes("ABOUARSA") || normPrenom.includes("EDDRISSIA")));
 
-    // Remplacement de Fatimzahra et Khalissa par Najia
-    if (isOldMenage) {
+    // Exclusion des anciens collaborateurs (Anissa, Souad, Fatimzahra, Khalissa)
+    if (isRemovedStaff) {
       continue;
     }
 
@@ -464,6 +466,60 @@ async function upd(id, f, v) {
 }
 
 // ─── ACTIONS PLANNING BATCH & UNITAIRES ───
+async function markAllPendingAsOff(dateISO) {
+  const selectedDate = dateISO || document.getElementById('datePicker')?.value || getMarocDate();
+  if (!canEditOFF(selectedDate)) {
+    alert("Action réservée au Gérant ou pour la date d'aujourd'hui.");
+    return;
+  }
+
+  const pendingEmps = EQUIPE.filter(emp => {
+    const id = empId(emp);
+    const d = latestDataCache[id] || {};
+    const sched = resolveEmployeeSchedule(emp, selectedDate, d);
+    return !sched.handled;
+  });
+
+  if (!pendingEmps.length) return;
+
+  const namesPreview = pendingEmps.map(e => `${e.nom} ${e.prenom}`).join(", ");
+  const ok = confirm(
+    `Déclarer les ${pendingEmps.length} collaborateur(s) en attente comme Absent / Repos (OUT) pour le ${selectedDate} ?\n\nCollaborateurs concernés :\n${namesPreview}`
+  );
+  if (!ok) return;
+
+  const updates = {};
+  for (const emp of pendingEmps) {
+    const id = empId(emp);
+    updates[`presences/${selectedDate}/${id}/off`] = true;
+    updates[`presences/${selectedDate}/${id}/hA`] = null;
+    updates[`presences/${selectedDate}/${id}/retard`] = null;
+    updates[`presences/${selectedDate}/${id}/retardMin`] = null;
+    updates[`presences/${selectedDate}/${id}/on`] = false;
+  }
+
+  try {
+    await database.ref().update(updates);
+    for (const emp of pendingEmps) {
+      const id = empId(emp);
+      const cur = latestDataCache[id] || {};
+      schedulePresenceExport(id, empName(emp), selectedDate, {
+        hP: cur.hP || "",
+        hA: "",
+        off: true,
+        retard: false,
+        retardMin: 0
+      });
+    }
+    if (typeof rebuildMerged === "function") rebuildMerged();
+    if (typeof render === "function") render();
+    uiExportMsg(`${pendingEmps.length} collaborateur(s) déclaré(s) OUT ✅`, true);
+  } catch (e) {
+    console.error("Erreur lors du passage groupé en OUT:", e);
+    uiExportMsg("Erreur lors de la déclaration OUT ❌", false);
+  }
+}
+
 async function applySingleCuisinePlan(id, date) {
   const plan = getCuisinePlanningInfo(id, date);
   if (!plan) return;
