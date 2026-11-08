@@ -617,6 +617,8 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   return {
     id,
     emp,
+    startDate,
+    notStartedYet: false,
     safeHP,
     safeHA,
     effectiveHP: effectiveHP || "",

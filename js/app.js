@@ -8,7 +8,11 @@ let equipeCb = null;
 let appInitialized = false;
 
 function stopListeners() {
-  activeRefs.forEach(({ ref, cb }) => ref.off("value", cb));
+  activeRefs.forEach(({ ref, cb }) => {
+    try {
+      if (ref && typeof ref.off === "function") ref.off("value", cb);
+    } catch (e) {}
+  });
   activeRefs = [];
 }
 

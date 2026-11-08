@@ -9,6 +9,7 @@ const database = firebase.database();
 const __exportTimers = new Map();
 
 function uiExportMsg(text, ok = true) {
+  if (typeof document === "undefined") return;
   const el = document.getElementById("exportMsg");
   if (!el) return;
   el.textContent = text;
@@ -89,8 +90,8 @@ function schedulePresenceExport(empKey, name, selectedDate, data) {
 }
 
 // ─── PERMISSIONS RÔLES ───
-function isGerant() { return role === "gerant"; }
-function isEquipe() { return role === "equipe"; }
+function isGerant() { return typeof role !== "undefined" && role === "gerant"; }
+function isEquipe() { return typeof role !== "undefined" && role === "equipe"; }
 
 function canEquipeEditToday(selectedDate) {
   return isEquipe() && selectedDate === getMarocDate();
@@ -279,11 +280,17 @@ async function removeEmployeeMotif(id, date) {
 
 // ─── MUTATIONS DE PRÉSENCE & POINTAGES (UPD) ───
 async function upd(id, f, v) {
-  const date = document.getElementById('datePicker').value;
-  const emp = EQUIPE.find(x => empId(x) === id);
+  const date = (typeof document !== "undefined" && document.getElementById('datePicker')?.value) || (typeof currentDate !== "undefined" ? currentDate : (typeof getMarocDate === "function" ? getMarocDate() : ""));
+  const empList = (typeof EQUIPE !== "undefined" && EQUIPE.length) ? EQUIPE : (typeof DEFAULT_EQUIPE !== "undefined" ? DEFAULT_EQUIPE : []);
+  const emp = empList.find(x => empId(x) === id);
   if (emp && !isEmployeeStartedOnDate(emp, date)) {
     const start = getEmployeeStartDate(emp);
     uiExportMsg(`⚠️ Collaborateur ajouté le ${start} (non actif le ${date})`, false);
+    return;
+  }
+  const curEmp = (typeof latestDataCache === "object" && latestDataCache[id]) || (typeof presencesCache === "object" && presencesCache[id]) || {};
+  if (typeof isExplicitMaladie === "function" && isExplicitMaladie(curEmp) && f === "off") {
+    uiExportMsg("⚠️ Statut Arrêt Maladie verrouillé (M)", false);
     return;
   }
   const name = emp ? empName(emp) : "";
@@ -327,7 +334,7 @@ async function upd(id, f, v) {
 
     const hp = normalizeHHMM(v);
     if (hp) {
-      saveHPHistory(id, hp);
+      if (typeof saveHPHistory === "function") saveHPHistory(id, hp);
     }
     const ref = database.ref('presences/' + date + '/' + id);
 
