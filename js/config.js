@@ -25,6 +25,9 @@ async function getAuthToken() {
   return "";
 }
 
+// ─── CHEMIN FIREBASE DES PLANNINGS DYNAMIQUES ───
+const PLANNINGS_PATH = "settings/plannings";
+
 // ─── GOOGLE SHEETS PLANNING (BAR & SERVICE) ───
 const BAR_SHEET_URL = "https://docs.google.com/spreadsheets/d/1mfwB4zNHS79YsNH4vTMUGOdWeQwC3htMgPtDWsrMbWg/gviz/tq?tqx=out:csv&gid=294813093&headers=1";
 const SERVICE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1aKrmu7Hdf1tb4_0QFCGC6VYjUVlRKeDJYLYs9qIM6Aw/gviz/tq?tqx=out:csv&gid=0&headers=1";
@@ -43,7 +46,7 @@ function getShiftHMatin(dateISO) {
 
 // Collaborateurs autorisés à saisir hA aujourd'hui si équipe
 const haExceptionsToday = [
-  "SBAI_HAKIMA", "EZHAR_FOUZIA", "FOUZIA"
+  "SBAI_HAKIMA", "EZHAR_FOUZIA", "FOUZIA", "FATIMAA", "FATIMA"
 ];
 const noLateCalcIds = [];
 
@@ -90,5 +93,6 @@ const DEFAULT_EQUIPE = [
   { nom: 'SALIL',      prenom: 'HOUDA',     poste: 'CAISSE' },
   { nom: 'SBAI',       prenom: 'HAKIMA',    poste: 'MENAGE' },
   { nom: 'EZHAR',      prenom: 'FOUZIA',    poste: 'MENAGE' },
+  { nom: 'FATIMAA',    prenom: 'FATIMAA',   poste: 'MENAGE' },
   { nom: 'ZAIR',       prenom: 'FATIMA',    poste: 'CUISINE' }
 ];

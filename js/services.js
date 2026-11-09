@@ -138,8 +138,8 @@ function normalizeEquipeSnapshot(val) {
       normNom.includes("ELGORRAMY") || normPrenom.includes("ANISSA") || normPrenom.includes("SOUAD") ||
       normNom.includes("AZHARY") || normPrenom.includes("NAJIA") ||
       ((e.poste === "MENAGE" || e.poste === "MÉNAGE") &&
-        (normNom.includes("FATIM") || normNom.includes("ZAHRA") || normPrenom.includes("FATIM") || normPrenom.includes("ZAHRA") ||
-         normNom.includes("KHALISSA") || normPrenom.includes("KHALISSA") || normNom.includes("ABOUARSA") || normPrenom.includes("EDDRISSIA")));
+        (normNom.includes("KHALISSA") || normPrenom.includes("KHALISSA") || normNom.includes("ABOUARSA") || normNom.includes("EDDRISSIA") ||
+         (normNom.includes("ZAHRA") && normPrenom.includes("FATIM")) || (normNom.includes("FATIM") && normPrenom.includes("ZAHRA"))));
 
     // Exclusion des anciens collaborateurs (Souad, Anissa, Najia El Azhary)
     if (isRemovedStaff) {

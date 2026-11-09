@@ -325,3 +325,92 @@ describe('4. Respect des Dates d\'Activité (Embauche & Sortie)', () => {
     assert.equal(activeApres[0].nom, 'ALAOUI');
   });
 });
+
+describe('6. Planning Ménage Dynamique & Support Collaborateur Fatimaa (Solution B)', () => {
+
+  const empFatimaa = { nom: 'FATIMAA', prenom: 'FATIMAA', poste: 'MENAGE' };
+  const empFatimaZair = { nom: 'ZAIR', prenom: 'FATIMA', poste: 'CUISINE' };
+  const empHakima = { nom: 'SBAI', prenom: 'HAKIMA', poste: 'MENAGE' };
+  const empNouveau = { nom: 'BENALI', prenom: 'SAMIRA', poste: 'MENAGE' };
+
+  it('identifie correctement le personnel de ménage et distingue Fatimaa de Fatima Zair', () => {
+    assert.equal(ctx.isMenageStaff(empFatimaa), true, 'Fatimaa (poste MENAGE) doit être identifiée');
+    assert.equal(ctx.isMenageStaff('FATIMAA_FATIMAA'), true);
+    assert.equal(ctx.isMenageStaff('FATIMA'), true);
+
+    // Fatima Zair est cuisinière : ne JAMAIS la classer en ménage
+    assert.equal(ctx.isMenageStaff(empFatimaZair), false, 'Fatima Zair (CUISINE) ne doit JAMAIS être classée en ménage');
+    assert.equal(ctx.isMenageStaff('ZAIR_FATIMA'), false);
+    assert.equal(ctx.isMenageStaff('FATIMA_ZAIR'), false);
+  });
+
+  it('résout la clé staffKey ménage pour Fatimaa, Hakima et les nouveaux collaborateurs dynamiques', () => {
+    assert.equal(ctx.getMenageStaffKey(empFatimaa), 'FATIMA');
+    assert.equal(ctx.getMenageStaffKey('FATIMAA_FATIMAA'), 'FATIMA');
+    assert.equal(ctx.getMenageStaffKey(empFatimaZair), null);
+    assert.equal(ctx.getMenageStaffKey(empHakima), 'HAKIMA');
+    assert.equal(ctx.getMenageStaffKey(empNouveau), 'SAMIRA');
+  });
+
+  it('valide la correspondance des shifts ménage dans isStaffInMenageShift', () => {
+    assert.equal(ctx.isStaffInMenageShift('Fatimaa / Hakima', empFatimaa), true);
+    assert.equal(ctx.isStaffInMenageShift('Fatima / Fouzia', empFatimaa), true);
+    assert.equal(ctx.isStaffInMenageShift('Hakima / Fouzia', empFatimaa), false);
+
+    assert.equal(ctx.isStaffInMenageShift('Hakima / Fouzia', empHakima), true);
+    assert.equal(ctx.isStaffInMenageShift('Fouzia / Fatima', empHakima), false);
+
+    assert.equal(ctx.isStaffInMenageShift('Samira / Hakima', empNouveau), true);
+  });
+
+  it('applique dynamiquement un planning personnalisé via applyCustomPlannings (settings/plannings)', () => {
+    // Lundi 2026-11-09 correspond à S1 (5 semaines après le 05/10/2026 qui est S2)
+    const weekKey = ctx.getMenageWeekKey('2026-11-09');
+    assert.equal(weekKey, 'S1');
+
+    // Personnalisation dynamique envoyée depuis Firebase settings/plannings
+    const customPlannings = {
+      menage: {
+        S1: {
+          title: 'Semaine 01 Personnalisée',
+          schedules: [
+            { day: 'lundi', matin: { staff: 'Fatimaa' }, soir: { staff: 'Hakima' } },
+            { day: 'mardi', matin: { staff: 'Fouzia' }, soir: { staff: 'Fatimaa' } },
+            { day: 'mercredi', matin: { staff: 'Hakima' }, soir: { staff: 'Fouzia' } },
+            { day: 'jeudi', matin: { staff: 'Fouzia' }, soir: { staff: 'Hakima' } },
+            { day: 'vendredi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
+            { day: 'samedi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
+            { day: 'dimanche', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
+          ]
+        }
+      }
+    };
+
+    ctx.applyCustomPlannings(customPlannings);
+
+    // Vérification pour Fatimaa le Lundi 09/11/2026 (matin = 06:30)
+    const planFatimaa = ctx.getMenagePlanningInfo(empFatimaa, '2026-11-09');
+    assert.notEqual(planFatimaa, null);
+    assert.equal(planFatimaa.inMatin, true);
+    assert.equal(planFatimaa.inSoir, false);
+    assert.equal(planFatimaa.off, false);
+    assert.equal(planFatimaa.hA, '06:30');
+
+    // Vérification dans resolveEmployeeSchedule (sans pointage existant -> pointage auto de la planification)
+    const resFatimaa = ctx.resolveEmployeeSchedule(empFatimaa, '2026-11-09', {});
+    assert.equal(resFatimaa.isMenage, true);
+    assert.equal(resFatimaa.isAutoPunched, true);
+    assert.equal(resFatimaa.safeHA, '06:30');
+    assert.equal(resFatimaa.effectiveHP, '06:30');
+    assert.equal(resFatimaa.isOff, false);
+    assert.equal(resFatimaa.handled, true);
+
+    // Vérification pour Hakima le Lundi 09/11/2026 (soir = 12:00)
+    const planHakima = ctx.getMenagePlanningInfo(empHakima, '2026-11-09');
+    assert.notEqual(planHakima, null);
+    assert.equal(planHakima.inMatin, false);
+    assert.equal(planHakima.inSoir, true);
+    assert.equal(planHakima.off, false);
+    assert.equal(planHakima.hA, '12:00');
+  });
+});

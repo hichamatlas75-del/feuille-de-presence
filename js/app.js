@@ -5,6 +5,8 @@
 let activeRefs = [];
 let equipeRef = null;
 let equipeCb = null;
+let planningsRef = null;
+let planningsCb = null;
 let appInitialized = false;
 
 function stopListeners() {
@@ -41,6 +43,42 @@ function startEquipeListener() {
     }
   };
   equipeRef.on("value", equipeCb);
+}
+
+function stopPlanningsListener() {
+  try {
+    if (planningsRef && planningsCb) {
+      planningsRef.off("value", planningsCb);
+    }
+  } catch (e) {}
+  planningsRef = null;
+  planningsCb = null;
+}
+
+function startPlanningsListener() {
+  stopPlanningsListener();
+
+  const path = (typeof PLANNINGS_PATH !== "undefined" ? PLANNINGS_PATH : "settings/plannings");
+  planningsRef = database.ref(path);
+  planningsCb = (snap) => {
+    const val = snap.val();
+    if (val && typeof val === "object") {
+      if (typeof applyCustomPlannings === "function") {
+        applyCustomPlannings(val);
+      }
+      try {
+        if (typeof localStorage !== "undefined" && typeof LOCAL_PLANNINGS_KEY !== "undefined") {
+          localStorage.setItem(LOCAL_PLANNINGS_KEY, JSON.stringify(val));
+        }
+      } catch (_) {}
+      rebuildMerged();
+      render();
+      if (isGerant() && typeof autoSyncMenagePlanningIfEmpty === "function") {
+        autoSyncMenagePlanningIfEmpty(document.getElementById('datePicker')?.value);
+      }
+    }
+  };
+  planningsRef.on("value", planningsCb);
 }
 
 function load() {
@@ -113,6 +151,7 @@ function initApp() {
   dp.addEventListener('change', load);
 
   startEquipeListener();
+  startPlanningsListener();
   load();
 }
 
@@ -134,6 +173,7 @@ document.getElementById("btnLogout").onclick = async () => {
   role = null;
   stopListeners();
   stopEquipeListener();
+  stopPlanningsListener();
   presencesCache = {};
   punchesCache = {};
   rootPunchesCache = {};
@@ -149,6 +189,7 @@ auth.onAuthStateChanged(async (user) => {
     role = null;
     stopListeners();
     stopEquipeListener();
+    stopPlanningsListener();
     presencesCache = {};
     punchesCache = {};
     rootPunchesCache = {};

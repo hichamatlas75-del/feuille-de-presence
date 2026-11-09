@@ -3,9 +3,9 @@
  * Centralise et unifie la résolution des horaires prévus et le calcul des retards.
  */
 
-// ─── PLANNING FIXE CUISINE (Hebdomadaire) ───
+// ─── PLANNING FIXE CUISINE (Hebdomadaire, synchronisable via settings/plannings) ───
 // 0 = Dimanche, 1 = Lundi, 2 = Mardi, 3 = Mercredi, 4 = Jeudi, 5 = Vendredi, 6 = Samedi
-const PLANNING_CUISINE = {
+let PLANNING_CUISINE = {
   1: { // Lundi
     NAOUAL:  { hP: "15:00", off: false, shift: "15h — F.S" },
     KHAOULA: { hP: "07:00", off: false, shift: "07h — 14h" },
@@ -156,9 +156,9 @@ function getActiveEquipeForDate(dateISO, list) {
   return arr.filter(emp => isEmployeeStartedOnDate(emp, dateISO));
 }
 
-// ─── PLANNING FIXE MÉNAGE (Alternance 2 semaines S1 / S2) ───
-// Binôme Fouzia / Hakima (Najia sortie le 08/11/2026)
-const MENAGE_PLANNING_DATA = {
+// ─── PLANNING FIXE MÉNAGE (Alternance 2 semaines S1 / S2, surchargeable via settings/plannings) ───
+// Équipe ménage : Hakima, Fouzia, Fatimaa (Najia sortie le 08/11/2026)
+let MENAGE_PLANNING_DATA = {
   S1: {
     title: 'Semaine 01',
     schedules: [
@@ -184,6 +184,38 @@ const MENAGE_PLANNING_DATA = {
     ]
   }
 };
+
+// ─── SYNCHRONISATION DYNAMIQUE DES PLANNINGS (Firebase settings/plannings + Secours localStorage) ───
+const LOCAL_PLANNINGS_KEY = "gc_custom_plannings_v1";
+
+function applyCustomPlannings(data) {
+  if (!data || typeof data !== "object") return;
+  if (data.cuisine && typeof data.cuisine === "object") {
+    for (const dow of [0, 1, 2, 3, 4, 5, 6]) {
+      if (data.cuisine[dow] && typeof data.cuisine[dow] === "object") {
+        PLANNING_CUISINE[dow] = { ...PLANNING_CUISINE[dow], ...data.cuisine[dow] };
+      }
+    }
+  }
+  if (data.menage && typeof data.menage === "object") {
+    if (data.menage.S1 && Array.isArray(data.menage.S1.schedules)) {
+      MENAGE_PLANNING_DATA.S1 = data.menage.S1;
+    }
+    if (data.menage.S2 && Array.isArray(data.menage.S2.schedules)) {
+      MENAGE_PLANNING_DATA.S2 = data.menage.S2;
+    }
+  }
+}
+
+function initCustomPlanningsFromLocal() {
+  try {
+    const rawLocal = typeof localStorage !== "undefined" ? localStorage.getItem(LOCAL_PLANNINGS_KEY) : null;
+    if (rawLocal) {
+      applyCustomPlannings(JSON.parse(rawLocal));
+    }
+  } catch (_) {}
+}
+initCustomPlanningsFromLocal();
 
 function getMenageWeekKey(dateISO) {
   if (!dateISO) dateISO = (typeof getMarocDate === "function" ? getMarocDate() : new Date().toISOString().slice(0, 10));
@@ -213,8 +245,22 @@ function getMenageStaffKey(empOrId) {
   if (s.includes("NAJIA") || s.includes("AZHARY") || s.includes("ELAZHARY")) {
     return null;
   }
+  // Exclure FATIMA ZAIR (Cuisine)
+  if (s.includes("ZAIR")) {
+    return null;
+  }
   if (s.includes("HAKIMA") || s.includes("SBAI")) return "HAKIMA";
   if (s.includes("FOUZIA") || s.includes("EZHAR") || (s.includes("ZHAR") && !s.includes("AZHAR"))) return "FOUZIA";
+  if (s.includes("FATIMAA") || (s.includes("FATIMA") && !s.includes("ZAIR"))) return "FATIMA";
+
+  // Membre ménage dynamique ajouté via settings/equipe
+  if (typeof empOrId === "object") {
+    const p = String(empOrId.poste || "").toUpperCase();
+    if (p === "MENAGE" || p === "MÉNAGE") {
+      const pName = (empOrId.prenom || empOrId.nom || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (pName) return pName;
+    }
+  }
   return null;
 }
 
@@ -223,9 +269,10 @@ function isStaffInMenageShift(shiftStaffStr, empOrId) {
   const staffKey = getMenageStaffKey(empOrId);
   if (!staffKey) return false;
   const s = String(shiftStaffStr).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (staffKey === "HAKIMA") return s.includes("HAKIMA");
-  if (staffKey === "FOUZIA") return s.includes("FOUZIA");
-  return false;
+  if (staffKey === "HAKIMA") return s.includes("HAKIMA") || s.includes("SBAI");
+  if (staffKey === "FOUZIA") return s.includes("FOUZIA") || s.includes("EZHAR");
+  if (staffKey === "FATIMA") return s.includes("FATIMA") || s.includes("FATIMAA");
+  return s.includes(staffKey);
 }
 
 function getMenagePlanningInfo(empOrId, dateISO) {
@@ -288,18 +335,19 @@ function getMenagePlanningInfo(empOrId, dateISO) {
 
 // ─── DÉTECTION POSTES & PERSONNELS SPÉCIFIQUES ───
 function isMenageStaff(empOrId) {
-  if(!empOrId) return false;
-  if(typeof empOrId === "object") {
+  if (!empOrId) return false;
+  if (typeof empOrId === "object") {
     const p = String(empOrId.poste || "").toUpperCase();
     return p === "MENAGE" || p === "MÉNAGE";
   }
   const emp = (typeof EQUIPE !== 'undefined' ? EQUIPE : []).find(e => empId(e) === empOrId);
-  if(emp) {
+  if (emp) {
     const p = String(emp.poste || "").toUpperCase();
     return p === "MENAGE" || p === "MÉNAGE";
   }
-  const s = String(empOrId).toUpperCase();
-  return s.includes("SBAI") || s.includes("FOUZIA") || s.includes("EZHAR");
+  const s = String(empOrId).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (s.includes("ZAIR")) return false; // Cuisinière Fatima Zair
+  return s.includes("SBAI") || s.includes("HAKIMA") || s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("FATIMA") || s.includes("FATIMAA");
 }
 
 function matchCuisineStaffKey(nameOrId) {
