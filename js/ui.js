@@ -258,7 +258,8 @@ function renderPendingBanner() {
     const plannedOff =
       (sched.isSoumia && sched.soumiaPlan?.off) ||
       (sched.isSecurite && sched.isMonday) ||
-      (sched.isCuisine && sched.cuisinePlan?.off);
+      (sched.isCuisine && sched.cuisinePlan?.off) ||
+      (sched.isCaisseAlt && sched.caissePlan?.off);
 
     let timeTag = `<span class="text-[10px] font-bold text-slate-500">hP non défini</span>`;
     if (plannedOff) {
@@ -590,7 +591,11 @@ function render() {
         } else if (sched.isSoumia && sched.soumiaPlan?.off) {
           statusBadges.push(`<span class="badge" style="border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.10);color:#6b21a8">💜 Repos Mardi</span>`);
         } else if (sched.caissePlan) {
-          statusBadges.push(`<span class="badge" style="border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.10);color:#4338ca">🔄 Rotation : ${sched.caissePlan.shift}</span>`);
+          if (sched.caissePlan.off) {
+            statusBadges.push(`<span class="badge" style="border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.10);color:#6b21a8">🔄 Repos Caisse (Lundi)</span>`);
+          } else {
+            statusBadges.push(`<span class="badge" style="border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.10);color:#4338ca">🔄 Rotation : ${sched.caissePlan.shift}</span>`);
+          }
         } else if (sched.isSecurite && sched.isMonday) {
           statusBadges.push(`<span class="badge" style="border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.10);color:#3730a3">🛡️ Repos Lundi</span>`);
         } else if (sched.isCuisine && sched.cuisinePlan?.off) {
@@ -861,9 +866,9 @@ function render() {
                 ${sched.caissePlan ? `
                   <div class="mt-1 flex items-center gap-1.5 flex-wrap">
                     <span class="text-[9px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200/80 rounded px-1.5 py-0.5">
-                      🔄 Rotation 24h : <strong>${sched.caissePlan.shift}</strong>
+                      🔄 ${sched.caissePlan.off ? 'Repos Lundi (Shift Soir off)' : `Rotation 24h : <strong>${sched.caissePlan.shift}</strong>`}
                     </span>
-                    ${canHP && (sched.safeHP !== sched.caissePlan.hP || sched.isOff) ? `
+                    ${canHP && ((sched.caissePlan.off && !sched.isOff) || (!sched.caissePlan.off && (sched.safeHP !== sched.caissePlan.hP || sched.isOff))) ? `
                       <button type="button" onclick="applySingleCaissePlan('${id}', '${selectedDate}')"
                         title="Appliquer le shift de rotation (${sched.caissePlan.shift})"
                         class="text-[9px] font-extrabold text-indigo-800 hover:bg-indigo-100 bg-indigo-50 border border-indigo-300 rounded px-1.5 py-0.5 transition-all active:scale-95">

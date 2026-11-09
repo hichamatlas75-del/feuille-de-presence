@@ -152,18 +152,44 @@ describe('2. Prise en Compte Prioritaire du Statut Arrêt Maladie (M)', () => {
 describe('3. Plannings Spécifiques Métier', () => {
 
   describe('Rotation Caisse 24h (Salil Houda & Benkhada Abdeslam)', () => {
-    it('alterne entre 07:30 et 15:00 par période de 24h', () => {
-      // 2026-09-24 = Ancre mod 0 : Salil 07:30, Benkhada 15:00
+    it('alterne entre 07:30 et 15:00 par période de 24h hors lundi', () => {
+      // 2026-09-24 = Ancre mod 0 (Jeudi) : Salil 07:30, Benkhada 15:00
       const planSal0 = ctx.getCaisseAlternance('SALIL_HOUDA', '2026-09-24');
       const planBen0 = ctx.getCaisseAlternance('BENKHADA_ABDESLAM', '2026-09-24');
       assert.equal(planSal0.hP, '07:30');
       assert.equal(planBen0.hP, '15:00');
 
-      // 2026-09-25 = Lendemain mod 1 : Salil 15:00, Benkhada 07:30
+      // 2026-09-25 = Lendemain mod 1 (Vendredi) : Salil 15:00, Benkhada 07:30
       const planSal1 = ctx.getCaisseAlternance('SALIL_HOUDA', '2026-09-25');
       const planBen1 = ctx.getCaisseAlternance('BENKHADA_ABDESLAM', '2026-09-25');
       assert.equal(planSal1.hP, '15:00');
       assert.equal(planBen1.hP, '07:30');
+    });
+
+    it('applique le repos (OFF) chaque lundi pour celui qui a d\'habitude le shift du soir', () => {
+      // Cas A : Lundi 2026-11-09 (mod 0 d'habitude : Salil 07:30, Benkhada 15:00)
+      // -> Benkhada (soir d'habitude) est mis en REPOS le lundi
+      const planSalA = ctx.getCaisseAlternance('SALIL_HOUDA', '2026-11-09');
+      const planBenA = ctx.getCaisseAlternance('BENKHADA_ABDESLAM', '2026-11-09');
+
+      assert.equal(planBenA.off, true, 'Benkhada doit être en REPOS ce lundi car d\'habitude au shift soir');
+      assert.equal(planBenA.hP, null);
+      assert.equal(planBenA.shift, 'OFF');
+
+      assert.equal(planSalA.off, false, 'Salil reste au shift matin (07:30)');
+      assert.equal(planSalA.hP, '07:30');
+
+      // Cas B : Lundi 2026-11-16 (mod 1 d'habitude : Salil 15:00, Benkhada 07:30)
+      // -> Salil (soir d'habitude) est mise en REPOS ce lundi-là
+      const planSalB = ctx.getCaisseAlternance('SALIL_HOUDA', '2026-11-16');
+      const planBenB = ctx.getCaisseAlternance('BENKHADA_ABDESLAM', '2026-11-16');
+
+      assert.equal(planSalB.off, true, 'Salil doit être en REPOS ce lundi car d\'habitude au shift soir');
+      assert.equal(planSalB.hP, null);
+      assert.equal(planSalB.shift, 'OFF');
+
+      assert.equal(planBenB.off, false, 'Benkhada reste au shift matin (07:30)');
+      assert.equal(planBenB.hP, '07:30');
     });
 
     it('gère le planning fixe de Soumia (09:00 sauf repos le mardi)', () => {
@@ -235,23 +261,26 @@ describe('3. Plannings Spécifiques Métier', () => {
   });
 });
 
-describe('4. Respect de la Date d\'Embauche (dateDebut)', () => {
+describe('4. Respect des Dates d\'Activité (Embauche & Sortie)', () => {
 
   const empNajia = {
     nom: 'EL AZHARY',
     prenom: 'NAJIA',
     poste: 'MENAGE',
-    dateDebut: '2026-11-05'
+    dateDebut: '2026-11-05',
+    dateSortie: '2026-11-07'
   };
 
-  it('résout la date d\'embauche via getEmployeeStartDate', () => {
+  it('résout la date d\'embauche et la date de sortie', () => {
     assert.equal(ctx.getEmployeeStartDate(empNajia), '2026-11-05');
+    assert.equal(ctx.getEmployeeEndDate(empNajia), '2026-11-07');
   });
 
   it('bloque et neutralise un collaborateur avant sa date d\'embauche', () => {
     // 2026-11-04 < 2026-11-05
     const resAvant = ctx.resolveEmployeeSchedule(empNajia, '2026-11-04', {});
     assert.equal(resAvant.notStartedYet, true);
+    assert.equal(resAvant.alreadyEnded, false);
     assert.equal(resAvant.handled, true, 'Un non-commencé est neutre et handled=true pour ne pas fausser les KPIs');
     assert.equal(resAvant.safeHA, '');
     assert.equal(resAvant.safeHP, '');
@@ -260,11 +289,20 @@ describe('4. Respect de la Date d\'Embauche (dateDebut)', () => {
     assert.equal(ctx.isEmployeeStartedOnDate(empNajia, '2026-11-04'), false);
   });
 
-  it('active le collaborateur dès sa date d\'embauche effective', () => {
-    // 2026-11-05 >= 2026-11-05
-    assert.equal(ctx.isEmployeeStartedOnDate(empNajia, '2026-11-05'), true);
-    const resApres = ctx.resolveEmployeeSchedule(empNajia, '2026-11-06', {});
-    assert.equal(resApres.notStartedYet, false);
+  it('active le collaborateur durant sa période de contrat (05/11 au 07/11)', () => {
+    // 2026-11-06 est entre 2026-11-05 et 2026-11-07
+    assert.equal(ctx.isEmployeeStartedOnDate(empNajia, '2026-11-06'), true);
+    const resPendant = ctx.resolveEmployeeSchedule(empNajia, '2026-11-06', {});
+    assert.equal(resPendant.notStartedYet, false);
+    assert.equal(resPendant.alreadyEnded, false);
+  });
+
+  it('désactive le collaborateur dès sa date de sortie (à partir du 08/11/2026)', () => {
+    // 2026-11-08 > 2026-11-07
+    assert.equal(ctx.isEmployeeStartedOnDate(empNajia, '2026-11-08'), false);
+    const resSortie = ctx.resolveEmployeeSchedule(empNajia, '2026-11-08', {});
+    assert.equal(resSortie.alreadyEnded, true);
+    assert.equal(resSortie.handled, true);
   });
 
   it('filtre les collaborateurs non actifs pour une date donnée dans getActiveEquipeForDate', () => {
@@ -272,11 +310,18 @@ describe('4. Respect de la Date d\'Embauche (dateDebut)', () => {
       { nom: 'ALAOUI', prenom: 'LAZIZ', poste: 'SERVICE' },
       empNajia
     ];
+    // Avant le 05/11 : 1 seul actif
     const activeAvant = ctx.getActiveEquipeForDate('2026-11-01', list);
     assert.equal(activeAvant.length, 1);
     assert.equal(activeAvant[0].nom, 'ALAOUI');
 
-    const activeApres = ctx.getActiveEquipeForDate('2026-11-06', list);
-    assert.equal(activeApres.length, 2);
+    // Le 06/11 : 2 actifs
+    const activePendant = ctx.getActiveEquipeForDate('2026-11-06', list);
+    assert.equal(activePendant.length, 2);
+
+    // Le 08/11 : Najia n'est plus dans l'équipe active
+    const activeApres = ctx.getActiveEquipeForDate('2026-11-08', list);
+    assert.equal(activeApres.length, 1);
+    assert.equal(activeApres[0].nom, 'ALAOUI');
   });
 });

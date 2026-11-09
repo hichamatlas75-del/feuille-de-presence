@@ -98,7 +98,7 @@ beforeEach(() => {
   vm.runInContext(fs.readFileSync(path.join(rootDir, 'js', 'schedules.js'), 'utf8'), ctx);
   vm.runInContext(fs.readFileSync(path.join(rootDir, 'js', 'services.js'), 'utf8'), ctx);
 
-  ctx.EQUIPE = ctx.DEFAULT_EQUIPE;
+  ctx.EQUIPE = vm.runInContext('typeof DEFAULT_EQUIPE !== "undefined" ? DEFAULT_EQUIPE : []', ctx);
   ctx.presencesCache = {};
   ctx.punchesCache = {};
   ctx.motifsCache = {};
@@ -245,9 +245,20 @@ describe('3. Verrouillage de Sécurité pour Arrêt Maladie (M)', () => {
   });
 });
 
-describe('4. Contrôle de la Date d\'Embauche (dateDebut)', () => {
+describe('4. Contrôle des Dates d\'Activité (Embauche & Sortie)', () => {
 
+  const empNajiaObj = {
+    nom: 'EL AZHARY',
+    prenom: 'NAJIA',
+    poste: 'MENAGE',
+    dateDebut: '2026-11-05',
+    dateSortie: '2026-11-07'
+  };
   const empNajia = 'EL_AZHARY_NAJIA';
+
+  beforeEach(() => {
+    ctx.EQUIPE = vm.runInContext('DEFAULT_EQUIPE', ctx).concat([empNajiaObj]);
+  });
 
   it('bloque toute écriture pour un collaborateur avant sa date d\'embauche effective', async () => {
     // Najia commence le 2026-11-05
@@ -259,12 +270,21 @@ describe('4. Contrôle de la Date d\'Embauche (dateDebut)', () => {
     assert.equal(mockDb.operations.length, 0, 'Aucune opération Firebase ne doit être émise avant la date d embauche');
   });
 
-  it('autorise les mutations à partir de sa date d\'embauche', async () => {
+  it('autorise les mutations durant la période de contrat actif', async () => {
     ctx.currentDate = '2026-11-06'; // Date active
     mockDb.resetOps();
 
     await ctx.upd(empNajia, 'off', true);
 
     assert.ok(mockDb.operations.length > 0, 'L écriture doit être acceptée pour un collaborateur actif');
+  });
+
+  it('bloque toute écriture pour un collaborateur sorti de l\'équipe (dès le 08/11/2026)', async () => {
+    ctx.currentDate = '2026-11-08'; // Date après sortie
+    mockDb.resetOps();
+
+    await ctx.upd(empNajia, 'off', true);
+
+    assert.equal(mockDb.operations.length, 0, 'Aucune opération Firebase ne doit être émise après la date de sortie');
   });
 });

@@ -124,7 +124,8 @@ function normalizeEquipeSnapshot(val) {
       nom: normalizeLabelPart(x?.nom),
       prenom: normalizeLabelPart(x?.prenom),
       poste: normalizeLabelPart(x?.poste),
-      dateDebut: normalizeDateISO(x?.dateDebut || x?.dateAjout || x?.startDate || x?.createdAt || "")
+      dateDebut: normalizeDateISO(x?.dateDebut || x?.dateAjout || x?.startDate || x?.createdAt || ""),
+      dateSortie: normalizeDateISO(x?.dateSortie || x?.dateFin || x?.endDate || "")
     }))
     .filter(x => x.nom && x.prenom && x.poste);
 
@@ -135,11 +136,12 @@ function normalizeEquipeSnapshot(val) {
     const normPrenom = normalizeKeyPart(e.prenom);
     const isRemovedStaff =
       normNom.includes("ELGORRAMY") || normPrenom.includes("ANISSA") || normPrenom.includes("SOUAD") ||
+      normNom.includes("AZHARY") || normPrenom.includes("NAJIA") ||
       ((e.poste === "MENAGE" || e.poste === "MÉNAGE") &&
         (normNom.includes("FATIM") || normNom.includes("ZAHRA") || normPrenom.includes("FATIM") || normPrenom.includes("ZAHRA") ||
          normNom.includes("KHALISSA") || normPrenom.includes("KHALISSA") || normNom.includes("ABOUARSA") || normPrenom.includes("EDDRISSIA")));
 
-    // Exclusion des anciens collaborateurs (Anissa, Souad, Fatimzahra, Khalissa)
+    // Exclusion des anciens collaborateurs (Souad, Anissa, Najia El Azhary)
     if (isRemovedStaff) {
       continue;
     }
@@ -148,22 +150,6 @@ function normalizeEquipeSnapshot(val) {
     if (seen.has(id)) continue;
     seen.add(id);
     out.push(e);
-  }
-
-  // Intégration systématique de EL AZHARY NAJIA dans la catégorie ménage (ajoutée le 2026-11-05)
-  const hasNajia = out.some(e => {
-    const k = `${e.nom} ${e.prenom}`.toUpperCase();
-    return k.includes("NAJIA") || k.includes("AZHARY");
-  });
-  if (!hasNajia) {
-    out.push({ nom: 'EL AZHARY', prenom: 'NAJIA', poste: 'MENAGE', dateDebut: '2026-11-05' });
-  } else {
-    out.forEach(e => {
-      const k = `${e.nom} ${e.prenom}`.toUpperCase();
-      if ((k.includes("NAJIA") || k.includes("AZHARY")) && !e.dateDebut) {
-        e.dateDebut = '2026-11-05';
-      }
-    });
   }
 
   return out;
@@ -642,8 +628,13 @@ async function applySingleCaissePlan(id, date) {
   } else {
     const plan = getCaisseAlternance(id, date);
     if (!plan) return;
-    await upd(id, 'off', false);
-    await upd(id, 'hP', plan.hP);
+    if (plan.off) {
+      await upd(id, 'off', true);
+      await upd(id, 'hP', '');
+    } else {
+      await upd(id, 'off', false);
+      await upd(id, 'hP', plan.hP);
+    }
   }
 }
 
@@ -673,8 +664,13 @@ async function applyCaissePlanningForDate(dateISO) {
     } else {
       const plan = getCaisseAlternance(id, dateISO);
       if (!plan) return;
-      updates[`presences/${dateISO}/${id}/hP`] = plan.hP;
-      updates[`presences/${dateISO}/${id}/off`] = false;
+      if (plan.off) {
+        updates[`presences/${dateISO}/${id}/off`] = true;
+        updates[`presences/${dateISO}/${id}/hP`] = null;
+      } else {
+        updates[`presences/${dateISO}/${id}/hP`] = plan.hP;
+        updates[`presences/${dateISO}/${id}/off`] = false;
+      }
     }
   });
   try {
@@ -722,8 +718,13 @@ async function applyCaissePlanningForWeek(dateISO) {
       } else {
         const plan = getCaisseAlternance(id, iso);
         if (!plan) return;
-        updates[`presences/${iso}/${id}/hP`] = plan.hP;
-        updates[`presences/${iso}/${id}/off`] = false;
+        if (plan.off) {
+          updates[`presences/${iso}/${id}/off`] = true;
+          updates[`presences/${iso}/${id}/hP`] = null;
+        } else {
+          updates[`presences/${iso}/${id}/hP`] = plan.hP;
+          updates[`presences/${iso}/${id}/off`] = false;
+        }
       }
     });
   }

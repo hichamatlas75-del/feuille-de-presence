@@ -131,16 +131,23 @@ function getEmployeeStartDate(emp) {
   if (!emp || typeof emp !== "object") return "";
   const explicit = normalizeDateISO(emp.dateDebut || emp.dateAjout || emp.startDate || emp.createdAt || "");
   if (explicit) return explicit;
-  const k = `${emp.nom || ""} ${emp.prenom || ""}`.toUpperCase();
-  if (k.includes("NAJIA") || k.includes("AZHARY")) return "2026-11-05";
+  return "";
+}
+
+function getEmployeeEndDate(emp) {
+  if (!emp || typeof emp !== "object") return "";
+  const explicit = normalizeDateISO(emp.dateSortie || emp.dateFin || emp.endDate || "");
+  if (explicit) return explicit;
   return "";
 }
 
 function isEmployeeStartedOnDate(emp, dateISO) {
   if (!emp) return false;
   const start = getEmployeeStartDate(emp);
-  if (!start || !dateISO) return true;
-  return String(dateISO) >= start;
+  if (start && dateISO && String(dateISO) < start) return false;
+  const end = getEmployeeEndDate(emp);
+  if (end && dateISO && String(dateISO) > end) return false;
+  return true;
 }
 
 function getActiveEquipeForDate(dateISO, list) {
@@ -150,30 +157,30 @@ function getActiveEquipeForDate(dateISO, list) {
 }
 
 // ─── PLANNING FIXE MÉNAGE (Alternance 2 semaines S1 / S2) ───
-// Fatimzahra et Khalissa remplacées par Najia
+// Binôme Fouzia / Hakima (Najia sortie le 08/11/2026)
 const MENAGE_PLANNING_DATA = {
   S1: {
     title: 'Semaine 01',
     schedules: [
-      { day: 'lundi', matin: { staff: 'Fouzia' }, soir: { staff: 'Najia' } },
-      { day: 'mardi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
-      { day: 'mercredi', matin: { staff: 'Hakima' }, soir: { staff: 'Najia' } },
-      { day: 'jeudi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
-      { day: 'vendredi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Najia' } },
-      { day: 'samedi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
-      { day: 'dimanche', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Najia' } },
+      { day: 'lundi', matin: { staff: 'Fouzia' }, soir: { staff: 'Hakima' } },
+      { day: 'mardi', matin: { staff: 'Hakima' }, soir: { staff: 'Fouzia' } },
+      { day: 'mercredi', matin: { staff: 'Hakima' }, soir: { staff: 'Fouzia' } },
+      { day: 'jeudi', matin: { staff: 'Fouzia' }, soir: { staff: 'Hakima' } },
+      { day: 'vendredi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'samedi', matin: { staff: 'Hakima' }, soir: { staff: 'Fouzia' } },
+      { day: 'dimanche', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
     ]
   },
   S2: {
     title: 'Semaine 02',
     schedules: [
-      { day: 'lundi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
-      { day: 'mardi', matin: { staff: 'Fouzia' }, soir: { staff: 'Najia' } },
-      { day: 'mercredi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
-      { day: 'jeudi', matin: { staff: 'Hakima' }, soir: { staff: 'Najia' } },
-      { day: 'vendredi', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
-      { day: 'samedi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Najia' } },
-      { day: 'dimanche', matin: { staff: 'Najia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'lundi', matin: { staff: 'Hakima' }, soir: { staff: 'Fouzia' } },
+      { day: 'mardi', matin: { staff: 'Fouzia' }, soir: { staff: 'Hakima' } },
+      { day: 'mercredi', matin: { staff: 'Hakima' }, soir: { staff: 'Fouzia' } },
+      { day: 'jeudi', matin: { staff: 'Fouzia' }, soir: { staff: 'Hakima' } },
+      { day: 'vendredi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'samedi', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
+      { day: 'dimanche', matin: { staff: 'Hakima / Fouzia' }, soir: { staff: 'Hakima / Fouzia' } },
     ]
   }
 };
@@ -202,8 +209,9 @@ function getMenageStaffKey(empOrId) {
     : String(empOrId)
   ).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+  // Exclure NAJIA EL AZHARY (sortie le 08/11/2026) avant la détection de FOUZIA EZHAR ("AZHARY" contient "ZHAR")
   if (s.includes("NAJIA") || s.includes("AZHARY") || s.includes("ELAZHARY")) {
-    return "NAJIA";
+    return null;
   }
   if (s.includes("HAKIMA") || s.includes("SBAI")) return "HAKIMA";
   if (s.includes("FOUZIA") || s.includes("EZHAR") || (s.includes("ZHAR") && !s.includes("AZHAR"))) return "FOUZIA";
@@ -217,7 +225,6 @@ function isStaffInMenageShift(shiftStaffStr, empOrId) {
   const s = String(shiftStaffStr).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (staffKey === "HAKIMA") return s.includes("HAKIMA");
   if (staffKey === "FOUZIA") return s.includes("FOUZIA");
-  if (staffKey === "NAJIA") return s.includes("NAJIA") || s.includes("AZHARY");
   return false;
 }
 
@@ -292,7 +299,7 @@ function isMenageStaff(empOrId) {
     return p === "MENAGE" || p === "MÉNAGE";
   }
   const s = String(empOrId).toUpperCase();
-  return s.includes("SBAI") || s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("AZHARY") || s.includes("NAJIA");
+  return s.includes("SBAI") || s.includes("FOUZIA") || s.includes("EZHAR");
 }
 
 function matchCuisineStaffKey(nameOrId) {
@@ -358,11 +365,23 @@ function getCaisseAlternance(idOrName, dateISO) {
   const isBen = isBenkhadaStaff(idOrName);
   if(!isSal && !isBen) return null;
 
+  const dt = new Date(Date.UTC(yy, mm - 1, dd));
+  const isMonday = (dt.getUTCDay() === 1);
+
   // Ancre : 24 Septembre 2026 (mois 8 = Septembre)
   const dAnchor = Date.UTC(2026, 8, 24);
   const dTarget = Date.UTC(yy, mm - 1, dd);
   const diffDays = Math.round((dTarget - dAnchor) / 86400000);
   const mod = ((diffDays % 2) + 2) % 2;
+
+  // mod === 0 : Salil Matin (07:30), Benkhada Soir (15:00)
+  // mod === 1 : Salil Soir (15:00), Benkhada Matin (07:30)
+  const habituelSoir = (mod === 0) ? isBen : isSal;
+
+  // Règle spécifique Lundi : celui qui a d'habitude le shift du soir est en repos (OFF)
+  if (isMonday && habituelSoir) {
+    return { hP: null, off: true, shift: "OFF" };
+  }
 
   if(mod === 0) {
     return isSal
@@ -463,14 +482,18 @@ function isStaffInSheetShift(shiftStr, emp) {
 function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   const id = empId(emp);
   const startDate = getEmployeeStartDate(emp);
+  const endDate = getEmployeeEndDate(emp);
   const notStartedYet = !!(startDate && dateISO && String(dateISO) < startDate);
+  const alreadyEnded = !!(endDate && dateISO && String(dateISO) > endDate);
 
-  if (notStartedYet) {
+  if (notStartedYet || alreadyEnded) {
     return {
       id,
       emp,
       startDate,
-      notStartedYet: true,
+      endDate,
+      notStartedYet,
+      alreadyEnded,
       safeHP: "",
       safeHA: "",
       effectiveHP: "",
@@ -587,7 +610,7 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
   if (!effectiveHP) {
     if (isMenage && menagePlan && !menagePlan.off) effectiveHP = menagePlan.hA;
     else if (soumiaPlan && !soumiaPlan.off) effectiveHP = soumiaPlan.hP;
-    else if (caissePlan && caissePlan.hP) effectiveHP = caissePlan.hP;
+    else if (caissePlan && !caissePlan.off && caissePlan.hP) effectiveHP = caissePlan.hP;
     else if (isSecurite && !isMonday) effectiveHP = "09:00";
     else if (cuisinePlan && !cuisinePlan.off) effectiveHP = cuisinePlan.hP;
   }
@@ -618,7 +641,9 @@ function resolveEmployeeSchedule(emp, dateISO, currentData = {}) {
     id,
     emp,
     startDate,
+    endDate,
     notStartedYet: false,
+    alreadyEnded: false,
     safeHP,
     safeHA,
     effectiveHP: effectiveHP || "",
@@ -714,20 +739,11 @@ const PHOTO_MAP = {
   "WALID": "images/WALID.jpg",
   "FOUZIA": "images/FOUZIA.jpg",
   "EZHAR_FOUZIA": "images/FOUZIA.jpg",
-  "FOUZIA_EZHAR": "images/FOUZIA.jpg",
-  "EL_AZHARY_NAJIA": "images/EL_AZHARY.jpg",
-  "ELAZHARY_NAJIA": "images/EL_AZHARY.jpg",
-  "AZHARY_NAJIA": "images/EL_AZHARY.jpg",
-  "EL_AZHARY": "images/EL_AZHARY.jpg",
-  "ELAZHARY": "images/EL_AZHARY.jpg",
-  "AZHARY": "images/EL_AZHARY.jpg",
-  "NAJIA_EL_AZHARY": "images/EL_AZHARY.jpg",
-  "NAJIA": "images/EL_AZHARY.jpg"
+  "FOUZIA_EZHAR": "images/FOUZIA.jpg"
 };
 
 const KNOWN_IMAGE_FILES = [
   "BAJJOU.jpeg",
-  "EL_AZHARY.jpg",
   "BELQASIM_KHAOULA.jpg",
   "BENKHADA_ABDESSLAM.jpg",
   "BOUCHNAK_NAOUAL.jpg",
@@ -795,9 +811,6 @@ function getCollaboratorPhoto(emp) {
   }
   if (fullStr.includes("SAAD") || fullStr.includes("OUDGHRI")) {
     return "images/IDRISSI_OUDGHRI_SAAD.jpg";
-  }
-  if (fullStr.includes("AZHARY") || fullStr.includes("NAJIA")) {
-    return "images/EL_AZHARY.jpg";
   }
 
   // 1. Recherche dans le dictionnaire direct
