@@ -414,3 +414,41 @@ describe('6. Planning Ménage Dynamique & Support Collaborateur Fatimaa (Solutio
     assert.equal(planHakima.hA, '12:00');
   });
 });
+
+describe('7. Réintégration et Validation EL GOURRAMY SOUAD (MENAGE, début le 11/11/2026)', () => {
+
+  const empSouad = { nom: 'EL GOURRAMY', prenom: 'SOUAD', poste: 'MENAGE', dateDebut: '2026-11-11' };
+  const empAnissa = { nom: 'EL GOURRAMY', prenom: 'ANISSA', poste: 'MENAGE' };
+
+  it('reconnaît Souad comme personnel de ménage et résout sa photo', () => {
+    assert.equal(ctx.isMenageStaff(empSouad), true);
+    assert.equal(ctx.isMenageStaff('EL_GOURRAMY_SOUAD'), true);
+    assert.equal(ctx.isMenageStaff('SOUAD'), true);
+
+    assert.equal(ctx.getMenageStaffKey(empSouad), 'SOUAD');
+    assert.equal(ctx.getCollaboratorPhoto(empSouad), 'images/ELGORRAMY_SOUAD.jpg');
+  });
+
+  it('gère rigoureusement la date de début au 11 novembre 2026', () => {
+    // Le 10/11/2026 : Pas encore commencée
+    assert.equal(ctx.isEmployeeStartedOnDate(empSouad, '2026-11-10'), false);
+    const resAvant = ctx.resolveEmployeeSchedule(empSouad, '2026-11-10', {});
+    assert.equal(resAvant.notStartedYet, true);
+    assert.equal(resAvant.handled, true);
+
+    // Le 11/11/2026 : Active et intégrée
+    assert.equal(ctx.isEmployeeStartedOnDate(empSouad, '2026-11-11'), true);
+    const resDebut = ctx.resolveEmployeeSchedule(empSouad, '2026-11-11', {});
+    assert.equal(resDebut.notStartedYet, false);
+  });
+
+  it('intègre Souad dans l\'équipe active à partir du 11 novembre et filtre avant', () => {
+    const list = [empSouad];
+    const active10 = ctx.getActiveEquipeForDate('2026-11-10', list);
+    assert.equal(active10.length, 0, 'Souad ne doit pas apparaître le 10 novembre');
+
+    const active11 = ctx.getActiveEquipeForDate('2026-11-11', list);
+    assert.equal(active11.length, 1, 'Souad doit apparaître dès le 11 novembre');
+    assert.equal(active11[0].prenom, 'SOUAD');
+  });
+});

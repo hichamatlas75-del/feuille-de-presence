@@ -135,13 +135,13 @@ function normalizeEquipeSnapshot(val) {
     const normNom = normalizeKeyPart(e.nom);
     const normPrenom = normalizeKeyPart(e.prenom);
     const isRemovedStaff =
-      normNom.includes("ELGORRAMY") || normPrenom.includes("ANISSA") || normPrenom.includes("SOUAD") ||
+      ((normNom.includes("ELGORRAMY") || normNom.includes("GOURRAMY")) && normPrenom.includes("ANISSA")) ||
       normNom.includes("AZHARY") || normPrenom.includes("NAJIA") ||
       ((e.poste === "MENAGE" || e.poste === "MÉNAGE") &&
-        (normNom.includes("KHALISSA") || normPrenom.includes("KHALISSA") || normNom.includes("ABOUARSA") || normNom.includes("EDDRISSIA") ||
+        (normNom.includes("ABOUARSA") || normNom.includes("EDDRISSIA") ||
          (normNom.includes("ZAHRA") && normPrenom.includes("FATIM")) || (normNom.includes("FATIM") && normPrenom.includes("ZAHRA"))));
 
-    // Exclusion des anciens collaborateurs (Souad, Anissa, Najia El Azhary)
+    // Exclusion des collaborateurs définitivement purgés (Anissa El Gorramy, Najia El Azhary)
     if (isRemovedStaff) {
       continue;
     }
@@ -150,6 +150,21 @@ function normalizeEquipeSnapshot(val) {
     if (seen.has(id)) continue;
     seen.add(id);
     out.push(e);
+  }
+
+  // Garantir la présence de Souad El Gourramy (réintégrée le 11/11/2026) en secours si snapshot partiel
+  const hasSouad = out.some(e => {
+    const n = normalizeKeyPart(e.nom);
+    const p = normalizeKeyPart(e.prenom);
+    return (n.includes("GOURRAMY") || n.includes("GORRAMY")) && p.includes("SOUAD");
+  });
+  if (!hasSouad) {
+    out.push({
+      nom: "EL GOURRAMY",
+      prenom: "SOUAD",
+      poste: "MENAGE",
+      dateDebut: "2026-11-11"
+    });
   }
 
   return out;

@@ -252,6 +252,7 @@ function getMenageStaffKey(empOrId) {
   if (s.includes("HAKIMA") || s.includes("SBAI")) return "HAKIMA";
   if (s.includes("FOUZIA") || s.includes("EZHAR") || (s.includes("ZHAR") && !s.includes("AZHAR"))) return "FOUZIA";
   if (s.includes("FATIMAA") || (s.includes("FATIMA") && !s.includes("ZAIR"))) return "FATIMA";
+  if (s.includes("SOUAD") || s.includes("GOURRAMY") || s.includes("GORRAMY")) return "SOUAD";
 
   // Membre ménage dynamique ajouté via settings/equipe
   if (typeof empOrId === "object") {
@@ -272,6 +273,7 @@ function isStaffInMenageShift(shiftStaffStr, empOrId) {
   if (staffKey === "HAKIMA") return s.includes("HAKIMA") || s.includes("SBAI");
   if (staffKey === "FOUZIA") return s.includes("FOUZIA") || s.includes("EZHAR");
   if (staffKey === "FATIMA") return s.includes("FATIMA") || s.includes("FATIMAA");
+  if (staffKey === "SOUAD") return s.includes("SOUAD") || s.includes("GOURRAMY") || s.includes("GORRAMY");
   return s.includes(staffKey);
 }
 
@@ -347,7 +349,7 @@ function isMenageStaff(empOrId) {
   }
   const s = String(empOrId).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (s.includes("ZAIR")) return false; // Cuisinière Fatima Zair
-  return s.includes("SBAI") || s.includes("HAKIMA") || s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("FATIMA") || s.includes("FATIMAA");
+  return s.includes("SBAI") || s.includes("HAKIMA") || s.includes("FOUZIA") || s.includes("EZHAR") || s.includes("FATIMA") || s.includes("FATIMAA") || s.includes("SOUAD") || s.includes("GOURRAMY") || s.includes("GORRAMY");
 }
 
 function matchCuisineStaffKey(nameOrId) {
@@ -787,7 +789,12 @@ const PHOTO_MAP = {
   "WALID": "images/WALID.jpg",
   "FOUZIA": "images/FOUZIA.jpg",
   "EZHAR_FOUZIA": "images/FOUZIA.jpg",
-  "FOUZIA_EZHAR": "images/FOUZIA.jpg"
+  "FOUZIA_EZHAR": "images/FOUZIA.jpg",
+  "EL_GOURRAMY_SOUAD": "images/ELGORRAMY_SOUAD.jpg",
+  "ELGOURRAMY_SOUAD": "images/ELGORRAMY_SOUAD.jpg",
+  "EL_GORRAMY_SOUAD": "images/ELGORRAMY_SOUAD.jpg",
+  "GOURRAMY_SOUAD": "images/ELGORRAMY_SOUAD.jpg",
+  "SOUAD": "images/ELGORRAMY_SOUAD.jpg"
 };
 
 const KNOWN_IMAGE_FILES = [
@@ -799,6 +806,7 @@ const KNOWN_IMAGE_FILES = [
   "CHKAIRI_YOUSSEF.jpg",
   "EL_KOBBI_MOSTAFA.jpg",
   "EL_MOBARAKI_MOHAMED.jpg",
+  "ELGORRAMY_SOUAD.jpg",
   "EN-NHAILI_SOUMIA.jpg",
   "FOUZIA.jpg",
   "FOUZIA6ZHAR.jpg",
